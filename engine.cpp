@@ -1,3 +1,7 @@
+#include "engine.h"
+
+namespace pxr
+{
 
 Engine::Duration_t Engine::RealClock::update()
 {
@@ -8,10 +12,8 @@ Engine::Duration_t Engine::RealClock::update()
 
 void Engine::GameClock::update(Duration_t realDt)
 {
-  if(_isPaused)
-    return;
-
-  _now += Duration_t{static_cast<int64_t>(realDt.count() * _scale)};
+  if(!_isPaused)
+    _now += Duration_t{static_cast<int64_t>(realDt.count() * _scale)};
 }
 
 Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod, 
@@ -19,7 +21,7 @@ Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod
   _onTicks{onTick},
   _tickCtx{tickCtx},
   _tickerNow{0},
-  _realStopwatch{0},
+  _lastMeasureNow{0},
   _tickPeriod{tickPeriod},
   _tickPeriodSeconds{static_cast<double>(tickPeriod.count()) / oneSecond.count()},
   _ticksDoneTotal{0},
@@ -59,33 +61,9 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
   }
 }
 
-int64_t Engine::Metronome::doTicks(Duration_t gameNow)
-{
-  int64_t ticks {0};
-  while(_lastTickNow + _tickPeriod < gameNow) {
-    _lastTickNow += _tickPeriod;
-    ++ticks;
-  }
-  _totalTicks += ticks;
-  return ticks;
-}
-
-void Engine::TPSMeter::recordTicks(Duration_t realDt, int32_t ticks)
-{
-  _timer += realDt;
-  _ticks += ticks;
-  if(_timer > oneSecond){
-    _tps = _ticks;
-    _ticks = 0;
-    _timer = Duration_t::zero();
-  }
-}
-
 void Engine::initialize(std::unique_ptr<Application> app)
 {
   subsys::log = std::make_unique<Log>();
-
-  _app = std::move(app);
 
   if(!_config.load(Config::filename))
     _config.write(Config::filename); // generate a default file if one doesn't exist.
@@ -98,7 +76,7 @@ void Engine::initialize(std::unique_ptr<Application> app)
   _logicTicker = Ticker{
     &onLogicTick, 
     this, 
-    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)},
+    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)}, // 60Hz tick rate.
     5,
     true
   };
@@ -106,10 +84,13 @@ void Engine::initialize(std::unique_ptr<Application> app)
   _drawTicker = Ticker{
     &onDrawTick, 
     this, 
-    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)},
+    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)}, // 60Hz tick rate.
     1,
     false
   };
+
+  _app = std::move(app);
+  _app->initialize(this, windowSize._x, windowSize._y);
 
   std::stringstream ss {};
   ss << _app->getName() 
@@ -135,9 +116,7 @@ void Engine::initialize(std::unique_ptr<Application> app)
   Assets::Manifest_t manifest {{engineFontKey, engineFontName, engineFontScale}};
   assets->loadFonts(manifest);
 
-  Vector2i windowSize = nomad::renderer->getWindowSize();
-
-  _app->initialize(this, windowSize._x, windowSize._y);
+  Vector2i windowSize = pxr::renderer->getWindowSize();
 
   _frameNo = 0;
   _isSleeping = true;
@@ -293,14 +272,14 @@ void Engine::onUpdateTick(Duration_t gameNow, Duration_t gameDt, Duration_t real
 {
   double now = durationToSeconds(gameNow);
   _app->onUpdate(now, tickDt);
-  nomad::input->onUpdate();
+  pxr::input->onUpdate();
 }
 
 void Engine::onDrawTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt, float tickDt)
 {
   // TODO - temp - clear the game viewport only in the game and menu states - only clear window
   // when toggle perf stats
-  nomad::renderer->clearWindow(colors::gainsboro);
+  pxr::renderer->clearWindow(colors::gainsboro);
 
   double now = durationToSeconds(gameNow);
 
@@ -312,7 +291,7 @@ void Engine::onDrawTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt
   if(_isDrawingPerformanceStats)
     drawPerformanceStats(realDt, gameDt);
 
-  nomad::renderer->show();
+  pxr::renderer->show();
 }
 
 double Engine::durationToMilliseconds(Duration_t d)
@@ -330,5 +309,5 @@ double Engine::durationToMinutes(Duration_t d)
   return static_cast<double>(d.count()) / static_cast<double>(oneMinute.count());
 }
 
-} // namespace nomad
+} // namespace pxr
 

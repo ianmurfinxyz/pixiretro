@@ -1,0 +1,27 @@
+- finish screen redesign - implement alpha blending of screen stacks - use the opengl 
+  alpha test with a threshold of 255 and the less than function (see chapter 11 of red book).
+  To do this simply need to enable the alpha test with the required threshold and function via
+  a single opengl call. Will want to disable all blending (see chapter 6 of red book) since
+  blending is for blending the fragments, I only want to reject fragments based on alpha values
+  not blend them since my games are 80s pixel games which had no blending.
+
+- implement a screen stack class? note that each layer doesn't have to be the same size or 
+  even have the same size pixels, since I would just be drawing each screen in the window in
+  the order of the stack (painting algorithm). Can use stack layers like:
+      1) background
+      2) actors
+      3) ui
+      4) debug info
+  this seperation allows me to limit manipulation of the screen buffers at the cost of needing
+  more buffers. It allows me to draw a static background once in the background screen buffer 
+  and then render it to the screen each draw tick (it is manipulating the screen buffer which is
+  slow; the rendering is fast ~40-100us on my computer).
+
+- implement gfx resources classes (fonts, bitmaps, sprites, tilesets etc) and implement drawing
+  functions on the virtual screen for them.
+
+- want to load fonts from file (xml font file loaded with tinyxml) and load bitmaps (including
+  the font glyph bitmap genned with genbitmap windows program)
+    http://www.angelcode.com/products/bmfont/
+  from file. Thus incorporate my bitmap loader into the engine and the image class. Will want
+  to convert the image class into bitmaps and sprites depending on the bpp.

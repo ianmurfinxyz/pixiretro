@@ -1,163 +1,10 @@
-// Bits in the bitmap are accessible via a [row][col] position mapped to screen space like:
-//
-//          row                               
-//           ^
-//           |                              y
-//         7 | | | |█|█| | | |              ^
-//         6 | | |█|█|█|█| | |              |      screen-space
-//         5 | |█|█|█|█|█|█| |              |         axes
-//         4 |█|█| |█|█| |█|█|       ==>    |
-//         3 |█|█|█|█|█|█|█|█|              |
-//         2 | | |█| | |█| | |              +----------> x
-//         1 | |█| |█|█| |█| |
-//         0 |█| |█| | |█| |█|           i.e bit[0][0] is the bottom-left most bit.
-//           +-----------------> col
-//            0 1 2 3 4 5 6 7
-//
-// Thus the bitmap can be considered to be a coordinate space in which the origin is the bottom-
-// left most pixel of the bitmap.
+#ifndef _GFX_H_
+#define _GFX_H_
 
-class Bitmap final
+#include "color.h"
+
+namespace pxr
 {
-  friend Assets;
-
-public:
-  Bitmap(const Bitmap&) = default;
-  Bitmap(Bitmap&&) = default;
-  Bitmap& operator=(const Bitmap&) = default;
-  Bitmap& operator=(Bitmap&&) = default;
-  ~Bitmap() = default;
-
-  bool getBit(int32_t row, int32_t col) const;
-  int32_t getWidth() const {return _width;}
-  int32_t getHeight() const {return _height;}
-  const std::vector<uint8_t>& getBytes() const {return _bytes;}
-
-  void setBit(int32_t row, int32_t col, bool value, bool regen = true);
-  void setRect(int32_t rowMin, int32_t colMin, int32_t rowMax, int32_t colMax, bool value, bool regen = true);
-  
-  void regenerateBytes();
-
-  bool isEmpty();
-  bool isApproxEmpty(int32_t threshold);
-
-  void print(std::ostream& out) const;
-
-private:
-  Bitmap() = default;
-
-  void initialize(std::vector<std::string> bits, int32_t scale = 1);
-
-private:
-  std::vector<std::vector<bool>> _bits;  // used for bit manipulation ops - indexed [row][col]
-  std::vector<uint8_t> _bytes;           // used for rendering
-  int32_t _width;
-  int32_t _height;
-};
-
-struct Glyph // note -- cannot nest in font as it needs to be forward declared.
-{
-  Bitmap _bitmap;
-  int32_t _asciiCode;
-  int32_t _offsetX;
-  int32_t _offsetY;
-  int32_t _advance;
-  int32_t _width;
-  int32_t _height;
-};
-
-class Font
-{
-  friend class Assets;
-
-public:
-  struct Meta
-  {
-    int32_t _lineSpace;
-    int32_t _wordSpace;
-    int32_t _glyphSpace;
-    int32_t _size;
-  };
-
-public:
-  Font(const Font&) = default;
-  Font(Font&&) = default;
-  Font& operator=(const Font&) = default;
-  Font& operator=(Font&&) = default;
-
-  const Glyph& getGlyph(char c) const {return _glyphs[static_cast<int32_t>(c - '!')];}
-  int32_t getLineSpace() const {return _meta._lineSpace;}
-  int32_t getWordSpace() const {return _meta._wordSpace;}
-  int32_t getGlyphSpace() const {return _meta._glyphSpace;}
-  int32_t getSize() const {return _meta._size;}
-
-  int32_t calculateStringWidth(const std::string& str) const;
-
-private:
-  Font() = default;
-  void initialize(Meta meta, std::vector<Glyph> glyphs);
-
-
-private:
-  std::vector<Glyph> _glyphs;
-  Meta _meta;
-};
-
-class Color3f
-{
-  constexpr static float lo {0.f};
-  constexpr static float hi {1.f};
-
-public:
-  Color3f() : _r{0.f}, _g{0.f}, _b{0.f}{}
-
-  constexpr Color3f(float r, float g, float b) : 
-    _r{std::clamp(r, lo, hi)},
-    _g{std::clamp(g, lo, hi)},
-    _b{std::clamp(b, lo, hi)}
-  {}
-
-  Color3f(const Color3f&) = default;
-  Color3f(Color3f&&) = default;
-  Color3f& operator=(const Color3f&) = default;
-  Color3f& operator=(Color3f&&) = default;
-
-  float getRed() const {return _r;}
-  float getGreen() const {return _g;}
-  float getBlue() const {return _b;}
-  void setRed(float r){_r = std::clamp(r, lo, hi);}
-  void setGreen(float g){_g = std::clamp(g, lo, hi);}
-  void setBlue(float b){_b = std::clamp(b, lo, hi);}
-
-private:
-  float _r;
-  float _g;
-  float _b;
-};
-
-namespace colors
-{
-constexpr Color3f white {1.f, 1.f, 1.f};
-constexpr Color3f black {0.f, 0.f, 0.f};
-constexpr Color3f red {1.f, 0.f, 0.f};
-constexpr Color3f green {0.f, 1.f, 0.f};
-constexpr Color3f blue {0.f, 0.f, 1.f};
-constexpr Color3f cyan {0.f, 1.f, 1.f};
-constexpr Color3f magenta {1.f, 0.f, 1.f};
-constexpr Color3f yellow {1.f, 1.f, 0.f};
-
-// greys - more grays: https://en.wikipedia.org/wiki/Shades_of_gray 
-
-constexpr Color3f gainsboro {0.88f, 0.88f, 0.88f};
-constexpr Color3f lightgray {0.844f, 0.844f, 0.844f};
-constexpr Color3f silver {0.768f, 0.768f, 0.768f};
-constexpr Color3f mediumgray {0.76f, 0.76f, 0.76f};
-constexpr Color3f spanishgray {0.608f, 0.608f, 0.608f};
-constexpr Color3f gray {0.512f, 0.512f, 0.512f};
-constexpr Color3f dimgray {0.42f, 0.42f, 0.42f};
-constexpr Color3f davysgray {0.34f, 0.34f, 0.34f};
-constexpr Color3f jet {0.208f, 0.208f, 0.208f};
-};
 
 class Renderer
 {
@@ -194,3 +41,178 @@ private:
 };
 
 extern std::unique_ptr<Renderer> renderer;
+
+class Renderer
+{
+public:
+  struct Config
+  {
+    std::string _windowTitle;
+    int32_t _windowWidth;
+    int32_t _windowHeight;
+  };
+
+public:
+  Renderer(const Config& config);
+  Renderer(const Renderer&) = delete;
+  Renderer* operator=(const Renderer&) = delete;
+  ~Renderer();
+  void setViewport(iRect viewport);
+  void clearWindow(const Color4& color);
+  void clearViewport(const Color4& color);
+  void drawPixelArray(int first, int count, void* pixels, int pixelSize);
+  void show();
+  Vector2i getWindowSize() const;
+
+private:
+  static constexpr int openglVersionMajor = 2;
+  static constexpr int openglVersionMinor = 1;
+
+private:
+  SDL_Window* _window;
+  SDL_GLContext _glContext;
+  Config _config;
+  iRect _viewport;
+};
+
+// A virtual screen with resolution independent of display resolution and window size.
+//
+// Pixels on the screen are arranged on a coordinate system with the origin in the bottom left
+// most corner, rows ascending north and columns ascending east as shown below.
+//
+//         row
+//          ^
+//          |
+//          |
+//   origin o----> col
+//
+// Although the resolution of the virtual screen is fixed, the size of each virtual pixel on 
+// the real screen is variable and controlled by the scale mode. The size of virtual pixels are 
+// always integer multiples of real pixels however. It is thus posible the virtual screen does
+// not occupy all space on the real screen (in the window). The position mode controls the
+// position of the virtual screen in the window and thus also the position of any empty space.
+//
+// A screen can be clamped to a corner of the window or centrally aligned. When centrally
+// aligned empty space will be distibuted evenly around the virtual screen.
+//
+// Screens have two color modes: full-color and y-banded. In full-color mode pixel colors are 
+// set via the drawing functions, or taken from the gfx resource (sprites, bitmaps etc). In 
+// y-banded mode the color of a pixel is determined by its y-axis position which determines the
+// color band in which the pixel resides. This mode is designed specifically to create the 
+// drawing effect seen in classic space invaders (part I and II).
+//
+// The Screen is designed to be used within a stack of screens where each member represents
+// a drawing layer. The layers are then drawn in their stacking order. Thus screens do not 
+// support transparency on the screen level but do support it on the stack level. Any pixel 
+// drawn to a screen is considered fully transparent if its alpha==255 and fully opaque if its
+// alpha<255 on the stack level. So for example if there 2 screens on a stack, the bottom screen
+// shows a fully opaque background and the top screen has only pixels with alpha==255, when the
+// stack is drawn only the bottom screen will contribute to the final image. If the top screen 
+// was fully transparent except for a red square in a corner. The final image will show the
+// background with a red square in a corner. However drawing to the same place on the same 
+// screen will not perform any alpha blending. All drawing to a screen overwrites all pixels
+// that occupy that space.
+//
+class Screen
+{
+public:
+  // Pixels fall inside a color band i if their y-axis position is greater than the end of
+  // the band i-1 and less than the end of the band i. Color bands form an ordered set with
+  // bands ascending from lower y-axis ranges to higher.
+  struct ColorBand
+  {
+    int _positionEnd; 
+    Color4 color;
+  };
+
+public:
+  Screen(Vector2i windowSize, Vector2i screenSize);
+
+  ~Screen() = default;
+
+  // slow clear but allows any color.
+  void clearColor(const Color4& color);
+
+  // fast clear but only allows grays or black (as all color channels equal). Value is
+  // clamped to range [0, 255] inclusive. Clearing to a value==255 (i.e. white) is equivilent 
+  // to calling 'clearTransparent'.
+  void clearShade(uint8_t value);
+
+  // clears all pixels to full transparency.
+  void clearTransparent();
+
+  void drawPixel(int x, int y, const Color4& color);
+  void drawSprite(int x, int y, const Sprite& sprite);
+  //void drawBitmap(int x, int y, const Bitmap& bitmap);
+  //void drawBitmap(int x, int y, const Bitmap& bitmap);
+  //void drawText(int x, int y, std::string text, const Font& font);
+
+  // must be called when the window size changes so the screen can update its
+  // position and pixel size.
+  void onWindowResize(Vector2i windowSize);
+
+  // render the virual screen on the real screen.
+  void render();
+
+  void useManualPositioning(Vector2i screenPosition);
+  void useCentralPositioning();
+  void useTopLeftPositioning();
+  void useTopRightPositioning();
+  void useBottomLeftPositioning();
+  void useBottomRightPositioning();
+
+  void useBandedColors(std::vector<ColorBands> bands);
+  void useFullColors();
+
+  void useManualScaling(int pixelScale);
+  void useAutoScaling();
+  void useNoScaling();
+
+private:
+  enum class PositionMode
+  {
+    MANUAL,              // manually set screen position w.r.t the window.
+    CENTER,              // center align the screen in the window.
+    TOP_LEFT,            // clamp screen to the top-left of the window.
+    TOP_RIGHT,           // clamp screen to the top-right of the window.
+    BOTTOM_LEFT,         // clamp screen to the bottom-left of the window.
+    BOTTOM_RIGHT         // clamp screen to the bottom-right of the window.
+  };
+
+  enum class ScaleMode
+  {
+    MANUAL,              // manually assign pixel scale.
+    AUTO_MAX,            // maximise pixel scale to fit window. 
+    NONE                 // no scale; ratio of screen pixel to display pixel = 1:1.
+  };
+
+  enum class ColorMode
+  {
+    FULL_COLOR,          // Pixels can take any color.
+    Y_BANDED             // The y-axis is split into color bands; pixel color dependent on position.
+  };
+
+  // 12 byte pixels designed to work with glInterleavedArrays format GL_C4UB_V2F (opengl 3.0).
+  struct Pixel
+  {
+    Pixel() : _color{}, _x{0}, _y{0}{}
+
+    Color4u _color;
+    float _x;
+    float _y;
+  };
+
+private:
+  std::vector<Pixel> _pixels;     // flattened 2D array accessed (col + (row * width)).
+  std::vector<ColorBand> _bands;  // ordered set of color bands.
+  Vector2i _position;             // position of virtual screen w.r.t the window.
+  Vector2i _screenSize;           // width,height of screen in pixels.
+  PositionMode _pmode;
+  ScaleMode _smode;
+  ColorMode _cmode;
+  int _pixelSize;
+};
+
+} // namespace pxr
+
+#endif
