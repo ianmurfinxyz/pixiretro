@@ -7,6 +7,44 @@ namespace pxr
 {
 namespace gfx
 {
+//----------------------------------------------------------------------------------------------//
+// GFX RESOURCES                                                                                //
+//----------------------------------------------------------------------------------------------//
+
+// A unique key to identify a gfx resource. If 2 resources use the same key only the first
+// encountered will be loaded. It is left to clients of this module to ensure uniqueness. Keys
+// must only be unique for each type of resource however. A font and a sprite can use the same
+// key without issue.
+using ResourceKey_t = int;
+
+// A resource name is the name of the data files for that resource. For example, a sprite called
+// 'alien', will be expected to have an associated file on disk called 'alien.bmp'. A font called
+// 'space' will be expected to have associated files: 'space.font' and 'space.bmp'.
+using ResourceName_t = const char*;
+
+// A manifest contains a list of resource to load via a load* function.
+using ResourceManifest_t = std::vector<std::pair<ResourceKey_t, ResourceName_t>>;
+
+// Resource loading functions can be called before or after gfx module initialisation.
+
+// Loads all sprites listed in the manifest. Upon successful loading sprites can be drawn to 
+// a layer via the 'drawSprite' function which takes the ResourceKey_t for the sprite to be
+// drawn. Sprites are managed internally by the gfx module, clients of this module need only
+// the resource key to use the sprite once loaded.
+//
+// Returns true upon successfully loading all resources in the manifest, else false.
+bool loadSprites(const ResourceManifest_t& manifest);
+
+// Loads all fonts listed in the manifest. Successfully loaded fonts can be used in 'drawText'
+// calls. Fonts are managed interally by the gfx module, clients of this module need only the
+// resource key to use the font once loaded.
+//
+// Returns true upon successfully loading all resources in the manifest, else false.
+bool loadFonts(const ResourceManifest_t& manifest);
+
+//----------------------------------------------------------------------------------------------//
+// GFX DRAWING                                                                                  //
+//----------------------------------------------------------------------------------------------//
 
 // Enumeration of all available rendering layers for use in draw calls.
 //
@@ -71,11 +109,15 @@ enum Layer
 //                     position on the layer being drawn to. The bands set the colors mapped
 //                     to each position. Color arguments in draw calls are ignored.
 //
+//      BITMAPS      - all pixels drawn adopt the 'bitmap color' set with a call to 
+//                     'setBitmapColor'. Color arguments in draw calls are ignored. The default
+//                     color is white.
 enum class ColorMode
 {
   FULL_RGB,
   YAXIS_BANDED,
-  XAXIS_BANDED
+  XAXIS_BANDED,
+  BITMAPS
 };
 
 // The pixel size mode controls the size of the pixels of a layer. Minimum pixel size is 1, the
@@ -151,8 +193,9 @@ struct Configuration
   bool _fullscreen;
 };
 
-// Initializes the rendering subsystem. Returns true if success and false if fatal error. Upon
-// returning false calls to other rendering functions have undefined results.
+// Initializes the gfx subsystem. Returns true if success and false if fatal error. Upon
+// returning false calls to other drawing functions have undefined results. Must be called
+// prior to any drawing functions.
 bool initialize(Config config);
 
 // Must be called whenever the window resizes to update layer positions, virtual pixel sizes, 
@@ -190,6 +233,8 @@ void present();
 // Sets the color mode for a specific rendering layer. Changes in color mode only effect future
 // draw calls; the pixels on the layer are not changed by this call. If setting a color banding
 // mode use 'setLayerColorBands' to configure the bands. By default there is a single white band.
+// Changing the color mode is a fast operation allowing drawing to be performed in multipe color
+// modes.
 void setLayerColorMode(ColorMode mode, Layer layer);
 
 // Sets the method of determining the virtual pixel size of a layer. Has immediate effect.
@@ -218,6 +263,10 @@ void setLayerPixelSize(Layer layer);
 // - Bands are only used if the layer is in a color banding mode, use 'setLayerColorMode' to
 //   enable a banding mode.
 void setLayerColorBands(std::vector<ColorBand> bands, Layer layer);
+
+// Sets the color used by all draw calls (for all pixels). Has no effect if the the layer is
+// not in the BITMAPS color mode. Default color is white.
+void setBitmapColor(Color4u color);
 
 } // namespace gfx
 } // namespace pxr

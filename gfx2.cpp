@@ -5,6 +5,8 @@
 
 #include "gfx.h"
 #include "math.h"
+#include "color.h"
+#include "bmpimage.h"
 
 namespace pxr
 {
@@ -38,6 +40,12 @@ struct Screen
   int _pixelSize;
 };
 
+struct Sprite
+{
+  std::vector<VPixel> _pixels; // flattened 2D array accessed [col + (row * width)]
+  Vector2i _size;              // x(num cols) and y(num rows) dimensions of sprite.
+};
+
 static constexpr int openglVersionMajor = 3;
 static constexpr int openglVersionMinor = 0;
 static constexpr int alphakey = 0;
@@ -48,11 +56,12 @@ static SDL_GLContext _glContext;
 static iRect _viewport;
 static Vector2i _windowSize;
 static std::array<Screen, LAYER_COUNT> _screens;
+static Color4u _bitmapColor;
 static int _minPixelSize;
 static int _maxPixelSize;
 
-// Recalculate screen position, pixel sizes, pixel positions etc to a change in window size,
-// display resolution or screen mode attributes.
+// Recalculate screen position, pixel sizes, pixel positions etc to a account for a change in 
+// window size, display resolution or screen mode attributes.
 static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
 {
   // recalculate pixel size.
