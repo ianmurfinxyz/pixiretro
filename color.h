@@ -53,25 +53,25 @@ private:
 
 namespace colors
 {
-  constexpr Color4u white {255, 255, 255, 0};
-  constexpr Color4u black {0, 0, 0, 0};
-  constexpr Color4u red {255, 0, 0, 0};
-  constexpr Color4u green {0, 255, 0, 0};
-  constexpr Color4u blue {0, 0, 255, 0};
-  constexpr Color4u cyan {0, 255, 255, 0};
-  constexpr Color4u magenta {255, 0, 255, 0};
-  constexpr Color4u yellow {255, 255, 0, 0};
+  constexpr Color4u white {255, 255, 255, 255};
+  constexpr Color4u black {0, 0, 0, 255};
+  constexpr Color4u red {255, 0, 0, 255};
+  constexpr Color4u green {0, 255, 0, 255};
+  constexpr Color4u blue {0, 0, 255, 255};
+  constexpr Color4u cyan {0, 255, 255, 255};
+  constexpr Color4u magenta {255, 0, 255, 255};
+  constexpr Color4u yellow {255, 255, 0, 255};
   
   // greys - more grays: https://en.wikipedia.org/wiki/Shades_of_gray 
   
-  constexpr Color4u gainsboro {224, 224, 224, 0};
-  constexpr Color4u lightgray {215, 215, 215, 0};
-  constexpr Color4u silver {196, 196, 196, 0};
-  constexpr Color4u spanishgray {155, 155, 155, 0};
-  constexpr Color4u gray {131, 131, 131, 0};
-  constexpr Color4u dimgray {107, 107, 107, 0};
-  constexpr Color4u davysgray {87, 87, 87, 0};
-  constexpr Color4u jet {53, 53, 53, 0};
+  constexpr Color4u gainsboro {224, 224, 224, 255};
+  constexpr Color4u lightgray {215, 215, 215, 255};
+  constexpr Color4u silver {196, 196, 196, 255};
+  constexpr Color4u spanishgray {155, 155, 155, 255};
+  constexpr Color4u gray {131, 131, 131, 255};
+  constexpr Color4u dimgray {107, 107, 107, 255};
+  constexpr Color4u davysgray {87, 87, 87, 255};
+  constexpr Color4u jet {53, 53, 53, 255};
 };
 
 } // namespace pxr

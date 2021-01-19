@@ -1,6 +1,7 @@
 #ifndef _GFX_H_
 #define _GFX_H_
 
+#include <memory>
 #include "color.h"
 
 namespace pxr
@@ -40,7 +41,9 @@ private:
   iRect _viewport;
 };
 
-extern std::unique_ptr<Renderer> renderer;
+//----------------------------------------------------------------------------------------------//
+// RENDERER                                                                                     //
+//----------------------------------------------------------------------------------------------//
 
 class Renderer
 {
@@ -64,6 +67,8 @@ public:
   void show();
   Vector2i getWindowSize() const;
 
+  int queryMaxPixelSize();
+
 private:
   static constexpr int openglVersionMajor = 2;
   static constexpr int openglVersionMinor = 1;
@@ -74,6 +79,10 @@ private:
   Config _config;
   iRect _viewport;
 };
+
+//----------------------------------------------------------------------------------------------//
+// SCREEN                                                                                       //
+//----------------------------------------------------------------------------------------------//
 
 // A virtual screen with resolution independent of display resolution and window size.
 //
@@ -87,13 +96,13 @@ private:
 //   origin o----> col
 //
 // Although the resolution of the virtual screen is fixed, the size of each virtual pixel on 
-// the real screen is variable and controlled by the scale mode. The size of virtual pixels are 
+// the real screen is variable and controlled by the size mode. The size of virtual pixels are 
 // always integer multiples of real pixels however. It is thus posible the virtual screen does
 // not occupy all space on the real screen (in the window). The position mode controls the
 // position of the virtual screen in the window and thus also the position of any empty space.
-//
 // A screen can be clamped to a corner of the window or centrally aligned. When centrally
-// aligned empty space will be distibuted evenly around the virtual screen.
+// aligned empty space will be distibuted evenly around the virtual screen. Pixel sizes cannot
+// be smaller than 1 and have a limit defined by the opengl implementation used.
 //
 // Screens have two color modes: full-color and y-banded. In full-color mode pixel colors are 
 // set via the drawing functions, or taken from the gfx resource (sprites, bitmaps etc). In 
@@ -112,13 +121,12 @@ private:
 // background with a red square in a corner. However drawing to the same place on the same 
 // screen will not perform any alpha blending. All drawing to a screen overwrites all pixels
 // that occupy that space.
-//
 class Screen
 {
 public:
   // Pixels fall inside a color band i if their y-axis position is greater than the end of
-  // the band i-1 and less than the end of the band i. Color bands form an ordered set with
-  // bands ascending from lower y-axis ranges to higher.
+  // the band i-1 and less than or equal to the end of the band i. Color bands form an ordered 
+  // set with bands ascending from lower y-axis ranges to higher.
   struct ColorBand
   {
     int _positionEnd; 
@@ -127,8 +135,12 @@ public:
 
 public:
   Screen(Vector2i windowSize, Vector2i screenSize);
-
   ~Screen() = default;
+
+  Screen(const Screen&) = default;
+  Screen(Screen&&) = default;
+  Screen& operator=(const Screen&) = default;
+  Screen& operator=(Screen&&) = default;
 
   // slow clear but allows any color.
   void clearColor(const Color4& color);
@@ -136,7 +148,7 @@ public:
   // fast clear but only allows grays or black (as all color channels equal). Value is
   // clamped to range [0, 255] inclusive. Clearing to a value==255 (i.e. white) is equivilent 
   // to calling 'clearTransparent'.
-  void clearShade(uint8_t value);
+  void clearShade(int value);
 
   // clears all pixels to full transparency.
   void clearTransparent();
@@ -155,18 +167,19 @@ public:
   void render();
 
   void useManualPositioning(Vector2i screenPosition);
-  void useCentralPositioning();
+  void useCenterPositioning();
   void useTopLeftPositioning();
   void useTopRightPositioning();
   void useBottomLeftPositioning();
   void useBottomRightPositioning();
 
+  // these functions do not change any current pixels on the screen. Once a change in the
+  // color mode is made only newly drawn pixels will be effected.
   void useBandedColors(std::vector<ColorBands> bands);
   void useFullColors();
 
-  void useManualScaling(int pixelScale);
-  void useAutoScaling();
-  void useNoScaling();
+  void useManualSize(int pixelSize);
+  void useAutoSize();
 
 private:
   enum class PositionMode
@@ -179,11 +192,10 @@ private:
     BOTTOM_RIGHT         // clamp screen to the bottom-right of the window.
   };
 
-  enum class ScaleMode
+  enum class SizeMode
   {
-    MANUAL,              // manually assign pixel scale.
-    AUTO_MAX,            // maximise pixel scale to fit window. 
-    NONE                 // no scale; ratio of screen pixel to display pixel = 1:1.
+    MANUAL,              // manually assign pixel size.
+    AUTO_MAX             // maximise pixel size to fit window. 
   };
 
   enum class ColorMode
@@ -207,11 +219,17 @@ private:
   std::vector<ColorBand> _bands;  // ordered set of color bands.
   Vector2i _position;             // position of virtual screen w.r.t the window.
   Vector2i _screenSize;           // width,height of screen in pixels.
+  Vector2i _windowSize;           // copy of current window size.
   PositionMode _pmode;
   ScaleMode _smode;
   ColorMode _cmode;
   int _pixelSize;
 };
+
+namespace subsys
+{
+  extern std::unique_ptr<Renderer> renderer;
+}
 
 } // namespace pxr
 

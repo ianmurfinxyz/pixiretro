@@ -1,5 +1,14 @@
 #include <cstring>
 
+namespace pxr
+{
+
+// pointers to global gfx subsystem instances.
+namespace subsys
+{
+  std::unique_ptr<Renderer> renderer {nullptr};
+}
+
 void Bitmap::initialize(std::vector<std::string> bits, int32_t scale)
   // predicate: bit strings must contain only 0's and 1's
 {
@@ -312,20 +321,21 @@ Vector2i Renderer::getWindowSize() const
   return size;
 }
 
-std::unique_ptr<Renderer> renderer {nullptr};
 
 
 Screen::Screen(Vector2i windowSize, Vector2i screenSize) :
   _pixels{},
   _bands{},
   _position{},
-  _size{screenSize},
+  _screenSize{screenSize},
+  _windowSize{windowSize},
   _pmode{PositionMode::CENTER},
-  _smode{ScaleMode::AUTO_MAX},
+  _smode{SizeMode::AUTO_MAX},
   _cmode{ColorMode::FULL_COLOR},
   _pixelSize{}
 {
   _pixels.resize(screenSize._x * screenSize._y);
+  clearTransparent();
   onWindowResize(windowSize);
 }
 
@@ -384,7 +394,7 @@ void Screen::drawSprite(int x, int y, const Sprite& sprite)
 void Screen::onWindowResize(Vector2i windowSize)
 {
   // recalculate pixel size.
-  if(smode == ScaleMode::AUTO_MAX){
+  if(smode == SizeMode::AUTO_MAX){
     // note: integer math here thus all division results are implicitly floored as required.
     int pxw = windowSize._x / _screenSize._x;  
     int pxh = windowSize._y / _screenSize._y;
@@ -434,15 +444,75 @@ void Screen::onWindowResize(Vector2i windowSize)
       pixel._y = _position._y + (row * _pixelSize) + pixelCenterOffset;
     }
   }
+
+  _windowSize = windowSize;
 }
 
 void Screen::render()
 {
-  auto now0 = std::chrono::high_resolution_clock::now();
-  sk::renderer->drawPixelArray(0, pixelCount, static_cast<void*>(_pixels.data()), _pixelSize);
-  auto now1 = std::chrono::high_resolution_clock::now();
-  std::cout << "Screen::render execution time (us): "
-            << std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0).count()
-            << std::endl;
+  sk::renderer->drawPixelArray(0, _pixels.size(), static_cast<void*>(_pixels.data()), _pixelSize);
 }
 
+void Screen::useManualPositioning(Vector2i screenPosition)
+{
+  _pmode = PositionMode::MANUAL;
+  _position = screenPosition;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useCenterPositioning()
+{
+  _pmode = PositionMode::CENTER;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useTopLeftPositioning()
+{
+  _pmode = PositionMode::TOP_LEFT;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useTopRightPositioning()
+{
+  _pmode = PositionMode::TOP_RIGHT;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useBottomLeftPositioning()
+{
+  _pmode = PositionMode::BOTTOM_LEFT;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useBottomRightPositioning()
+{
+  _pmode = PositionMode::BOTTOM_RIGHT;
+  onWindowResize(_windowSize);
+}
+
+void Screen::useBandedColors(std::vector<ColorBands> bands)
+{
+  _cmode = ColorMode::Y_BANDED;
+  _bands = std::move(bands);
+}
+
+void Screen::useFullColors()
+{
+  _cmode = ColorMode::FULL_COLOR;
+  _bands.clear();
+}
+
+void Screen::useManualSize(int pixelSize)
+{
+  _smode = SizeMode::MANUAL;
+  _pixelSize = std::min(std::max(0, pixelSize), pxr::renderer->queryMaxPixelSize());
+  onWindowResize(_windowSize);
+}
+
+void Screen::useAutoSize()
+{
+  _smode = SizeMode::AUTO_MAX;
+  onWindowResize(_windowSize);
+}
+
+} // namespace pxr
