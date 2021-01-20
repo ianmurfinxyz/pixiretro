@@ -11,6 +11,9 @@ namespace gfx
 // GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
 
+// Directory where this module expects to find sprite resources when loading.
+constexpr const char* spritesdir = "assets/sprites/";
+
 // A unique key to identify a gfx resource. If 2 resources use the same key only the first
 // encountered will be loaded. It is left to clients of this module to ensure uniqueness. Keys
 // must only be unique for each type of resource however. A font and a sprite can use the same
@@ -19,10 +22,11 @@ using ResourceKey_t = int;
 
 // A resource name is the name of the data files for that resource. For example, a sprite called
 // 'alien', will be expected to have an associated file on disk called 'alien.bmp'. A font called
-// 'space' will be expected to have associated files: 'space.font' and 'space.bmp'.
+// 'space' will be expected to have associated files: 'space.font' and 'space.bmp'. The names
+// must not include the directory path to the resource.
 using ResourceName_t = const char*;
 
-// A manifest contains a list of resource to load via a load* function.
+// A manifest contains a list of resources to load via a 'load*' function.
 using ResourceManifest_t = std::vector<std::pair<ResourceKey_t, ResourceName_t>>;
 
 // Resource loading functions can be called before or after gfx module initialisation.
@@ -81,10 +85,10 @@ bool loadFonts(const ResourceManifest_t& manifest);
 //
 enum Layer
 {
-  LAYER_BACKGROUND,
-  LAYER_STAGE,
-  LAYER_UI,
-  LAYER_DEBUG,
+  LAYER_BACKGROUND,        // Intended for drawing static backgrounds.
+  LAYER_STAGE,             // Intended for drawing all dynamic game objects.
+  LAYER_UI,                // Intended for drawing the HUD/UI.
+  LAYER_ENGINE_STATS,      // Reserved for use by the engine to output performance stats.
   LAYER_COUNT
 };
 
@@ -94,12 +98,21 @@ enum Layer
 //      ColorMode     = FULL_RGB
 //      PixelSizeMode = AUTO_MAX
 //      PositionMode  = CENTER
+//
+// With the exception of the LAYER_ENGINE_STATS (which is reserved for use by the engine for
+// drawing performance statistics) which has defaults:
+//      ColorMode     = FULL_RGB
+//      PixelSizeMode = AUTO_MIN
+//      PositionMode  = BOTTOM_LEFT
+//
+// DO NOT DRAW TO THE LAYER_ENGINE_STATS! YOU WILL OVERWRITE THE PERFORMANCE STATS.
 
 // The color mode controls the final color of pixels that result from all draw calls.
 //
 // The modes apply as follows:
 //
-//      FULL_RGB     - unrestricted colors; colors taken from arguments in draw call.
+//      FULL_RGB     - unrestricted colors; colors taken from arguments in draw call (a gfx 
+//                     resource argument or a direct color argument).
 //
 //      YAXIS_BANDED - restricted colors; the color of a pixel is determined by its y-axis
 //                     position on the layer being drawn to. The bands set the colors mapped
@@ -169,15 +182,18 @@ enum class PositionMode
   BOTTOM_RIGHT
 };
 
-// Color bands apply to a single axis (x or y). All pixels with x/y position
-// within the range [lo,hi) adopt the color of the band. 
+// Color bands apply to a single axis (x or y). All pixels with x/y position greater than
+// the 'hi' of a band 'i' and less than the 'hi' of the next band 'i+1' will adopt the color
+// of the band 'i+1'.
 struct ColorBand
 {
-  ColorBand() : _color{0, 0, 0, 0}, _lo{0}, _hi{0}{}
-  ColorBand(Color4u color, lo, hi) : _color{color}, _lo{lo}, _hi{hi}{}
+  ColorBand() : _color{0, 0, 0, 0}, _hi{0}{}
+  ColorBand(Color4u color, hi) : _color{color}, _hi{hi}{}
+
+  bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
+  bool operator==(const ColorBand& lhs, const ColorBand& lhs){return lhs._hi == rhs._hi;}
 
   Color4u _color;
-  int _lo;
   int _hi;
 };
 
@@ -189,7 +205,7 @@ struct Configuration
   Vector2i _backgroundLayerSize;
   Vector2i _stageLayerSize;
   Vector2i _uiLayerSize;
-  Vector2i _debugLayerSize;
+  Vector2i _engineStatsLayerSize;
   bool _fullscreen;
 };
 
@@ -209,8 +225,9 @@ void clearWindow(Color4u color);
 void clearLayer(Layer layer);
 
 // Fills a layer with a solid shade, i.e. sets all color channels of all pixels to 'shade' 
-// value. If shade == 0 this call has the same effect as 'clearLayer'. It is thus not
-// possible to fill a layer pure black.
+// value. If shade == 0 (the alpha color key) this call has the same effect as 'clearLayer'. It 
+// is thus not possible to fill a layer pure black. If you need black use RGB:1,1,1 for a very
+// close black.
 void fastFillLayer(int shade, Layer layer);
 
 // Fills a layer with a solid color, i.e. sets all pixels to said color. This is a slow 
@@ -244,25 +261,27 @@ void setLayerPixelSizeMode(PixelSizeMode mode, Layer layer);
 void setLayerPositionMode(PositionMode mode, Layer layer);
 
 // Sets the position of a layer. Has no effect if layer is not in position mode MANUAL.
-void setLayerPosition(Layer layer);
+void setLayerPosition(Vector2i position, Layer layer);
 
-// Sets the pixel size of a layer. Has no effect if the layer is not in pixel size mode MANUAL.
+// Sets the pixel size of a layer. Has no effect if the layer is not in pixel size mode MANUAL,
+// thus this function must be called after setting the layer to MANUAL mode.
 void setLayerPixelSize(Layer layer);
 
 // Sets the color bands which apply to draw calls for a layer. Has no effect if the layer is
 // not in a color banding mode.
 //
+// The append flag controls whether the argument bands replace any existing bands or add to
+// them. By default existing bands are replaced.
+//
 // The following rules apply to bands:
 // - Bands form an ordered set with elements ordered by ascending 'hi' range value. 
-// - Overlapping bands are clipped by clamping the lo value of band 'i+1' to the hi value of 
-//   band 'i'. 
-// - If multiple bands have equal hi values, the first band encountered in arg 'bands' takes 
-//   precedence; all others rejected.
-// - All bands are clipped to the size of the layer, thus valid [lo,hi) ranges are between
-//   0 and layer x/y size.
+// - If multiple bands have equal hi values, one of the bands will be removed but no guarantees
+//   are made as to which one.
 // - Bands are only used if the layer is in a color banding mode, use 'setLayerColorMode' to
 //   enable a banding mode.
-void setLayerColorBands(std::vector<ColorBand> bands, Layer layer);
+// - Switching a layer between banding and non-banding modes does not change previously set
+//   bands.
+void setLayerColorBands(std::vector<ColorBand> bands, Layer layer, bool append = false);
 
 // Sets the color used by all draw calls (for all pixels). Has no effect if the the layer is
 // not in the BITMAPS color mode. Default color is white.
