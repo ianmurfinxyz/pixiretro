@@ -10,7 +10,7 @@ public:
   Engine() = default;
   ~Engine() = default;
 
-  void initialize(std::unique_ptr<Application> app);
+  void initialize(std::unique_ptr<App> app);
   void shutdown();
   void run();
 
@@ -116,9 +116,7 @@ private:
       //    key               name        default   min      max
       {KEY_WINDOW_WIDTH,  "windowWidth",  {500},   {300},   {1000}},
       {KEY_WINDOW_HEIGHT, "windowHeight", {500},   {300},   {1000}},
-      {KEY_FULLSCREEN,    "fullscreen",   {false}, {false}, {true}},
-      {KEY_OPENGL_MAJOR,  "openglMajor",  {2},     {2},     {2},  },
-      {KEY_OPENGL_MINOR,  "openglMinor",  {1},     {1},     {1},  }
+      {KEY_FULLSCREEN,    "fullscreen",   {false}, {false}, {true}}
     }){}
   };
 
@@ -145,7 +143,7 @@ private:
   float _measuredFrameFrequency;
   Duration_t _lastFrameMeasureNow;
 
-  std::unique_ptr<Application> _app;
+  std::unique_ptr<App> _app;
 
   bool _isDrawingPerformanceStats;
   bool _isDone;

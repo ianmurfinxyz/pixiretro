@@ -61,7 +61,7 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
   }
 }
 
-void Engine::initialize(std::unique_ptr<Application> app)
+void Engine::initialize(std::unique_ptr<App> app)
 {
   subsys::log = std::make_unique<Log>();
 
@@ -90,7 +90,7 @@ void Engine::initialize(std::unique_ptr<Application> app)
   };
 
   _app = std::move(app);
-  _app->initialize(this, windowSize._x, windowSize._y);
+  _app->onInit();
 
   std::stringstream ss {};
   ss << _app->getName() 
@@ -98,6 +98,10 @@ void Engine::initialize(std::unique_ptr<Application> app)
      << _app->getVersionMajor() 
      << "." 
      << _app->getVersionMinor();
+
+  gfx::Configuration gfxconfig {};
+  gfxconfig._windowTitle = std::string{ss.str()};
+  gfxconfig._windowSize = 
 
   Renderer::Config rconfig {
     std::string{ss.str()},
