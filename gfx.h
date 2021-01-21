@@ -1,236 +1,293 @@
 #ifndef _GFX_H_
 #define _GFX_H_
 
-#include <memory>
 #include "color.h"
 
 namespace pxr
 {
-
-class Renderer
+namespace gfx
 {
-public:
-  struct Config
-  {
-    std::string _windowTitle;
-    int32_t _windowWidth;
-    int32_t _windowHeight;
-    int32_t _openglVersionMajor;
-    int32_t _openglVersionMinor;
-    bool _fullscreen;
-  };
-  
-public:
-  Renderer(const Config& config);
-  Renderer(const Renderer&) = delete;
-  Renderer* operator=(const Renderer&) = delete;
-  ~Renderer();
-  void setViewport(iRect viewport);
-  void blitText(Vector2f position, const std::string& text, const Font& font, const Color3f& color);
-  void blitBitmap(Vector2f position, const Bitmap& bitmap, const Color3f& color);
-  void drawBorderRect(const iRect& rect, const Color3f& background, const Color& borderColor, int32_t borderWidth = 1);
-  void clearWindow(const Color3f& color);
-  void clearViewport(const Color3f& color);
-  void show();
-  Vector2i getWindowSize() const;
-
-private:
-  SDL_Window* _window;
-  SDL_GLContext _glContext;
-  Config _config;
-  iRect _viewport;
-};
-
 //----------------------------------------------------------------------------------------------//
-// RENDERER                                                                                     //
+// GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
 
-class Renderer
-{
-public:
-  struct Config
-  {
-    std::string _windowTitle;
-    int32_t _windowWidth;
-    int32_t _windowHeight;
-  };
+// Directory where this module expects to find sprite resources when loading.
+constexpr const char* spritesdir = "assets/sprites/";
 
-public:
-  Renderer(const Config& config);
-  Renderer(const Renderer&) = delete;
-  Renderer* operator=(const Renderer&) = delete;
-  ~Renderer();
-  void setViewport(iRect viewport);
-  void clearWindow(const Color4& color);
-  void clearViewport(const Color4& color);
-  void drawPixelArray(int first, int count, void* pixels, int pixelSize);
-  void show();
-  Vector2i getWindowSize() const;
+// A unique key to identify a gfx resource. If 2 resources use the same key only the first
+// encountered will be loaded. It is left to clients of this module to ensure uniqueness. Keys
+// must only be unique for each type of resource however. A font and a sprite can use the same
+// key without issue.
+using ResourceKey_t = int;
 
-  int queryMaxPixelSize();
+// A resource name is the name of the data files for that resource. For example, a sprite called
+// 'alien', will be expected to have an associated file on disk called 'alien.bmp'. A font called
+// 'space' will be expected to have associated files: 'space.font' and 'space.bmp'. The names
+// must not include the directory path to the resource.
+using ResourceName_t = const char*;
 
-private:
-  static constexpr int openglVersionMajor = 2;
-  static constexpr int openglVersionMinor = 1;
+// A manifest contains a list of resources to load via a 'load*' function.
+using ResourceManifest_t = std::vector<std::pair<ResourceKey_t, ResourceName_t>>;
 
-private:
-  SDL_Window* _window;
-  SDL_GLContext _glContext;
-  Config _config;
-  iRect _viewport;
-};
+// Resource loading functions can be called before or after gfx module initialisation.
 
-//----------------------------------------------------------------------------------------------//
-// SCREEN                                                                                       //
-//----------------------------------------------------------------------------------------------//
-
-// A virtual screen with resolution independent of display resolution and window size.
+// Loads all sprites listed in the manifest. Upon successful loading sprites can be drawn to 
+// a layer via the 'drawSprite' function which takes the ResourceKey_t for the sprite to be
+// drawn. Sprites are managed internally by the gfx module, clients of this module need only
+// the resource key to use the sprite once loaded.
 //
-// Pixels on the screen are arranged on a coordinate system with the origin in the bottom left
-// most corner, rows ascending north and columns ascending east as shown below.
+// Returns true upon successfully loading all resources in the manifest, else false.
+bool loadSprites(const ResourceManifest_t& manifest);
+
+// Loads all fonts listed in the manifest. Successfully loaded fonts can be used in 'drawText'
+// calls. Fonts are managed interally by the gfx module, clients of this module need only the
+// resource key to use the font once loaded.
 //
-//         row
-//          ^
+// Returns true upon successfully loading all resources in the manifest, else false.
+bool loadFonts(const ResourceManifest_t& manifest);
+
+//----------------------------------------------------------------------------------------------//
+// GFX DRAWING                                                                                  //
+//----------------------------------------------------------------------------------------------//
+
+// Enumeration of all available rendering layers for use in draw calls.
+//
+// A rendering layer is conceptualised as a virtual screen of fixed resolution independent of
+// window size or display resolution. The purpose of these virtual screens is to permit the
+// development of display resolution dependent games e.g. space invaders which has a fixed
+// world size of 224x256 pixels. Virtual screens allow the game logic to be programmed as if
+// the screen has a fixed resolution.
+//
+// Layers use a 2D cartesian coordinate space with the origin in the bottom-left, y-axis
+// ascening up the window and x-axis ascending rightward in the window.
+//
+//          y
+//          ^     [layer coordinate space]
 //          |
-//          |
-//   origin o----> col
+//  origin  o--> x
 //
-// Although the resolution of the virtual screen is fixed, the size of each virtual pixel on 
-// the real screen is variable and controlled by the size mode. The size of virtual pixels are 
-// always integer multiples of real pixels however. It is thus posible the virtual screen does
-// not occupy all space on the real screen (in the window). The position mode controls the
-// position of the virtual screen in the window and thus also the position of any empty space.
-// A screen can be clamped to a corner of the window or centrally aligned. When centrally
-// aligned empty space will be distibuted evenly around the virtual screen. Pixel sizes cannot
-// be smaller than 1 and have a limit defined by the opengl implementation used.
+// The size ratio between a layer pixel and a real display pixel is controlled by the pixel 
+// size mode (see modes below).
 //
-// Screens have two color modes: full-color and y-banded. In full-color mode pixel colors are 
-// set via the drawing functions, or taken from the gfx resource (sprites, bitmaps etc). In 
-// y-banded mode the color of a pixel is determined by its y-axis position which determines the
-// color band in which the pixel resides. This mode is designed specifically to create the 
-// drawing effect seen in classic space invaders (part I and II).
+// The color of pixels drawn to a layer is controlled by the color mode.
 //
-// The Screen is designed to be used within a stack of screens where each member represents
-// a drawing layer. The layers are then drawn in their stacking order. Thus screens do not 
-// support transparency on the screen level but do support it on the stack level. Any pixel 
-// drawn to a screen is considered fully transparent if its alpha==255 and fully opaque if its
-// alpha<255 on the stack level. So for example if there 2 screens on a stack, the bottom screen
-// shows a fully opaque background and the top screen has only pixels with alpha==255, when the
-// stack is drawn only the bottom screen will contribute to the final image. If the top screen 
-// was fully transparent except for a red square in a corner. The final image will show the
-// background with a red square in a corner. However drawing to the same place on the same 
-// screen will not perform any alpha blending. All drawing to a screen overwrites all pixels
-// that occupy that space.
-class Screen
+// The position of a layer w.r.t the window is controlled by the position mode (a layer may
+// not necessarily fill the entire window).
+//
+// Layers do not support color blending or alpha transparency. The alpha channel is however used
+// as a color key where an alpha = 0 is used to skip a pixel when drawing. This allows layers
+// to be actually layered rather than each layer fully obscuring the one below. A value of 0 is
+// chosen as 0 is used for full transparency by convention. Thus in image editing software such
+// as GIMP fully transparent pixels in the editor will also be so in game.
+//
+// When rendering layers are rendered to the window via the painters algorithm in the order in 
+// which they are declared in this enumeration.
+//
+enum Layer
 {
-public:
-  // Pixels fall inside a color band i if their y-axis position is greater than the end of
-  // the band i-1 and less than or equal to the end of the band i. Color bands form an ordered 
-  // set with bands ascending from lower y-axis ranges to higher.
-  struct ColorBand
-  {
-    int _positionEnd; 
-    Color4 color;
-  };
-
-public:
-  Screen(Vector2i windowSize, Vector2i screenSize);
-  ~Screen() = default;
-
-  Screen(const Screen&) = default;
-  Screen(Screen&&) = default;
-  Screen& operator=(const Screen&) = default;
-  Screen& operator=(Screen&&) = default;
-
-  // slow clear but allows any color.
-  void clearColor(const Color4& color);
-
-  // fast clear but only allows grays or black (as all color channels equal). Value is
-  // clamped to range [0, 255] inclusive. Clearing to a value==255 (i.e. white) is equivilent 
-  // to calling 'clearTransparent'.
-  void clearShade(int value);
-
-  // clears all pixels to full transparency.
-  void clearTransparent();
-
-  void drawPixel(int x, int y, const Color4& color);
-  void drawSprite(int x, int y, const Sprite& sprite);
-  //void drawBitmap(int x, int y, const Bitmap& bitmap);
-  //void drawBitmap(int x, int y, const Bitmap& bitmap);
-  //void drawText(int x, int y, std::string text, const Font& font);
-
-  // must be called when the window size changes so the screen can update its
-  // position and pixel size.
-  void onWindowResize(Vector2i windowSize);
-
-  // render the virual screen on the real screen.
-  void render();
-
-  void useManualPositioning(Vector2i screenPosition);
-  void useCenterPositioning();
-  void useTopLeftPositioning();
-  void useTopRightPositioning();
-  void useBottomLeftPositioning();
-  void useBottomRightPositioning();
-
-  // these functions do not change any current pixels on the screen. Once a change in the
-  // color mode is made only newly drawn pixels will be effected.
-  void useBandedColors(std::vector<ColorBands> bands);
-  void useFullColors();
-
-  void useManualSize(int pixelSize);
-  void useAutoSize();
-
-private:
-  enum class PositionMode
-  {
-    MANUAL,              // manually set screen position w.r.t the window.
-    CENTER,              // center align the screen in the window.
-    TOP_LEFT,            // clamp screen to the top-left of the window.
-    TOP_RIGHT,           // clamp screen to the top-right of the window.
-    BOTTOM_LEFT,         // clamp screen to the bottom-left of the window.
-    BOTTOM_RIGHT         // clamp screen to the bottom-right of the window.
-  };
-
-  enum class SizeMode
-  {
-    MANUAL,              // manually assign pixel size.
-    AUTO_MAX             // maximise pixel size to fit window. 
-  };
-
-  enum class ColorMode
-  {
-    FULL_COLOR,          // Pixels can take any color.
-    Y_BANDED             // The y-axis is split into color bands; pixel color dependent on position.
-  };
-
-  // 12 byte pixels designed to work with glInterleavedArrays format GL_C4UB_V2F (opengl 3.0).
-  struct Pixel
-  {
-    Pixel() : _color{}, _x{0}, _y{0}{}
-
-    Color4u _color;
-    float _x;
-    float _y;
-  };
-
-private:
-  std::vector<Pixel> _pixels;     // flattened 2D array accessed (col + (row * width)).
-  std::vector<ColorBand> _bands;  // ordered set of color bands.
-  Vector2i _position;             // position of virtual screen w.r.t the window.
-  Vector2i _screenSize;           // width,height of screen in pixels.
-  Vector2i _windowSize;           // copy of current window size.
-  PositionMode _pmode;
-  ScaleMode _smode;
-  ColorMode _cmode;
-  int _pixelSize;
+  LAYER_BACKGROUND,        // Intended for drawing static backgrounds.
+  LAYER_STAGE,             // Intended for drawing all dynamic game objects.
+  LAYER_UI,                // Intended for drawing the HUD/UI.
+  LAYER_ENGINE_STATS,      // Reserved for use by the engine to output performance stats.
+  LAYER_COUNT
 };
 
-namespace subsys
-{
-  extern std::unique_ptr<Renderer> renderer;
-}
+// Modes apply to each rendering layer and can be set independently for each layer.
+//
+// By default layers use: 
+//      ColorMode     = FULL_RGB
+//      PixelSizeMode = AUTO_MAX
+//      PositionMode  = CENTER
+//
+// With the exception of the LAYER_ENGINE_STATS (which is reserved for use by the engine for
+// drawing performance statistics) which has defaults:
+//      ColorMode     = FULL_RGB
+//      PixelSizeMode = AUTO_MIN
+//      PositionMode  = BOTTOM_LEFT
+//
+// DO NOT DRAW TO THE LAYER_ENGINE_STATS! YOU WILL OVERWRITE THE PERFORMANCE STATS.
 
+// The color mode controls the final color of pixels that result from all draw calls.
+//
+// The modes apply as follows:
+//
+//      FULL_RGB     - unrestricted colors; colors taken from arguments in draw call (a gfx 
+//                     resource argument or a direct color argument).
+//
+//      YAXIS_BANDED - restricted colors; the color of a pixel is determined by its y-axis
+//                     position on the layer being drawn to. The bands set the colors mapped
+//                     to each position. Color arguments in draw calls are ignored.
+//
+//      XAXIS_BANDED - restricted colors; the color of a pixel is determined by its x-axis
+//                     position on the layer being drawn to. The bands set the colors mapped
+//                     to each position. Color arguments in draw calls are ignored.
+//
+//      BITMAPS      - all pixels drawn adopt the 'bitmap color' set with a call to 
+//                     'setBitmapColor'. Color arguments in draw calls are ignored. The default
+//                     color is white.
+enum class ColorMode
+{
+  FULL_RGB,
+  YAXIS_BANDED,
+  XAXIS_BANDED,
+  BITMAPS
+};
+
+// The pixel size mode controls the size of the pixels of a layer. Minimum pixel size is 1, the
+// maximum size is determined by the opengl implementation used.
+//
+// The modes apply as follows:
+//
+//      MANUAL   - pixel size is set manually to a fixed value and does not change when the
+//                 window resizes.
+//
+//      AUTO_MIN - pixel size is automatically set to he minimum size of 1 and does not change
+//                 when the window resizes (since it is already at the minimum).
+//
+//      AUTO_MAX - pixel size is automatically maximised to scale the layer to fit the window,
+//                 thus pixel size changes as the window resizes. Pixel sizes are restricted to
+//                 integer multiples of the real pixel size of the display.
+//
+enum class PixelSizeMode
+{
+  MANUAL,
+  AUTO_MIN,
+  AUTO_MAX
+};
+
+// The position mode controls the position of a layer w.r.t the window.
+// 
+// The modes apply as follows:
+//
+//      MANUAL       - the layer's origin is at a fixed window coordinate.
+//
+//      CENTER       - the layer automatically moves to maintain a central position in the 
+//                     window as the window resizes.
+//
+//      TOP_LEFT     - the layer is clamped to the top-left of the window.
+//       
+//      TOP_RIGHT    - the layer is clamped to the top-right of the window.
+//
+//      BOTTOM_LEFT  - the layer is clamped to the bottom-left of the window.
+//
+//      BOTTOM_RIGHT -  the layer is clamped to the bottom-right of the window.
+//
+enum class PositionMode
+{
+  MANUAL,
+  CENTER,
+  TOP_LEFT,
+  TOP_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT
+};
+
+// Color bands apply to a single axis (x or y). All pixels with x/y position greater than
+// the 'hi' of a band 'i' and less than the 'hi' of the next band 'i+1' will adopt the color
+// of the band 'i+1'.
+struct ColorBand
+{
+  ColorBand() : _color{0, 0, 0, 0}, _hi{0}{}
+  ColorBand(Color4u color, hi) : _color{color}, _hi{hi}{}
+
+  bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
+  bool operator==(const ColorBand& lhs, const ColorBand& lhs){return lhs._hi == rhs._hi;}
+
+  Color4u _color;
+  int _hi;
+};
+
+// Configuration struct to be used with 'initialize'.
+struct Configuration
+{
+  std::string _windowTitle;
+  Vector2i _windowSize;
+  Vector2i _backgroundLayerSize;
+  Vector2i _stageLayerSize;
+  Vector2i _uiLayerSize;
+  Vector2i _engineStatsLayerSize;
+  bool _fullscreen;
+};
+
+// Initializes the gfx subsystem. Returns true if success and false if fatal error. Upon
+// returning false calls to other drawing functions have undefined results. Must be called
+// prior to any drawing functions.
+bool initialize(Config config);
+
+// Must be called whenever the window resizes to update layer positions, virtual pixel sizes, 
+// the viewport etc.
+void onWindowResize(Vector2i windowSize);
+
+// Clears the entire window to a solid color.
+void clearWindow(Color4u color);
+
+// Clears a layer such that nothing is drawn for that layer.
+void clearLayer(Layer layer);
+
+// Fills a layer with a solid shade, i.e. sets all color channels of all pixels to 'shade' 
+// value. If shade == 0 (the alpha color key) this call has the same effect as 'clearLayer'. It 
+// is thus not possible to fill a layer pure black. If you need black use RGB:1,1,1 for a very
+// close black.
+void fastFillLayer(int shade, Layer layer);
+
+// Fills a layer with a solid color, i.e. sets all pixels to said color. This is a slow 
+// operation to be used only if you need a specific color, use 'fastFillLayer' or 'clearLayer' 
+// for simple clearing ops. It is not recommended this function is used in a tight loop such
+// as the mainloop.
+void slowFillLayer(Color4u color, Layer layer);
+
+void drawSprite(Layer layer);
+void drawBitmap(Layer layer);
+void drawRectangle(Layer layer);
+void drawLine(Layer layer);
+void drawParticles(Layer layer);
+void drawPixel(Vector2i position, Color4u color, Layer layer);
+void drawText(Layer layer);
+
+// Must be called once all drawing is done to present the results to the window.
+void present();
+
+// Sets the color mode for a specific rendering layer. Changes in color mode only effect future
+// draw calls; the pixels on the layer are not changed by this call. If setting a color banding
+// mode use 'setLayerColorBands' to configure the bands. By default there is a single white band.
+// Changing the color mode is a fast operation allowing drawing to be performed in multipe color
+// modes.
+void setLayerColorMode(ColorMode mode, Layer layer);
+
+// Sets the method of determining the virtual pixel size of a layer. Has immediate effect.
+void setLayerPixelSizeMode(PixelSizeMode mode, Layer layer);
+
+// Sets the method of positioning the layer in the window. Has immediate effect.
+void setLayerPositionMode(PositionMode mode, Layer layer);
+
+// Sets the position of a layer. Has no effect if layer is not in position mode MANUAL.
+void setLayerPosition(Vector2i position, Layer layer);
+
+// Sets the pixel size of a layer. Has no effect if the layer is not in pixel size mode MANUAL,
+// thus this function must be called after setting the layer to MANUAL mode.
+void setLayerPixelSize(Layer layer);
+
+// Sets the color bands which apply to draw calls for a layer. Has no effect if the layer is
+// not in a color banding mode.
+//
+// The append flag controls whether the argument bands replace any existing bands or add to
+// them. By default existing bands are replaced.
+//
+// The following rules apply to bands:
+// - Bands form an ordered set with elements ordered by ascending 'hi' range value. 
+// - If multiple bands have equal hi values, one of the bands will be removed but no guarantees
+//   are made as to which one.
+// - Bands are only used if the layer is in a color banding mode, use 'setLayerColorMode' to
+//   enable a banding mode.
+// - Switching a layer between banding and non-banding modes does not change previously set
+//   bands.
+void setLayerColorBands(std::vector<ColorBand> bands, Layer layer, bool append = false);
+
+// Sets the color used by all draw calls (for all pixels). Has no effect if the the layer is
+// not in the BITMAPS color mode. Default color is white.
+void setBitmapColor(Color4u color);
+
+} // namespace gfx
 } // namespace pxr
 
 #endif
