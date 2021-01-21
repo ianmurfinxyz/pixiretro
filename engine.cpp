@@ -46,7 +46,7 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
   while(_ticksAccumulated > 0 && _ticksDoneThisFrame < _maxTicksPerFrame){
     ++_ticksDoneThisFrame;
     --_ticksAccumulated;
-    (_tickCtx->*_onTick)(gameNow, realNow, _tickPeriodSeconds);
+    (_tickCtx->*_onTick)(_tickPeriodSeconds);
   }
 
   _ticksDoneThisSecond += _ticksDoneThisFrame;
@@ -64,6 +64,7 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
 void Engine::initialize(std::unique_ptr<App> app)
 {
   log::initialize();
+  input::initialize();
 
   if(!_rc.load(EngineRC::filename))
     _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
@@ -98,7 +99,6 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   gfx::initialize(gfxconfig);
 
-  //input = std::make_unique<Input>();
   //assets = std::make_unique<Assets>();
 
   //Assets::Manifest_t manifest {{engineFontKey, engineFontName, engineFontScale}};
@@ -134,32 +134,32 @@ void Engine::mainloop()
         return;
       case SDL_WINDOWEVENT:
         if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-          _app->onWindowResize(event.window.data1, event.window.data2);
+          gfx::onWindowResize(Vector2i{event.window.data1, event.window.data2});
         break;
       case SDL_KEYDOWN:
-        if(event.key.keysym.sym == SDLK_LEFTBRACKET){
+        if(event.key.keysym.sym == decrementGameClockScaleKey){
           _gameClock.incrementScale(-0.1);
           break;
         }
-        else if(event.key.keysym.sym == SDLK_RIGHTBRACKET){
+        else if(event.key.keysym.sym == incrementGameClockScaleKey){
           _gameClock.incrementScale(0.1);
           break;
         }
-        else if(event.key.keysym.sym == SDLK_KP_HASH){
+        else if(event.key.keysym.sym == resetGameClockScaleKey){
           _gameClock.setScale(1.f);
           break;
         }
-        else if(event.key.keysym.sym == SDLK_p && !_app->isWindowTooSmall()){
+        else if(event.key.keysym.sym == pauseGameClockKey){
           _gameClock.togglePause();
           break;
         }
-        else if(event.key.keysym.sym == SDLK_BACKQUOTE){
-          _isDrawingPerformanceStats = !_isDrawingPerformanceStats;
+        else if(event.key.keysym.sym == toggleDrawEngineStatsKey){
+          _isDrawingEngineStats = !_isDrawingEngineStats;
           break;
         }
         // FALLTHROUGH
       case SDL_KEYUP:
-        subsys::input->onKeyEvent(event);
+        input::onKeyEvent(event);
         break;
     }
   }
@@ -182,7 +182,7 @@ void Engine::mainloop()
     std::this_thread::sleep_for(minFramePeriod - framePeriod); 
 }
 
-void Engine::drawEngineStats(Duration_t realDt, Duration_t gameDt)
+void Engine::drawEngineStats()
 {
 }
 
@@ -190,28 +190,27 @@ void Engine::drawPauseDialog()
 {
 }
 
-void Engine::onUpdateTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt, float tickDt)
+void Engine::onUpdateTick(float tickPeriodSeconds)
 {
-  double now = durationToSeconds(gameNow);
-  _app->onUpdate(now, tickDt);
-  pxr::input->onUpdate();
+  double nowSeconds = durationToSeconds(_gameClock.getNow());
+  _app->onUpdate(nowSeconds, tickPeriodSeconds);
+  input::onUpdate();
 }
 
-void Engine::onDrawTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt, float tickDt)
+void Engine::onDrawTick(float tickPeriodSeconds)
 {
   gfx::clearWindow(colors::gainsboro);
 
-  double now = durationToSeconds(gameNow);
-
-  _app->onDraw(now, tickDt);
+  double nowSeconds = durationToSeconds(_gameClock.getNow());
+  _app->onDraw(nowSeconds, tickPeriodSeconds);
 
   if(_gameClock.isPaused())
     drawPauseDialog();
 
-  if(_isDrawingPerformanceStats)
-    drawPerformanceStats(realDt, gameDt);
+  if(_isDrawingEngineStats)
+    drawEngineStats();
 
-  pxr::renderer->show();
+  gfx::present();
 }
 
 double Engine::durationToMilliseconds(Duration_t d)

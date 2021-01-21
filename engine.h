@@ -28,6 +28,14 @@ private:
 
   static constexpr Vector2i engineStatsLayerSize {400, 200};
 
+  // Keys used by the engine for user controlled engine features. If these keys
+  // clash with your application controls they can be changed here.
+  static constexpr int decrementGameClockScaleKey {SDLK_LEFTBRACKET};
+  static constexpr int incrementGameClockScaleKey {SDLK_RIGHTBRACKET};
+  static constexpr int resetGameClockScaleKey {SDLK_KP_HASH};
+  static constexpr int pauseGameClockKey {SDLK_P};
+  static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
+
   // Lock the FPS to this frequency (or less).
   static constexpr Duration_t fpsLockHz {static_cast<int64_t>(1.0e9 / 60.0)}; 
 
@@ -78,7 +86,7 @@ private:
   class Ticker
   {
   public:
-    using Callback_t = void (Engine::*)(Duration_t, Duration_t, float);
+    using Callback_t = void (Engine::*)(float);
 
   public:
     Ticker() = default;
@@ -129,8 +137,8 @@ private:
   void mainloop();
   void drawEngineStats(Duration_t realDt, Duration_t gameDt);
   void drawPauseDialog();
-  void onUpdateTick(Duration_t gameNow, Duration_t realNow, float tickPeriodSeconds);
-  void onDrawTick(Duration_t gameNow, Duration_t realNow, float tickPeriodSeconds);
+  void onUpdateTick(float tickPeriodSeconds);
+  void onDrawTick(float tickPeriodSeconds);
 
   double durationToMilliseconds(Duration_t d);
   double durationToSeconds(Duration_t d);
