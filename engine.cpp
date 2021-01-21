@@ -63,31 +63,18 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
 
 void Engine::initialize(std::unique_ptr<App> app)
 {
-  subsys::log = std::make_unique<Log>();
+  log::initialize();
 
-  if(!_config.load(Config::filename))
-    _config.write(Config::filename); // generate a default file if one doesn't exist.
+  if(!_rc.load(EngineRC::filename))
+    _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
 
   if(SDL_Init(SDL_INIT_VIDEO) < 0){
-    log->log(Log::FATAL, logstr::fail_sdl_init, std::string{SDL_GetError()});
+    log::log(log::FATAL, log::msg_fail_sdl_init, std::string{SDL_GetError()});
     exit(EXIT_FAILURE);
   }
 
-  _logicTicker = Ticker{
-    &onLogicTick, 
-    this, 
-    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)}, // 60Hz tick rate.
-    5,
-    true
-  };
-
-  _drawTicker = Ticker{
-    &onDrawTick, 
-    this, 
-    Duration_t{static_cast<int64_t>(1.0e9 / 60.0)}, // 60Hz tick rate.
-    1,
-    false
-  };
+  _updateTicker = Ticker{&onUpdateTick, this, fpsLockHz, 5, true};
+  _drawTicker = Ticker{&onDrawTick, this, fpsLockHz, 1, false};
 
   _app = std::move(app);
   _app->onInit();
@@ -101,36 +88,33 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   gfx::Configuration gfxconfig {};
   gfxconfig._windowTitle = std::string{ss.str()};
-  gfxconfig._windowSize = 
+  gfxconfig._windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
+  gfxconfig._windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
+  gfxconfig._backgroundLayerSize = _app->getBackgroundLayerSize();
+  gfxconfig._stageLayerSize = _app->getStageLayerSize();
+  gfxconfig._uiLayerSize = _app->getUiLayerSize();
+  gfxconfig._engineStatsLayerSize = engineStatsLayerSize;
+  gfxconfig._fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
 
-  Renderer::Config rconfig {
-    std::string{ss.str()},
-    _config.getIntValue(Config::KEY_WINDOW_WIDTH),
-    _config.getIntValue(Config::KEY_WINDOW_HEIGHT),
-    _config.getIntValue(Config::KEY_OPENGL_MAJOR),
-    _config.getIntValue(Config::KEY_OPENGL_MINOR),
-    _config.getBoolValue(Config::KEY_FULLSCREEN)
-  };
+  gfx::initialize(gfxconfig);
 
-  renderer = std::make_unique<Renderer>(rconfig);
+  //input = std::make_unique<Input>();
+  //assets = std::make_unique<Assets>();
 
-  input = std::make_unique<Input>();
-  assets = std::make_unique<Assets>();
+  //Assets::Manifest_t manifest {{engineFontKey, engineFontName, engineFontScale}};
+  //assets->loadFonts(manifest);
 
-  Assets::Manifest_t manifest {{engineFontKey, engineFontName, engineFontScale}};
-  assets->loadFonts(manifest);
-
-  Vector2i windowSize = pxr::renderer->getWindowSize();
-
-  _frameNo = 0;
-  _isSleeping = true;
-  _isDrawingPerformanceStats = false;
+  _framesDone = 0;
+  _framesDoneThisSecond = 0;
+  _measureFrameFrequency = 0;
+  _lastFrameMeasureNow = Duration_t::zero();
+  _isDrawingEngineStats = false;
   _isDone = false;
 }
 
 void Engine::run()
 {
-  _realClock.start();
+  _realClock.reset();
   while(!_isDone) mainloop();
 }
 
@@ -198,78 +182,12 @@ void Engine::mainloop()
     std::this_thread::sleep_for(minFramePeriod - framePeriod); 
 }
 
-void Engine::drawPerformanceStats(Duration_t realDt, Duration_t gameDt)
+void Engine::drawEngineStats(Duration_t realDt, Duration_t gameDt)
 {
-  Vector2i windowSize = renderer->getWindowSize();
-  renderer->setViewport({0, 0, std::min(300, windowSize._x), std::min(70, windowSize._y)});
-  renderer->clearViewport(colors::blue);
-
-  const Font& engineFont = assets->getFont(engineFontKey, engineFontScale);
-
-  std::stringstream ss {};
-
-  LoopTick* tick = &_loopTicks[LOOPTICK_UPDATE];
-  ss << std::setprecision(3);
-  ss << "UTPS:"  << tick->_tpsMeter.getTPS() << "hz"
-     << "  UTA:" << tick->_ticksAccumulated
-     << "  UTD:" << tick->_ticksDoneThisFrame
-     << "  UTT:"  << tick->_metronome.getTotalTicks();
-  renderer->blitText({5.f, 50.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-
-  tick = &_loopTicks[LOOPTICK_DRAW];
-  ss << std::setprecision(3);
-  ss << "DTPS:"  << tick->_tpsMeter.getTPS() << "hz"
-     << "  DTA:" << tick->_ticksAccumulated
-     << "  DTD:" << tick->_ticksDoneThisFrame
-     << "  DTT:" << tick->_metronome.getTotalTicks();
-  renderer->blitText({5.f, 40.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-  
-  ss << std::setprecision(3);
-  ss << "FPS:"  << _fpsMeter.getTPS() << "hz"
-     << "  FNo:" << _frameNo;
-  renderer->blitText({5.f, 30.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-  
-  ss << std::setprecision(3);
-  ss << "Gdt:"   << durationToMilliseconds(gameDt) << "ms";
-  renderer->blitText({5.f, 20.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-
-  ss << std::setprecision(3);
-  ss << "  Rdt:" << durationToMilliseconds(realDt) << "ms";
-  renderer->blitText({120.f, 20.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-
-  ss << std::setprecision(3);
-  ss << "GNow:"     << durationToMinutes(_gameClock.getNow()) << "min";
-  renderer->blitText({5.f, 10.f}, ss.str(), engineFont, colors::white); 
-
-  std::stringstream().swap(ss);
-
-  ss << std::setprecision(3);
-  ss << "  Uptime:" << durationToMinutes(_realClock.getNow()) << "min";
-  renderer->blitText({120.f, 10.f}, ss.str(), engineFont, colors::white); 
 }
 
 void Engine::drawPauseDialog()
 {
-  Vector2i windowSize = renderer->getWindowSize();
-  renderer->setViewport({0, 0, windowSize._x, windowSize._y});
-
-  const Font& engineFont = assets->getFont(engineFontKey, engineFontScale);
-
-  Vector2f position {};
-  position._x = (windowSize._x / 2.f) - 20.f; 
-  position._y = (windowSize._y / 2.f) - 5.f;
-
-  renderer->blitText(position, "PAUSED", engineFont, colors::white); 
 }
 
 void Engine::onUpdateTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt, float tickDt)
@@ -281,9 +199,7 @@ void Engine::onUpdateTick(Duration_t gameNow, Duration_t gameDt, Duration_t real
 
 void Engine::onDrawTick(Duration_t gameNow, Duration_t gameDt, Duration_t realDt, float tickDt)
 {
-  // TODO - temp - clear the game viewport only in the game and menu states - only clear window
-  // when toggle perf stats
-  pxr::renderer->clearWindow(colors::gainsboro);
+  gfx::clearWindow(colors::gainsboro);
 
   double now = durationToSeconds(gameNow);
 

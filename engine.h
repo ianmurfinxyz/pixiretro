@@ -1,6 +1,8 @@
 #ifndef _ENGINE_H_
 #define _ENGINE_H_
 
+#include "filerc.h"
+
 namespace pxr
 {
 
@@ -19,10 +21,15 @@ private:
   using TimePoint_t = std::chrono::time_point<Clock_t>;
   using Duration_t = std::chrono::nanoseconds;
 
-  constexpr static Duration_t oneMillisecond {1'000'000};
-  constexpr static Duration_t oneSecond {1'000'000'000};
-  constexpr static Duration_t oneMinute {60'000'000'000};
-  constexpr static Duration_t minFramePeriod {1'000'000};
+  static constexpr Duration_t oneMillisecond {1'000'000};
+  static constexpr Duration_t oneSecond {1'000'000'000};
+  static constexpr Duration_t oneMinute {60'000'000'000};
+  static constexpr Duration_t minFramePeriod {1'000'000};
+
+  static constexpr Vector2i engineStatsLayerSize {400, 200};
+
+  // Lock the FPS to this frequency (or less).
+  static constexpr Duration_t fpsLockHz {static_cast<int64_t>(1.0e9 / 60.0)}; 
 
   // Clock to record the real passage of time since the app booted.
   class RealClock
@@ -107,12 +114,10 @@ private:
     {
       KEY_WINDOW_WIDTH, 
       KEY_WINDOW_HEIGHT, 
-      KEY_FULLSCREEN, 
-      KEY_OPENGL_MAJOR, 
-      KEY_OPENGL_MINOR,
+      KEY_FULLSCREEN
     };
 
-    Config() : Dataset({
+    EngineRC() : FileRC({
       //    key               name        default   min      max
       {KEY_WINDOW_WIDTH,  "windowWidth",  {500},   {300},   {1000}},
       {KEY_WINDOW_HEIGHT, "windowHeight", {500},   {300},   {1000}},
@@ -122,9 +127,9 @@ private:
 
 private:
   void mainloop();
-  void drawPerformanceStats(Duration_t realDt, Duration_t gameDt);
+  void drawEngineStats(Duration_t realDt, Duration_t gameDt);
   void drawPauseDialog();
-  void onLogicTick(Duration_t gameNow, Duration_t realNow, float tickPeriodSeconds);
+  void onUpdateTick(Duration_t gameNow, Duration_t realNow, float tickPeriodSeconds);
   void onDrawTick(Duration_t gameNow, Duration_t realNow, float tickPeriodSeconds);
 
   double durationToMilliseconds(Duration_t d);
@@ -132,7 +137,9 @@ private:
   double durationToMinutes(Duration_t d);
 
 private:
-  Ticker _logicTicker;
+  EngineRC _rc;
+
+  Ticker _updateTicker;
   Ticker _drawTicker;
 
   RealClock _realClock;
@@ -145,7 +152,7 @@ private:
 
   std::unique_ptr<App> _app;
 
-  bool _isDrawingPerformanceStats;
+  bool _isDrawingEngineStats;
   bool _isDone;
 };
 

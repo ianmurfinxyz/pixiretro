@@ -12,7 +12,7 @@ constexpr const char* msg_open_log = "failed to open log";
 
 // gfx log strings.
 
-constexpr const char* msg_sdl_init = "failed to initialize SDL";
+constexpr const char* msg_fail_sdl_init = "failed to initialize SDL";
 constexpr const char* msg_create_opengl_context = "failed to create opengl context";
 constexpr const char* msg_set_opengl_attribute = "failed to set opengl attribute";
 constexpr const char* msg_create_window = "failed to create window";
