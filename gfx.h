@@ -243,7 +243,7 @@ void fastFillLayer(int shade, Layer layer);
 // as the mainloop.
 void slowFillLayer(Color4u color, Layer layer);
 
-void drawSprite(Layer layer);
+void drawSprite(Vector2i position, ResourceKey_t key, Layer layer);
 void drawBitmap(Layer layer);
 void drawRectangle(Layer layer);
 void drawLine(Layer layer);
@@ -251,7 +251,8 @@ void drawParticles(Layer layer);
 void drawPixel(Vector2i position, Color4u color, Layer layer);
 void drawText(Layer layer);
 
-// Must be called once all drawing is done to present the results to the window.
+// Called by the engine after calling App::onDraw to present the results of all drawing to the 
+// window. It is not necessary to call this function within your app.
 void present();
 
 // Sets the color mode for a specific rendering layer. Changes in color mode only effect future

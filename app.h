@@ -22,11 +22,10 @@ public:
   virtual void onDraw(double now, float dt) = 0;
   virtual void onReset() = 0;
 
-  const std::string& getName() const {return _name;}
+  virtual std::string getName() const = 0;
 
 protected:
   App* _owner;
-  std::string _name;
 };
 
 // Virtual base class for applications. Derive from this class and setup some
