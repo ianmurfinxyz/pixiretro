@@ -1,0 +1,7 @@
+info : successfully read property : enginerc [2] fullscreen=false
+info : successfully read property : enginerc [4] windowHeight=600
+info : successfully read property : enginerc [6] windowWidth=600
+info : creating window : {w:600,h:600}
+info : successfully created window : {w:600,h:600}
+info : using opengl version : 3.0 Mesa 20.3.2
+info : range of valid pixel sizes : [min:1,max:255]

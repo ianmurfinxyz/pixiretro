@@ -1,0 +1,6 @@
+# default=false min=false max=true
+fullscreen=false
+# default=500 min=300 max=1000
+windowHeight=600
+# default=500 min=300 max=1000
+windowWidth=600

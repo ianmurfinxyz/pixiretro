@@ -54,7 +54,7 @@ struct Sprite
 
 static constexpr int openglVersionMajor = 3;
 static constexpr int openglVersionMinor = 0;
-static constexpr int alphakey = 0;
+static constexpr int alphaKey = 0;
 
 static Configuration config;
 static SDL_Window* window;
@@ -260,7 +260,7 @@ bool initialize(Configuration config)
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_COLOR_ARRAY);
   glEnable(GL_ALPHA_TEST);
-  glAlphaFunc(GL_LESS, 1.f);
+  glAlphaFunc(GL_GREATER, 0.f);
   glDisable(GL_BLEND);
 
   GLfloat params[2];
@@ -336,7 +336,7 @@ void clearWindow(Color4u color)
 void clearLayer(Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  memset(screens[layer]._pixelColors.data(), alphakey, screens[layer]._pixelCount * sizeof(Color4u));
+  memset(screens[layer]._pixelColors.data(), alphaKey, screens[layer]._pixelCount * sizeof(Color4u));
 }
 
 void fastFillLayer(int shade, Layer layer)
@@ -373,11 +373,12 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, Layer layer)
     if(0 < screenRow && screenRow < screen._screenSize._y){
       for(int spriteCol = 0; spriteCol < sprite._size._x; ++spriteCol){
         screenCol = position._x + spriteCol;
-        if(0 < screenCol && screenCol < screen._screenSize._x)
+        if(0 < screenCol && screenCol < screen._screenSize._x){
           screen._pixelColors[screenCol + (screenRow * screen._screenSize._x)] = sprite._pixels[spritePixelNo]; 
+          ++spritePixelNo;
+        }
       }
     }
-    ++spritePixelNo;
   }
 }
 
@@ -408,6 +409,8 @@ void drawText(Layer layer)
 void present()
 {
   for(auto& screen : screens){
+  //for(int layer = LAYER_BACKGROUND; layer <= LAYER_COUNT; ++layer){
+    //Screen& screen = screens[layer];
     glVertexPointer(2, GL_INT, 0, screen._pixelPositions.data());
     glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pixelColors.data());
     glPointSize(screen._pixelSize);
