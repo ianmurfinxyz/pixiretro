@@ -1,11 +1,18 @@
+#include <SDL2/SDL.h>
+#include <thread>
+#include <sstream>
 #include "engine.h"
+#include "log.h"
+#include "app.h"
+#include "input.h"
+#include "gfx.h"
 
 namespace pxr
 {
 
 Engine::Duration_t Engine::RealClock::update()
 {
-  Duration_t old = _now;
+  auto old = _now;
   _now = Clock_t::now();
   return _now - old;
 }
@@ -18,7 +25,7 @@ void Engine::GameClock::update(Duration_t realDt)
 
 Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod, 
                        int maxTicksPerFrame, bool isChasingGameNow) :
-  _onTicks{onTick},
+  _onTick{onTick},
   _tickCtx{tickCtx},
   _tickerNow{0},
   _lastMeasureNow{0},
@@ -35,7 +42,7 @@ Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod
 
 void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
 {
-  Duration_t now = isChasingGameNow ? gameNow : realNow;
+  Duration_t now = _isChasingGameNow ? gameNow : realNow;
 
   while(_tickerNow + _tickPeriod < now){
     _tickerNow += _tickPeriod;
@@ -74,8 +81,8 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
-  _updateTicker = Ticker{&onUpdateTick, this, fpsLockHz, 5, true};
-  _drawTicker = Ticker{&onDrawTick, this, fpsLockHz, 1, false};
+  _updateTicker = Ticker{&Engine::onUpdateTick, this, fpsLockHz, 5, true};
+  _drawTicker = Ticker{&Engine::onDrawTick, this, fpsLockHz, 1, false};
 
   _app = std::move(app);
   _app->onInit();
@@ -106,10 +113,16 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   _framesDone = 0;
   _framesDoneThisSecond = 0;
-  _measureFrameFrequency = 0;
+  _measuredFrameFrequency = 0;
   _lastFrameMeasureNow = Duration_t::zero();
   _isDrawingEngineStats = false;
   _isDone = false;
+}
+
+void Engine::shutdown()
+{
+  gfx::shutdown();
+  log::shutdown();
 }
 
 void Engine::run()
@@ -164,7 +177,7 @@ void Engine::mainloop()
     }
   }
 
-  _logicTicker.doTicks(gameNow, realNow);
+  _updateTicker.doTicks(gameNow, realNow);
   _drawTicker.doTicks(gameNow, realNow);
 
   ++_framesDone;

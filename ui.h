@@ -1,3 +1,8 @@
+#ifndef _PIXIRETRO_UI_H_
+#define _PIXIRETRO_UI_H_
+
+namespace pxr
+{
 
 //
 // TODO - There is a fair amount of diplicate code in this class. Could be improved.
@@ -166,3 +171,6 @@ private:
   int32_t _boxH;
 };
 
+} // namespace pxr
+
+#endif

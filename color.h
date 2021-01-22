@@ -1,6 +1,7 @@
-#ifndef _COLOR_H_
-#define _COLOR_H_
+#ifndef _PIXIRETRO_COLOR_H_
+#define _PIXIRETRO_COLOR_H_
 
+#include <algorithm>
 #include <cinttypes>
 
 namespace pxr

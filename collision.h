@@ -1,3 +1,8 @@
+#ifndef _PIXIRETRO_COLLISION_H_
+#define _PIXIRETRO_COLLISION_H_
+
+namespace pxr
+{
 
 // COLLISION RESULTS
 //
@@ -78,3 +83,6 @@ struct Collision
 const Collision& testCollision(Vector2i aPosition, const Bitmap& aBitmap, 
                                Vector2i bPosition, const Bitmap& bBitmap, bool pixelLists = true);
 
+} // namespace pxr
+
+#endif

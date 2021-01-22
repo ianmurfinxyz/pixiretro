@@ -1,7 +1,12 @@
-#ifndef _ENGINE_H_
-#define _ENGINE_H_
+#ifndef _PIXIRETRO_ENGINE_H_
+#define _PIXIRETRO_ENGINE_H_
+
+#include <memory>
+#include <chrono>
+#include <SDL2/SDL_events.h>
 
 #include "filerc.h"
+#include "app.h"
 
 namespace pxr
 {
@@ -33,7 +38,7 @@ private:
   static constexpr int decrementGameClockScaleKey {SDLK_LEFTBRACKET};
   static constexpr int incrementGameClockScaleKey {SDLK_RIGHTBRACKET};
   static constexpr int resetGameClockScaleKey {SDLK_KP_HASH};
-  static constexpr int pauseGameClockKey {SDLK_P};
+  static constexpr int pauseGameClockKey {SDLK_p};
   static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
 
   // Lock the FPS to this frequency (or less).
@@ -135,7 +140,7 @@ private:
 
 private:
   void mainloop();
-  void drawEngineStats(Duration_t realDt, Duration_t gameDt);
+  void drawEngineStats();
   void drawPauseDialog();
   void onUpdateTick(float tickPeriodSeconds);
   void onDrawTick(float tickPeriodSeconds);

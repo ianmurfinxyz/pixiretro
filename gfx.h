@@ -1,7 +1,11 @@
 #ifndef _GFX_H_
 #define _GFX_H_
 
+#include <string>
+#include <cmath>
+
 #include "color.h"
+#include "math.h"
 
 namespace pxr
 {
@@ -188,14 +192,14 @@ enum class PositionMode
 struct ColorBand
 {
   ColorBand() : _color{0, 0, 0, 0}, _hi{0}{}
-  ColorBand(Color4u color, hi) : _color{color}, _hi{hi}{}
-
-  bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
-  bool operator==(const ColorBand& lhs, const ColorBand& lhs){return lhs._hi == rhs._hi;}
+  ColorBand(Color4u color, int hi) : _color{color}, _hi{hi}{}
 
   Color4u _color;
   int _hi;
 };
+
+bool operator<(const ColorBand& lhs, const ColorBand& rhs);
+bool operator==(const ColorBand& lhs, const ColorBand& rhs);
 
 // Configuration struct to be used with 'initialize'.
 struct Configuration
@@ -212,7 +216,10 @@ struct Configuration
 // Initializes the gfx subsystem. Returns true if success and false if fatal error. Upon
 // returning false calls to other drawing functions have undefined results. Must be called
 // prior to any drawing functions.
-bool initialize(Config config);
+bool initialize(Configuration config);
+
+// Call to shutdown the module upon app termination.
+void shutdown();
 
 // Must be called whenever the window resizes to update layer positions, virtual pixel sizes, 
 // the viewport etc.

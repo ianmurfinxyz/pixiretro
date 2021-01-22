@@ -1,4 +1,8 @@
 #include <limits>
+#include <cassert>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
 
 #include "filerc.h"
 #include "log.h"
@@ -6,7 +10,7 @@
 namespace pxr
 {
 
-constexpr static Value_t unsetValue {std::numeric_limits<int>::min()};
+constexpr static FileRC::Value_t unsetValue {std::numeric_limits<int>::min()};
 
 FileRC::Property::Property(Key_t key, std::string name, Value_t default_, Value_t min, Value_t max) :
   _key{key}, 
@@ -29,8 +33,8 @@ int FileRC::load(const std::string& filename)
 {
   std::ifstream file {filename};
   if(!file){
-    log::log(log::ERROR, log::msg_fail_open, filename);
-    log::log(log::INFO, log::msg_using_default);
+    log::log(log::ERROR, log::msg_rcfile_fail_open, filename);
+    log::log(log::INFO, log::msg_rcfile_using_default);
     for(auto& pair : _properties)
       pair.second._value = pair.second._default;
     return -1;
@@ -90,7 +94,7 @@ int FileRC::load(const std::string& filename)
       continue;
     }
 
-    switch(p->_type){
+    switch(p->_default.index()){
       case 0:
         {
           int result {0};
@@ -155,7 +159,7 @@ int FileRC::load(const std::string& filename)
   }
 
   if(nErrors > 0)
-    log::log(log::WARN, log::msg_errors, std::to_string(nErrors));
+    log::log(log::WARN, log::msg_rcfile_errors, std::to_string(nErrors));
 
   return nErrors;
 }
@@ -198,37 +202,37 @@ bool FileRC::write(const std::string& filename, bool genComments)
 
 int FileRC::getIntValue(Key_t key) const
 {
-  assert(_properties.at(key)._type == INT_PROPERTY);
+  assert(_properties.at(key)._default.index() == 0);
   return std::get<int>(_properties.at(key)._value);
 }
 
 float FileRC::getFloatValue(Key_t key) const
 {
-  assert(_properties.at(key)._type == FLOAT_PROPERTY);
+  assert(_properties.at(key)._default.index() == 1);
   return std::get<float>(_properties.at(key)._value);
 }
 
 bool FileRC::getBoolValue(Key_t key) const
 {
-  assert(_properties.at(key)._type == BOOL_PROPERTY);
+  assert(_properties.at(key)._default.index() == 2);
   return std::get<bool>(_properties.at(key)._value);
 }
 
 void FileRC::setIntValue(Key_t key, int value)
 {
-  assert(_properties.at(key)._type == INT_PROPERTY);
+  assert(_properties.at(key)._default.index() == 0);
   _properties[key]._value = value;
 }
 
-void FileRC::setFloatValue(int32_t key, float value)
+void FileRC::setFloatValue(int key, float value)
 {
-  assert(_properties.at(key)._type == FLOAT_PROPERTY);
+  assert(_properties.at(key)._default.index() == 1);
   _properties[key]._value = value;
 }
 
-void FileRC::setBoolValue(int32_t key, bool value)
+void FileRC::setBoolValue(int key, bool value)
 {
-  assert(_properties.at(key)._type == BOOL_PROPERTY);
+  assert(_properties.at(key)._default.index() == 2);
   _properties[key]._value = value;
 }
 
@@ -239,12 +243,12 @@ void FileRC::applyDefaults()
   }
 }
 
-bool FileRC::parseInt(const std::string& value, int32_t& result)
+bool FileRC::parseInt(const std::string& value, int& result)
 {
   auto isDigit = [](unsigned char c){return std::isdigit(c);};
   auto isSign = [](unsigned char c){return c == '+' || c == '-';};
 
-  int32_t nSigns = std::count_if(value.begin(), value.end(), isSign);
+  int nSigns = std::count_if(value.begin(), value.end(), isSign);
   if(nSigns > 1){
     return false;
   }
@@ -252,7 +256,7 @@ bool FileRC::parseInt(const std::string& value, int32_t& result)
       return false;
   }
 
-  int32_t count = std::count_if(value.begin(), value.end(), isDigit);
+  int count = std::count_if(value.begin(), value.end(), isDigit);
   if(count != value.length() - nSigns){
     return false;
   }
@@ -266,7 +270,7 @@ bool FileRC::parseFloat(const std::string& value, float& result)
   auto isDigit = [](unsigned char c){return std::isdigit(c);};
   auto isSign = [](unsigned char c){return c == '+' || c == '-';};
 
-  int32_t nSigns = std::count_if(value.begin(), value.end(), isSign);
+  int nSigns = std::count_if(value.begin(), value.end(), isSign);
   if(nSigns > 1){
     return false;
   }
@@ -274,11 +278,11 @@ bool FileRC::parseFloat(const std::string& value, float& result)
       return false;
   }
 
-  int32_t nPoints = std::count(value.begin(), value.end(), '.');
+  int nPoints = std::count(value.begin(), value.end(), '.');
   if(nPoints > 1)
     return false;
 
-  int32_t count = std::count_if(value.begin(), value.end(), isDigit);
+  int count = std::count_if(value.begin(), value.end(), isDigit);
   if(count != value.length() - nPoints - nSigns)
     return false;
 
@@ -304,7 +308,7 @@ void FileRC::printValue(const Value_t& value, std::ostream& os)
 {
   switch(value.index()){
     case 0:
-      os << std::get<int32_t>(value);
+      os << std::get<int>(value);
       break;
     case 1:
       os << std::get<float>(value);

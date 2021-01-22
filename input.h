@@ -1,5 +1,7 @@
-#ifndef _INPUT_H_
-#define _INPUT_H_
+#ifndef _PIXIRETRO_INPUT_H_
+#define _PIXIRETRO_INPUT_H_
+
+#include <SDL2/SDL_events.h>
 
 namespace pxr
 {
@@ -43,7 +45,9 @@ const std::vector<KeyCode>& getHistory();
 // Simple helper to convert a key code to the ascii value of the character associated with
 // the key. Only valid for key codes which have an associated ascii value, i.e. for alpha
 // numeric keys and the space key. All other key codes return -1.
-int keyToAsciiCode(KeyCode key) const;
+int keyToAsciiCode(KeyCode key);
 
 } // namespace input
 } // namespace pxr
+
+#endif

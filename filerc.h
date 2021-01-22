@@ -41,6 +41,7 @@ public:
 
   struct Property
   {
+    Property() = default;
     Property(Key_t key, std::string name, Value_t default_, Value_t min, Value_t max); 
 
     Key_t _key;             // key used to access the property.
@@ -56,7 +57,7 @@ public:
 
   // Writes name=value pairs to a file for all properties. If genComments=true a comment
   // is generated for each property which informs of the default, min and max values.
-  int write(const std::string& filepath, bool genComments = true);
+  bool write(const std::string& filepath, bool genComments = true);
 
   int getIntValue(Key_t key) const;
   float getFloatValue(Key_t key) const;

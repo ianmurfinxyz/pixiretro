@@ -2,6 +2,7 @@
 #define _APP_H_
 
 #include <memory>
+#include "math.h"
 
 namespace pxr
 {

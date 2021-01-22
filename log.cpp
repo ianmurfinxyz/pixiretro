@@ -19,8 +19,8 @@ void initialize()
 {
   _os.open(filename, std::ios_base::trunc);
   if(!_os){
-    log(ERROR, logstr::fail_open_log);
-    log(INFO, logstr::info_stderr_log);
+    log(ERROR, log::msg_log_fail_open);
+    log(INFO, log::msg_log_to_stderr);
   }
 }
 

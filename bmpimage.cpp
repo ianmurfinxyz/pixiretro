@@ -22,7 +22,7 @@ bool BmpImage::load(std::string filepath)
 
   std::ifstream file {filepath, std::ios_base::binary};
   if(!file){
-    log::log(log::ERROR, log::msg_failed_open_bmp, filepath);
+    log::log(log::ERROR, log::msg_bmp_fail_open, filepath);
     return false;
   }
 
@@ -30,7 +30,7 @@ bool BmpImage::load(std::string filepath)
   file.read(reinterpret_cast<char*>(&fileHead._fileMagic), sizeof(fileHead._fileMagic));
 
   if(fileHead._fileMagic != BMPMAGIC){
-    log::log(log::ERROR, log::msg_expected_bmp, filepath);
+    log::log(log::ERROR, log::msg_bmp_corrupted, filepath);
     return false;
   }
 
@@ -71,7 +71,7 @@ bool BmpImage::load(std::string filepath)
   if(infoHead._headerSize_bytes >= V4INFOHEADER_SIZE_BYTES){
     file.read(reinterpret_cast<char*>(&infoHead._colorSpaceMagic), sizeof(infoHead._colorSpaceMagic));
     if(infoHead._colorSpaceMagic != SRGBMAGIC){
-      log::log(log::ERROR, log::msg_unsupported_bmp_colorspace, std::string{});
+      log::log(log::ERROR, log::msg_bmp_unsupported_colorspace, std::string{});
       return false;
     }
     infoHeadVersion = 4;
@@ -82,7 +82,7 @@ bool BmpImage::load(std::string filepath)
   }
 
   if(infoHead._compression != BI_RGB && infoHead._compression != BI_BITFIELDS){
-    log::log(log::ERROR, log::msg_unsupported_bmp_compression, std::string{});
+    log::log(log::ERROR, log::msg_bmp_unsupported_compression, std::string{});
     return false;
   }
 

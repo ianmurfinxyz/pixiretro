@@ -1,5 +1,6 @@
 #include <array>
 #include <vector>
+#include <cassert>
 #include <SDL2/SDL_events.h>
 
 #include "input.h"
@@ -58,7 +59,7 @@ void initialize()
     key._isDown = key._isReleased = key._isPressed = false;
 }
 
-void Input::onKeyEvent(const SDL_Event& event)
+void onKeyEvent(const SDL_Event& event)
 {
   assert(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP);
 
@@ -78,7 +79,7 @@ void Input::onKeyEvent(const SDL_Event& event)
   }
 }
 
-void Input::onUpdate()
+void onUpdate()
 {
   for(auto& key : keys)
     key._isPressed = key._isReleased = false;
@@ -105,7 +106,7 @@ const std::vector<KeyCode>& getHistory()
   return history;
 }
 
-int Input::keyToAsciiCode(KeyCode key)
+int keyToAsciiCode(KeyCode key)
 {
   switch(key){
     case KEY_a: return 'a';

@@ -1,5 +1,5 @@
-
-#define _BMP_IMAGE_H_
+#ifndef _PIXIRETRO_BMPIMAGE_H_
+#define _PIXIRETRO_BMPIMAGE_H_
 
 //----------------------------------------------------------------------------------------------//
 // FILE: bmpimage.h                                                                             //
