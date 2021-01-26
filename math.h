@@ -36,6 +36,8 @@ struct Vector2i
   inline Vector2i normalized() const;
   inline void normalize();
 
+  bool operator==(const Vector2i& v) const {return _x == v._x && _y == v._y;}
+
   int32_t _x;
   int32_t _y;
 };

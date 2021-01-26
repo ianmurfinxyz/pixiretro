@@ -7,12 +7,92 @@
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <cstring>
 #include "color.h"
 #include "bmpimage.h"
 #include "log.h"
 
 namespace pxr
 {
+namespace gfx
+{
+
+BmpImage::BmpImage() :
+  _pixels{nullptr},
+  _size{0,0}
+{}
+
+BmpImage::~BmpImage()
+{
+  if(_pixels != nullptr){
+    for(int row = 0; row < _size._y; ++row)
+      delete[] _pixels[row];
+    delete[] _pixels;
+  }
+  _size.zero();
+}
+
+BmpImage::BmpImage(const BmpImage& other) :
+  _pixels{nullptr},
+  _size{0, 0}
+{
+  _size = other._size;
+  _pixels = new Color4u*[_size._y];
+  for(int row = 0; row < _size._y; ++row){
+    _pixels[row] = new Color4u[_size._x];
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+  }
+}
+
+BmpImage::BmpImage(BmpImage&& other)
+{
+  _pixels = other._pixels;
+  other._pixels = nullptr;
+  _size = other._size;
+  other._size.zero();
+}
+
+BmpImage::BmpImage& BmpImage::operator=(const BmpImage& other)
+{
+  if(_pixels != nullptr && _size == other._size){ 
+    for(int row = 0; row < _size._y; ++row){
+      memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+    }
+    return *this;
+  }
+
+  ~BmpImage();
+  _size = other._size;
+  _pixels = new Color4u*[_size._y];
+  for(int row = 0; row < _size._y; ++row){
+    _pixels[row] = new Color4u[_size._x];
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+  }
+  return *this;
+}
+
+BmpImage::BmpImage& operator=(BmpImage&& other)
+{
+  ~BmpImage();   
+  _pixels = other._pixels;
+  other._pixels = nullptr;
+  _size = other._size;
+  other._size.zero();
+  return *this;
+}
+
+const Color4u BmpImage::getPixel(int row, int col)
+{
+  assert(0 <= row && row < _size.y);
+  assert(0 <= col && col <= _size._x);
+  return _pixels[row][col];
+}
+
+const Color4u* BmpImage::getRow(int row)
+{
+  assert(0 <= row && row < _size.y);
+  return _pixels[row];
+}
 
 bool BmpImage::load(std::string filepath)
 {
@@ -85,6 +165,17 @@ bool BmpImage::load(std::string filepath)
     log::log(log::ERROR, log::msg_bmp_unsupported_compression, std::string{});
     return false;
   }
+
+  _size = Vector2i{infoHead._bmpWidth_px, std::abs(infohead._bmpHeight_px)};
+  if(_size._x <= 0 || _size._y <= 0 || _size._x > BMP_MAX_WIDTH || _size._y > BMP_MAX_HEIGHT){
+    std::sstream ss{};
+    ss << "[w:" << _size._x << ",h:" << _size._y << "]";
+    log::log(log::ERROR, log::msg_bmp_unsupported_size, ss.str());
+    return false;
+  }
+  _pixels = new Color4u*[_size._y];
+  for(int row = 0; row < _size._y; ++row)
+    _pixels[row] = new Color4u[_size._x];
 
   switch(infoHead._bitsPerPixel)
   {
@@ -166,32 +257,32 @@ void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, I
   _pixels.reserve(infoHead._bmpWidth_px * numRows);
 
   int seekPos {pixelOffset_bytes};
-  char* row = new char[rowSize_bytes];
+  char* buffer = new char[rowSize_bytes];
 
   // for each row of pixels.
-  for(int i = 0; i < numRows; ++i){
+  for(int row = 0; row < numRows; ++row){
     file.seekg(seekPos);
-    file.read(static_cast<char*>(row), rowSize_bytes);
+    file.read(static_cast<char*>(buffer), rowSize_bytes);
 
     // for each pixel in the row.
-    int numPixelsExtracted {0};
+    int col {0};
     int byteNo {0};
     int bytePixelNo {0};
-    uint8_t byte = static_cast<uint8_t>(row[byteNo]);
-    while(numPixelsExtracted < infoHead._bmpWidth_px){
+    uint8_t byte = static_cast<uint8_t>(buffer[byteNo]);
+    while(col < infoHead._bmpWidth_px){
       if(bytePixelNo >= numPixelsPerByte){
-        byte = static_cast<uint8_t>(row[++byteNo]);
+        byte = static_cast<uint8_t>(buffer[++byteNo]);
         bytePixelNo = 0;
       }
       int shift = infoHead._bitsPerPixel * (numPixelsPerByte - 1 - bytePixelNo);
       uint8_t index = (byte & (mask << shift)) >> shift;
-      _pixels.push_back(palette[index]);
-      ++numPixelsExtracted;
+      _pixels[row][col] = palette[index];
+      ++col;
       ++bytePixelNo;
     }
     seekPos += rowOffset_bytes;
   }
-  delete[] row;
+  delete[] buffer;
 }
 
 void BmpImage::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)
@@ -229,26 +320,24 @@ void BmpImage::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHead
   if(infoHead._alphaMask)
     while((infoHead._alphaMask & (0x01 << alphaShift)) == 0) ++alphaShift;
 
-  _pixels.reserve(infoHead._bmpWidth_px * numRows);
-
   int seekPos {pixelOffset_bytes};
-  char* row = new char[rowSize_bytes];
+  char* buffer = new char[rowSize_bytes];
 
   // for each row of pixels.
-  for(int i = 0; i < numRows; ++i){
+  for(int row = 0; row < numRows; ++row){
     file.seekg(seekPos);
-    file.read(static_cast<char*>(row), rowSize_bytes);
+    file.read(static_cast<char*>(buffer), rowSize_bytes);
 
-    // for each pixel.
-    for(int j = 0; j < infoHead._bmpWidth_px; ++j){
+    // for each pixel in row.
+    for(int col = 0; col < infoHead._bmpWidth_px; ++col){
       uint32_t rawPixelBytes {0};
 
       // for each pixel byte.
-      for(int k = 0; k < pixelSize_bytes; ++k){
-        uint8_t pixelByte = row[(j * pixelSize_bytes) + k];
+      for(int i = 0; i < pixelSize_bytes; ++i){
+        uint8_t pixelByte = buffer[(col * pixelSize_bytes) + i];
 
         // 0rth byte of pixel stored in LSB of rawPixelBytes.
-        rawPixelBytes |= static_cast<uint32_t>(pixelByte << (k * 8));
+        rawPixelBytes |= static_cast<uint32_t>(pixelByte << (i * 8));
       }
 
       uint8_t red = (rawPixelBytes & infoHead._redMask) >> redShift;
@@ -256,11 +345,12 @@ void BmpImage::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHead
       uint8_t blue = (rawPixelBytes & infoHead._blueMask) >> blueShift;
       uint8_t alpha = (rawPixelBytes & infoHead._alphaMask) >> alphaShift;
 
-      _pixels.push_back(Color4u{red, green, blue, alpha});
+      _pixels[row][col] = Color4u{red, green, blue, alpha};
     }
     seekPos += rowOffset_bytes;
   }
-  delete[] row;
+  delete[] buffer;
 }
 
+} // namespace gfx
 } // namespace pxr

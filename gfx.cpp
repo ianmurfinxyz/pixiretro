@@ -10,6 +10,8 @@
 #include <limits>
 #include <cassert>
 
+#include "tinyxml2.h"  // TODO move to a lib dir
+
 #include "gfx.h"
 #include "math.h"
 #include "color.h"
@@ -25,19 +27,29 @@ bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs.
 bool operator==(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi == rhs._hi;}
 
 // A virtual screen of virtual pixels. Each rendering layer is an instance of a screen.
+//
+// note: pixel data is stored via raw pointers to optimise rendering performance since pixels
+// must be read and written potentially tens of thousands of times in each draw tick 
+// (drawing routines are essentially software rending routines with only the results being
+// rendered via the GPU).
+//
+// note: pixel data is stored as a flattened 2D so it can be accessed directly by opengl.
 struct Screen
 {
-  std::vector<Color4u> _pixelColors;
-  std::vector<Vector2i> _pixelPositions;
+  static constexpr int MAX_WIDTH {800};   // Limit virtual screen resolution to SVGA.
+  static constexpr int MAX_HEIGHT {600};
+
+  Color4u* _pxColors;              // flattened 2D arrays accessed [col + (row * width)]
+  Vector2i* _pxPositions;
   std::vector<ColorBand> _bands;
-  Vector2i _position;
-  Vector2i _screenSize;
+  Vector2i _position;              // position w.r.t the window.
+  Vector2i _size;                  // x=width pixels, y=height pixels.
   PositionMode _pmode;
-  PixelSizeMode _smode;
+  PxSizeMode _smode;
   ColorMode _cmode;
   Color4u _bitmapColor;
-  int _pixelSize;
-  int _pixelCount;
+  int _pxSize;
+  int _pxCount;
 };
 
 struct Sprite
@@ -68,123 +80,8 @@ static std::unordered_map<ResourceKey_t, Sprite> sprites;
 static Sprite errorSprite;
 
 //----------------------------------------------------------------------------------------------//
-// GFX RESOURCES                                                                                //
+// GFX SETUP                                                                                    //
 //----------------------------------------------------------------------------------------------//
-
-void genErrorSprite()
-{
-  static constexpr int squareSize = 8;
-  static constexpr int squareArea = squareSize * squareSize;
-
-  errorSprite._size = Vector2i{squareSize, squareSize};
-  errorSprite._pixels.resize(squareArea);
-  for(auto& pixel : errorSprite._pixels)
-    pixel = colors::red;
-}
-
-bool loadSprites(const ResourceManifest_t& manifest)
-{
-  if(errorSprite._pixels.size() == 0)
-    genErrorSprite();
-
-  // reuse the same instance to avoid repeated internal allocations.
-  BmpImage image {};
-
-  for(auto &pair : manifest){
-    ResourceKey_t rkey = pair.first;
-    ResourceName_t rname = pair.second;
-
-    auto search = sprites.find(rkey);
-    if(search != sprites.end()){
-      log::log(log::WARN, log::msg_gfx_duplicate_resource_key, std::to_string(rkey));
-      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
-      continue;
-    }
-
-    std::string filepath {};
-    filepath += spritesdir;
-    filepath += rname;
-    filepath += BmpImage::FILE_EXTENSION;
-    if(!image.load(filepath)){
-      log::log(log::ERROR, log::msg_gfx_fail_load_sprite, std::string{rname});
-      log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
-      sprites.insert(std::make_pair(rkey, errorSprite));
-      continue;
-    }
-
-    Sprite sprite {};
-    sprite._pixels = image.getPixels();
-    sprite._size._x = image.getWidth();
-    sprite._size._y = image.getHeight();
-    sprites.insert(std::make_pair(rkey, std::move(sprite)));
-  }
-}
-
-bool loadFonts(const ResourceManifest_t& manifest)
-{
-
-}
-
-//----------------------------------------------------------------------------------------------//
-// GFX DRAWING                                                                                  //
-//----------------------------------------------------------------------------------------------//
-
-// Recalculate screen position, pixel sizes, pixel positions etc to a account for a change in 
-// window size, display resolution or screen mode attributes.
-static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
-{
-  // recalculate pixel size.
-  if(screen._smode == PixelSizeMode::AUTO_MAX){
-    // note: integer math here thus all division results are implicitly floored as required.
-    int pxw = windowSize._x / screen._screenSize._x;  
-    int pxh = windowSize._y / screen._screenSize._y;
-    screen._pixelSize = std::max(std::min(pxw, pxh), 1);
-  }
-
-  // recalculate screen position.
-  switch(screen._pmode)
-  {
-  case PositionMode::MANUAL:
-    // no change.
-    break;
-  case PositionMode::CENTER:
-    screen._position._x = std::clamp((windowSize._x - (screen._pixelSize * screen._screenSize._x)) / 2, 0, windowSize._x);
-    screen._position._y = std::clamp((windowSize._y - (screen._pixelSize * screen._screenSize._y)) / 2, 0, windowSize._y);
-    break;
-  case PositionMode::TOP_LEFT:
-    screen._position._x = 0;
-    screen._position._y = windowSize._y - (screen._pixelSize * screen._screenSize._y);
-    break;
-  case PositionMode::TOP_RIGHT:
-    screen._position._x = windowSize._x - (screen._pixelSize * screen._screenSize._x);
-    screen._position._y = windowSize._y - (screen._pixelSize * screen._screenSize._y);
-    break;
-  case PositionMode::BOTTOM_LEFT:
-    screen._position._x = 0;
-    screen._position._y = 0;
-    break;
-  case PositionMode::BOTTOM_RIGHT:
-    screen._position._x = windowSize._x - (screen._pixelSize * screen._screenSize._x);
-    screen._position._y = 0;
-    break;
-  }
-
-  // recalculate pixel positions.
-  
-  // Pixels are drawn as an array of points of _pixelSize diameter. When drawing points in opengl, 
-  // the position of the point is taken as the center position. For odd pixel sizes e.g. 7 the 
-  // center pixel is simply 3,3 (= floor(7/2)). For even pixel sizes e.g. 8 the center of the 
-  // pixel is considered the bottom-left pixel in the top-right quadrant, i.e. 4,4 (= floor(8/2)).
-  int pixelCenterOffset = screen._pixelSize / 2;
-
-  for(int row = 0; row < screen._screenSize._y; ++row){
-    for(int col = 0; col < screen._screenSize._x; ++col){
-      Vector2i& pixelPosition = screen._pixelPositions[col + (row * screen._screenSize._x)];
-      pixelPosition._x = screen._position._x + (col * screen._pixelSize) + pixelCenterOffset;
-      pixelPosition._y = screen._position._y + (row * screen._pixelSize) + pixelCenterOffset;
-    }
-  }
-}
 
 static void setViewport(iRect viewport)
 {
@@ -195,6 +92,110 @@ static void setViewport(iRect viewport)
   glLoadIdentity();
   glViewport(viewport._x, viewport._y, viewport._w, viewport._h);
   pxr::gfx::viewport = viewport;
+}
+
+// Recalculate screen position, pixel sizes, pixel positions etc to a account for a change in 
+// window size, display resolution or screen mode attributes.
+static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
+{
+  // recalculate pixel size.
+  if(screen._smode == PxSizeMode::AUTO_MAX){
+    // note: integer math here thus all division results are implicitly floored as required.
+    int pxw = windowSize._x / screen._size._x;  
+    int pxh = windowSize._y / screen._size._y;
+    screen._pxSize = std::max(std::min(pxw, pxh), 1);
+  }
+
+  // recalculate screen position.
+  switch(screen._pmode)
+  {
+  case PositionMode::MANUAL:
+    // no change.
+    break;
+  case PositionMode::CENTER:
+    screen._position._x = std::clamp((windowSize._x - (screen._pxSize * screen._size._x)) / 2, 0, windowSize._x);
+    screen._position._y = std::clamp((windowSize._y - (screen._pxSize * screen._size._y)) / 2, 0, windowSize._y);
+    break;
+  case PositionMode::TOP_LEFT:
+    screen._position._x = 0;
+    screen._position._y = windowSize._y - (screen._pxSize * screen._size._y);
+    break;
+  case PositionMode::TOP_RIGHT:
+    screen._position._x = windowSize._x - (screen._pxSize * screen._size._x);
+    screen._position._y = windowSize._y - (screen._pxSize * screen._size._y);
+    break;
+  case PositionMode::BOTTOM_LEFT:
+    screen._position._x = 0;
+    screen._position._y = 0;
+    break;
+  case PositionMode::BOTTOM_RIGHT:
+    screen._position._x = windowSize._x - (screen._pxSize * screen._size._x);
+    screen._position._y = 0;
+    break;
+  }
+
+  // recalculate pixel positions.
+  
+  // Pixels are drawn as an array of points of _pxSize diameter. When drawing points in opengl, 
+  // the position of the point is taken as the center position. For odd pixel sizes e.g. 7 the 
+  // center pixel is simply 3,3 (= floor(7/2)). For even pixel sizes e.g. 8 the center of the 
+  // pixel is considered the bottom-left pixel in the top-right quadrant, i.e. 4,4 (= floor(8/2)).
+  int pixelCenterOffset = screen._pxSize / 2;
+
+  for(int row = 0; row < screen._size._y; ++row){
+    for(int col = 0; col < screen._size._x; ++col){
+      Vector2i& pxPosition = screen._pxPositions[col + (row * screen._size._x)];
+      pxPosition._x = screen._position._x + (col * screen._pxSize) + pixelCenterOffset;
+      pxPosition._y = screen._position._y + (row * screen._pxSize) + pixelCenterOffset;
+    }
+  }
+}
+
+void initializeScreens(Configuration config)
+{
+  for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
+    auto& screen = screens[layer];
+    if(layer == LAYER_ENGINE_STATS){
+      screen._pmode = PositionMode::BOTTOM_LEFT;
+      screen._smode = PxSizeMode::AUTO_MIN;
+      screen._cmode = ColorMode::FULL_RGB;
+    }
+    else{
+      screen._pmode = PositionMode::CENTER;
+      screen._smode = PxSizeMode::AUTO_MAX;
+      screen._cmode = ColorMode::FULL_RGB;
+    }
+
+    screen._size = config._screenSize[layer];
+    assert(0 < screen._size._x && screen._size._x <= screen::MAX_WIDTH);
+    assert(0 < screen._size._y && screen._size._y <= screen::MAX_HEIGHT);
+    screen._pxCount  = screen._size._x * screen._size._y;
+  
+    screen._pxColors = new Color4u[screen._pxCount];
+    screen._pxPositions = new Vector2i[screen._pxCount];
+    
+    clearLayer(static_cast<Layer>(layer)); 
+    autoAdjustScreen(windowSize, screen);
+    
+    screen._bands.push_back(ColorBand{colors::white, std::numeric_limits<int>::max()});
+    screen._bitmapColor = colors::white;
+
+    std::sstream ss {};
+    ss << "[w:" << screen._size._x << ", h:" << screen._size._y << "] "
+       << "mem:" << (screen._pxCount * sizeof Color4u) / 1024 << "kib";
+    log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
+  }
+}
+
+void freeScreens()
+{
+  for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
+    auto& screen = screens[layer];
+    delete[] screen._pxColors;
+    delete[] screen._pxPositions;
+    screen._pxColors = nullptr;
+    screen._pxPositions = nullptr;
+  }
 }
 
 bool initialize(Configuration config)
@@ -271,54 +272,88 @@ bool initialize(Configuration config)
   ss << "[min:" << minPixelSize << ",max:" << maxPixelSize << "]";
   log::log(log::INFO, log::msg_gfx_pixel_size_range, std::string{ss.str()});
 
-  // setup rendering layers/screens.
-  
-  for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
-    auto& screen = screens[layer];
-    if(layer == LAYER_ENGINE_STATS){
-      screen._pmode = PositionMode::BOTTOM_LEFT;
-      screen._smode = PixelSizeMode::AUTO_MIN;
-      screen._cmode = ColorMode::FULL_RGB;
-    }
-    else{
-      screen._pmode = PositionMode::CENTER;
-      screen._smode = PixelSizeMode::AUTO_MAX;
-      screen._cmode = ColorMode::FULL_RGB;
-    }
-    switch(layer)
-    {
-    case LAYER_BACKGROUND:
-      screen._screenSize = config._backgroundLayerSize;
-      break;
-    case LAYER_STAGE:
-      screen._screenSize = config._stageLayerSize;
-      break;
-    case LAYER_UI:
-      screen._screenSize = config._uiLayerSize;
-      break;
-    case LAYER_ENGINE_STATS:
-      screen._screenSize = config._engineStatsLayerSize;
-      break;
-    }
-    screen._pixelCount  = screen._screenSize._x * screen._screenSize._y;
-    assert(screen._pixelCount > 0);
-    screen._pixelColors.resize(screen._pixelCount);
-    screen._pixelPositions.resize(screen._pixelCount);
-    clearLayer(static_cast<Layer>(layer)); 
-    autoAdjustScreen(windowSize, screen);
-    
-    screen._bands.push_back(ColorBand{colors::white, std::numeric_limits<int>::max()});
-    screen._bitmapColor = colors::white;
-  }
+  initializeScreens(config);  
 
   return true;
 }
 
 void shutdown()
 {
+  freeScreens();
   SDL_GL_DeleteContext(glContext);
   SDL_DestroyWindow(window);
 }
+
+//----------------------------------------------------------------------------------------------//
+// GFX RESOURCES                                                                                //
+//----------------------------------------------------------------------------------------------//
+
+void genErrorSprite()
+{
+  static constexpr int squareSize = 8;
+  static constexpr int squareArea = squareSize * squareSize;
+
+  errorSprite._size = Vector2i{squareSize, squareSize};
+  errorSprite._pixels.resize(squareArea);
+  for(auto& pixel : errorSprite._pixels)
+    pixel = colors::red;
+}
+
+bool loadSprites(const ResourceManifest_t& manifest)
+{
+  if(errorSprite._pixels.size() == 0)
+    genErrorSprite();
+
+  // reuse the same instance to avoid repeated internal allocations.
+  BmpImage image {};
+
+  for(auto &pair : manifest){
+    ResourceKey_t rkey = pair.first;
+    ResourceName_t rname = pair.second;
+
+    auto search = sprites.find(rkey);
+    if(search != sprites.end()){
+      log::log(log::WARN, log::msg_gfx_duplicate_resource_key, std::to_string(rkey));
+      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
+      continue;
+    }
+
+    std::string filepath {};
+    filepath += spritesdir;
+    filepath += rname;
+    filepath += BmpImage::FILE_EXTENSION;
+    if(!image.load(filepath)){
+      log::log(log::ERROR, log::msg_gfx_fail_load_sprite, std::string{rname});
+      log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
+      sprites.insert(std::make_pair(rkey, errorSprite));
+      continue;
+    }
+
+    Sprite sprite {};
+    sprite._pixels = image.getPixels();
+    sprite._size._x = image.getWidth();
+    sprite._size._y = image.getHeight();
+    sprites.insert(std::make_pair(rkey, std::move(sprite)));
+  }
+}
+
+bool loadFonts(const ResourceManifest_t& manifest)
+{
+  BmpImage image {};
+  for(auto &pair : manifest){
+    ResourceKey_t rkey = pair.first;
+    ResourceName_t rname = pair.second;
+
+    std::string
+   
+    XMLDocument doc {}; 
+    doc.load(
+  }
+}
+
+//----------------------------------------------------------------------------------------------//
+// GFX DRAWING                                                                                  //
+//----------------------------------------------------------------------------------------------//
 
 void onWindowResize(Vector2i windowSize)
 {
@@ -336,14 +371,14 @@ void clearWindow(Color4u color)
 void clearLayer(Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  memset(screens[layer]._pixelColors.data(), alphaKey, screens[layer]._pixelCount * sizeof(Color4u));
+  memset(screens[layer]._pixelColors.data(), alphaKey, screens[layer]._pxCount * sizeof(Color4u));
 }
 
 void fastFillLayer(int shade, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   shade = std::max(0, std::min(shade, 255));
-  memset(screens[layer]._pixelColors.data(), shade, screens[layer]._pixelCount * sizeof(Color4u));
+  memset(screens[layer]._pixelColors.data(), shade, screens[layer]._pxCount * sizeof(Color4u));
 }
 
 void slowFillLayer(Color4u color, Layer layer)
@@ -370,11 +405,11 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, Layer layer)
   int spritePixelNo{0}, screenRow{0}, screenCol{0};
   for(int spriteRow = 0; spriteRow < sprite._size._y; ++spriteRow){
     screenRow = position._y + spriteRow;
-    if(0 < screenRow && screenRow < screen._screenSize._y){
+    if(0 < screenRow && screenRow < screen._size._y){
       for(int spriteCol = 0; spriteCol < sprite._size._x; ++spriteCol){
         screenCol = position._x + spriteCol;
-        if(0 < screenCol && screenCol < screen._screenSize._x){
-          screen._pixelColors[screenCol + (screenRow * screen._screenSize._x)] = sprite._pixels[spritePixelNo]; 
+        if(0 < screenCol && screenCol < screen._size._x){
+          screen._pixelColors[screenCol + (screenRow * screen._size._x)] = sprite._pixels[spritePixelNo]; 
           ++spritePixelNo;
         }
       }
@@ -409,12 +444,10 @@ void drawText(Layer layer)
 void present()
 {
   for(auto& screen : screens){
-  //for(int layer = LAYER_BACKGROUND; layer <= LAYER_COUNT; ++layer){
-    //Screen& screen = screens[layer];
-    glVertexPointer(2, GL_INT, 0, screen._pixelPositions.data());
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pixelColors.data());
-    glPointSize(screen._pixelSize);
-    glDrawArrays(GL_POINTS, 0, screen._pixelCount);
+    glVertexPointer(2, GL_INT, 0, screen._pxPositions);
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
+    glPointSize(screen._pxSize);
+    glDrawArrays(GL_POINTS, 0, screen._pxCount);
   }
   SDL_GL_SwapWindow(window);
 }
@@ -425,7 +458,7 @@ void setLayerColorMode(ColorMode mode, Layer layer)
   screens[layer]._cmode = mode;
 }
 
-void setLayerPixelSizeMode(PixelSizeMode mode, Layer layer)
+void setLayerPxSizeMode(PxSizeMode mode, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   auto& screen = screens[layer];
@@ -433,11 +466,11 @@ void setLayerPixelSizeMode(PixelSizeMode mode, Layer layer)
 
   // setting to manual will keep the current pixel size until it is changed manually with
   // a call to 'setLayerPixelSize'.
-  if(mode == PixelSizeMode::MANUAL)
+  if(mode == PxSizeMode::MANUAL)
     return;
 
-  if(mode == PixelSizeMode::AUTO_MIN)
-    screen._pixelSize = 1;
+  if(mode == PxSizeMode::AUTO_MIN)
+    screen._pxSize = 1;
 
   autoAdjustScreen(windowSize, screen);
 }
@@ -468,18 +501,18 @@ void setLayerPosition(Vector2i position, Layer layer)
   autoAdjustScreen(windowSize, screen);
 }
 
-void setLayerPixelSize(int pixelSize, Layer layer)
+void setLayerPixelSize(int pxSize, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   auto& screen = screens[layer];
 
   // no effect if not in manual mode.
-  if(screen._smode != PixelSizeMode::MANUAL)
+  if(screen._smode != PxSizeMode::MANUAL)
     return;
 
-  pixelSize = std::min(std::max(minPixelSize, pixelSize), maxPixelSize);
+  pxSize = std::min(std::max(minPixelSize, pxSize), maxPixelSize);
 
-  screen._pixelSize = pixelSize;
+  screen._pxSize = pxSize;
   autoAdjustScreen(windowSize, screen);
 }
 

@@ -29,6 +29,7 @@ constexpr const char* msg_gfx_duplicate_resource_key = "asset manifest contains 
 constexpr const char* msg_gfx_skipping_asset_load = "skipping asset loading";
 constexpr const char* msg_gfx_fullscreen = "activating fullscreen window mode";
 constexpr const char* msg_gfx_pixel_size_range = "range of valid pixel sizes";
+constexpr const char* msg_gfx_created_vscreen = "created vscreen";
 
 // bitmap (bmp) file log strings.
 
@@ -36,6 +37,7 @@ constexpr const char* msg_bmp_fail_open = "failed to open bitmap image file";
 constexpr const char* msg_bmp_corrupted = "expected a bitmap image file; file corrupted or wrong type";
 constexpr const char* msg_bmp_unsupported_colorspace = "loaded bitmap image using unsupported non-sRGB color space";
 constexpr const char* msg_bmp_unsupported_compression = "loaded bitmap image using unsupported compression mode";
+constexpr const char* msg_bmp_unsupported_size = "loaded bitmap image has unsupported size";
 
 // rcfile log strings.
 

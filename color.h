@@ -6,6 +6,8 @@
 
 namespace pxr
 {
+namespace gfx
+{
 
 // 32-bit RGBA color.
 class Color4u
@@ -46,10 +48,10 @@ public:
   float getfAlpha() const {return std::clamp(_a / 255.f, f_lo, f_hi);}
 
 private:
-  uint8_t _r;
-  uint8_t _g;
-  uint8_t _b;
-  uint8_t _a;
+  uint8_t _r;           // DO NOT ADD MEMBER DATA TO THIS CLASS!
+  uint8_t _g;           //
+  uint8_t _b;           // sizeof Color4u == 4 bytes naturally aligned; gfx module
+  uint8_t _a;           // relies on this being true.
 };
 
 namespace colors
@@ -75,6 +77,7 @@ namespace colors
   constexpr Color4u jet {53, 53, 53, 255};
 };
 
+} // namespace gfx
 } // namespace pxr
 
 #endif

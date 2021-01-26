@@ -28,10 +28,16 @@ public:
     };
 
     pxr::gfx::loadSprites(manifest);
+
+    _alienPosition = pxr::Vector2i{20, 20};
+    _alienSpeedX = 40;
   }
 
   void onUpdate(double now, float dt)
   {
+    _alienPosition._x += _alienSpeedX * dt;
+    if(_alienPosition._x < 0 || _alienPosition._x > (_owner->getStageLayerSize()._x - 20))
+      _alienSpeedX *= -1;
   }
 
   void onDraw(double now, float dt)
@@ -40,7 +46,7 @@ public:
     pxr::gfx::fastFillLayer(20, pxr::gfx::LAYER_BACKGROUND);
 
     pxr::gfx::clearLayer(pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(pxr::Vector2i{20, 20}, SPRITEID_SQUID, pxr::gfx::LAYER_STAGE);
+    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, pxr::gfx::LAYER_STAGE);
     pxr::gfx::drawSprite(pxr::Vector2i{50, 20}, SPRITEID_CRAB, pxr::gfx::LAYER_STAGE);
   }
 
@@ -50,6 +56,10 @@ public:
   }
 
   std::string getName() const {return name;}
+
+private:
+  pxr::Vector2f _alienPosition;
+  float _alienSpeedX; // px per seconds
 };
 
 
@@ -59,7 +69,7 @@ public:
   static constexpr int versionMajor {1};
   static constexpr int versionMinor {0};
   static constexpr const char* name {"example-app"};
-  static constexpr pxr::Vector2i worldSize {200, 200};
+  static constexpr pxr::Vector2i worldSize {512, 512};
 
 public:
   ExampleApp() = default;

@@ -8,8 +8,11 @@
 
 #include <fstream>
 #include "color.h"
+#include "math.h"
 
 namespace pxr
+{
+namespace gfx
 {
 
 class BmpImage
@@ -18,25 +21,39 @@ public:
   static constexpr const char* FILE_EXTENSION {".bmp"};
 
 public:
-  BmpImage() = default;
-  ~BmpImage() = default;
+  BmpImage();
+  ~BmpImage();
+
+  BmpImage(const BmpImage& other);
+  BmpImage(BmpImage&& other);
+  BmpImage& operator=(const BmpImage& other);
+  BmpImage& operator=(BmpImage&& other);
 
   bool load(std::string filepath);
 
-  const std::vector<Color4u>& getPixels() const {return _pixels;}
-  int getWidth() const {return _width_px;}
-  int getHeight() const {return _height_px;}
+  const Color4u getPixel(int row, int col);
+  const Color4u* getRow(int row);
+  const Color4u** getPixels() const {return _pixels;}
+
+  int getWidth() const {return _size._x;}
+  int getHeight() const {return _size._y;}
+  Vector2i getSize() const {return _size;}
 
 private:
-  static constexpr uint32_t BMPMAGIC {0x4D42};
-  static constexpr uint32_t SRGBMAGIC {0x73524742};
+  static constexpr int BMPMAGIC {0x4D42};
+  static constexpr int SRGBMAGIC {0x73524742};
 
-  static constexpr uint32_t FILEHEADER_SIZE_BYTES {14};
-  static constexpr uint32_t V1INFOHEADER_SIZE_BYTES {40};
-  static constexpr uint32_t V2INFOHEADER_SIZE_BYTES {52};
-  static constexpr uint32_t V3INFOHEADER_SIZE_BYTES {56};
-  static constexpr uint32_t V4INFOHEADER_SIZE_BYTES {108};
-  static constexpr uint32_t V5INFOHEADER_SIZE_BYTES {124};
+  static constexpr int FILEHEADER_SIZE_BYTES {14};
+  static constexpr int V1INFOHEADER_SIZE_BYTES {40};
+  static constexpr int V2INFOHEADER_SIZE_BYTES {52};
+  static constexpr int V3INFOHEADER_SIZE_BYTES {56};
+  static constexpr int V4INFOHEADER_SIZE_BYTES {108};
+  static constexpr int V5INFOHEADER_SIZE_BYTES {124};
+
+  // This is a somewhat arbitrary choice made to avoid allocating excessive memory
+  // and to aid checking bmp image integrity.
+  static constexpr int BMP_MAX_WIDTH {1024};
+  static constexpr int BMP_MAX_HEIGHT {1024};
 
   enum Compression
   {
@@ -86,11 +103,11 @@ private:
   void extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
 
 private:
-  std::vector<Color4u> _pixels;
-  int _width_px;
-  int _height_px;
+  Color4u** _pixels;    // _pixels = ptr to rows, thus accessed _pixels[row][col]
+  Vector2i _size;       // x=width/numCols, y=height/numRows
 };
 
+} // namespace gfx
 } // namespace pxr
 
 #endif

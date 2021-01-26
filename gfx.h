@@ -1,5 +1,5 @@
-#ifndef _GFX_H_
-#define _GFX_H_
+#ifndef _PIXIRETRO_GFX_H_
+#define _PIXIRETRO_GFX_H_
 
 #include <string>
 #include <cmath>
@@ -100,13 +100,13 @@ enum Layer
 //
 // By default layers use: 
 //      ColorMode     = FULL_RGB
-//      PixelSizeMode = AUTO_MAX
+//      PxSizeMode = AUTO_MAX
 //      PositionMode  = CENTER
 //
 // With the exception of the LAYER_ENGINE_STATS (which is reserved for use by the engine for
 // drawing performance statistics) which has defaults:
 //      ColorMode     = FULL_RGB
-//      PixelSizeMode = AUTO_MIN
+//      PxSizeMode = AUTO_MIN
 //      PositionMode  = BOTTOM_LEFT
 //
 // DO NOT DRAW TO THE LAYER_ENGINE_STATS! YOU WILL OVERWRITE THE PERFORMANCE STATS.
@@ -152,7 +152,7 @@ enum class ColorMode
 //                 thus pixel size changes as the window resizes. Pixel sizes are restricted to
 //                 integer multiples of the real pixel size of the display.
 //
-enum class PixelSizeMode
+enum class PxSizeMode
 {
   MANUAL,
   AUTO_MIN,
@@ -206,10 +206,7 @@ struct Configuration
 {
   std::string _windowTitle;
   Vector2i _windowSize;
-  Vector2i _backgroundLayerSize;
-  Vector2i _stageLayerSize;
-  Vector2i _uiLayerSize;
-  Vector2i _engineStatsLayerSize;
+  Vector2i _screenSize[LAYER_COUNT];    // a size for each layer.
   bool _fullscreen;
 };
 
@@ -263,7 +260,7 @@ void present();
 void setLayerColorMode(ColorMode mode, Layer layer);
 
 // Sets the method of determining the virtual pixel size of a layer. Has immediate effect.
-void setLayerPixelSizeMode(PixelSizeMode mode, Layer layer);
+void setLayerPxSizeMode(PxSizeMode mode, Layer layer);
 
 // Sets the method of positioning the layer in the window. Has immediate effect.
 void setLayerPositionMode(PositionMode mode, Layer layer);
