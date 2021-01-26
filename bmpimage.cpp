@@ -29,7 +29,7 @@ BmpImage::~BmpImage()
       delete[] _pixels[row];
     delete[] _pixels;
   }
-  _size.zero();
+  _pixels = nullptr;
 }
 
 BmpImage::BmpImage(const BmpImage& other) :
@@ -96,10 +96,6 @@ const Color4u* BmpImage::getRow(int row)
 
 bool BmpImage::load(std::string filepath)
 {
-  // clear any current data so we dont append a newly loaded bitmap to a last; allows
-  // the 'load' function to be called multiple times.
-  _pixels.clear();
-
   std::ifstream file {filepath, std::ios_base::binary};
   if(!file){
     log::log(log::ERROR, log::msg_bmp_fail_open, filepath);
@@ -173,9 +169,8 @@ bool BmpImage::load(std::string filepath)
     log::log(log::ERROR, log::msg_bmp_unsupported_size, ss.str());
     return false;
   }
-  _pixels = new Color4u*[_size._y];
-  for(int row = 0; row < _size._y; ++row)
-    _pixels[row] = new Color4u[_size._x];
+
+  reallocatePixels();
 
   switch(infoHead._bitsPerPixel)
   {
@@ -218,6 +213,31 @@ bool BmpImage::load(std::string filepath)
   _height_px = infoHead._bmpHeight_px;
 
   return true;
+}
+
+void BmpImage::create(Vector2i size, Color4u clearColor)
+{
+  _size = size;
+  reallocatePixels(); 
+  clear(clearColor);
+}
+
+void BmpImage::clear(Color4u color)
+{
+  if(pixels == nullptr)
+    return;
+
+  for(int row = 0; row < _size._y; ++row)
+    for(int col = 0; col < _size._x; ++col)
+      _pixels[row][col] = color;
+}
+
+bool BmpImage::reallocatePixels()
+{
+  ~BmpImage();
+  _pixels = new Color4u*[_size._y];
+  for(int row = 0; row < _size._y; ++row)
+    _pixels[row] = new Color4u[_size._x];
 }
 
 void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)

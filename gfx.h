@@ -11,9 +11,52 @@ namespace pxr
 {
 namespace gfx
 {
+
 //----------------------------------------------------------------------------------------------//
 // GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
+
+struct Sprite
+{
+  int _rowmin;
+  int _colmin;
+  int _rowmax;
+  int _colmax;
+  BmpImage* _image;
+};
+
+// A sprite sheet imposes an ordered structure to a bmpimage; it imposes a regular 2D grid
+// (all cells of equal dimensions). Each cell however is accessed via a single index into the
+// grid where the indices are arranged like:
+// 
+//   
+//    +---+---+---+---+
+//    | 4 | 5 | 6 | 7 |     4x2 sprite sheet
+//    +---+---+---+---+
+//    | 0 | 1 | 2 | 3 |
+//    +---+---+---+---+
+//
+// This allows the client to care only about the number of sprites in the sheet and the index
+// of the sprite they desire.
+//
+// The intended purpose of this class is for use with 2D animations; a sprite sheet can contain
+// a set of animation frames where each successive frame can be accessed with ascending index.
+// In this case the client need only know the number of frames.
+struct SpriteSheet
+{
+  SpriteSheet() = default;
+  SpriteSheet(const SpriteSheet&) = default;
+  SpriteSheet(SpriteSheet&&) = default;
+  SpriteSheet& operator=(const SpriteSheet&) default;
+  SpriteSheet& operator=(SpriteSheet&&) default;
+
+  Sprite getSprite() const;
+
+  BmpImage _image;
+  Vector2i _spriteSize;    // x=width pixels, y=height pixels.
+  Vector2i _sheetSize;     // x=width sprites, y=height sprites.
+  int _spriteCount;
+};
 
 // Directory where this module expects to find sprite resources when loading.
 constexpr const char* spritesdir = "assets/sprites/";
@@ -296,3 +339,4 @@ void setBitmapColor(Color4u color);
 } // namespace pxr
 
 #endif
+

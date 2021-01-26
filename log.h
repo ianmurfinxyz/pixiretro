@@ -23,13 +23,20 @@ constexpr const char* msg_gfx_created_window = "successfully created window";
 constexpr const char* msg_gfx_fail_create_opengl_context = "failed to create opengl context";
 constexpr const char* msg_gfx_fail_set_opengl_attribute = "failed to set opengl attribute";
 constexpr const char* msg_gfx_opengl_version = "using opengl version";
+constexpr const char* msg_gfx_loading_sprites = "starting sprite loading";
+constexpr const char* msg_gfx_loading_sprite = "loading sprite";
 constexpr const char* msg_gfx_fail_load_sprite = "failed to load a sprite asset";
 constexpr const char* msg_gfx_using_error_sprite = "susbtituting unloaded sprite with 8x8 red square";
 constexpr const char* msg_gfx_duplicate_resource_key = "asset manifest contains duplicate resource key";
-constexpr const char* msg_gfx_skipping_asset_load = "skipping asset loading";
+constexpr const char* msg_gfx_skipping_asset_load = "skipping loading asset";
 constexpr const char* msg_gfx_fullscreen = "activating fullscreen window mode";
 constexpr const char* msg_gfx_pixel_size_range = "range of valid pixel sizes";
 constexpr const char* msg_gfx_created_vscreen = "created vscreen";
+constexpr const char* msg_gfx_fail_xml_parse = "parsing error in xml file";
+constexpr const char* msg_gfx_fail_xml_attribute = "failed to read xml attribute";
+constexpr const char* msg_gfx_tinyxml_error_name = "tinyxml2 error name";
+constexpr const char* msg_gfx_tinyxml_error_desc = "tinyxml2 error desc";
+constexpr const char* msg_gfx_sheet_invalid = "invalid sprite sheet as xml data does not match bmp image";
 
 // bitmap (bmp) file log strings.
 

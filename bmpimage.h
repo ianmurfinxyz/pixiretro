@@ -30,6 +30,9 @@ public:
   BmpImage& operator=(BmpImage&& other);
 
   bool load(std::string filepath);
+  void create(Vector2i size, Color4u fill);
+
+  void clear(Color4u color);
 
   const Color4u getPixel(int row, int col);
   const Color4u* getRow(int row);
@@ -39,7 +42,7 @@ public:
   int getHeight() const {return _size._y;}
   Vector2i getSize() const {return _size;}
 
-private:
+public:
   static constexpr int BMPMAGIC {0x4D42};
   static constexpr int SRGBMAGIC {0x73524742};
 
@@ -51,9 +54,10 @@ private:
   static constexpr int V5INFOHEADER_SIZE_BYTES {124};
 
   // This is a somewhat arbitrary choice made to avoid allocating excessive memory
-  // and to aid checking bmp image integrity.
-  static constexpr int BMP_MAX_WIDTH {1024};
-  static constexpr int BMP_MAX_HEIGHT {1024};
+  // and to aid checking bmp image integrity. It is very game dependent so feel free
+  // to adjust these limits to suit your needs.
+  static constexpr int BMP_MAX_WIDTH {256};
+  static constexpr int BMP_MAX_HEIGHT {128};
 
   enum Compression
   {
@@ -98,11 +102,12 @@ private:
     uint32_t _colorSpaceMagic;
   };
 
-private:
+public:
+  void allocatePixels(Vector2i size);
   void extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
   void extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
 
-private:
+public:
   Color4u** _pixels;    // _pixels = ptr to rows, thus accessed _pixels[row][col]
   Vector2i _size;       // x=width/numCols, y=height/numRows
 };

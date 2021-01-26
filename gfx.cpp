@@ -16,6 +16,7 @@
 #include "math.h"
 #include "color.h"
 #include "bmpimage.h"
+#include "spritesheet.h"
 #include "log.h"
 
 namespace pxr
@@ -64,6 +65,8 @@ struct Sprite
   Vector2i _size;               // x(num cols) and y(num rows) dimensions of sprite.
 };
 
+static constexpr int SPRITESHEET_XML_FILE_EXTENSION {".ss"};
+
 static constexpr int openglVersionMajor = 3;
 static constexpr int openglVersionMinor = 0;
 static constexpr int alphaKey = 0;
@@ -76,8 +79,8 @@ static Vector2i windowSize;
 static int minPixelSize;
 static int maxPixelSize;
 static std::array<Screen, LAYER_COUNT> screens;
-static std::unordered_map<ResourceKey_t, Sprite> sprites;
-static Sprite errorSprite;
+static std::unordered_map<ResourceKey_t, SpriteSheet> sprites;
+static SpriteSheet errorSprite;
 
 //----------------------------------------------------------------------------------------------//
 // GFX SETUP                                                                                    //
@@ -288,28 +291,55 @@ void shutdown()
 // GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
 
-void genErrorSprite()
+static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
-  static constexpr int squareArea = squareSize * squareSize;
 
-  errorSprite._size = Vector2i{squareSize, squareSize};
-  errorSprite._pixels.resize(squareArea);
-  for(auto& pixel : errorSprite._pixels)
-    pixel = colors::red;
+  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
+  errorSprite._sheetSize = Vector2i{1, 1};
+  errorSprite._spriteCount = 1;
+  errorSprite._image.create(errorSprite._spriteSize, colors::red);
+}
+
+static bool extractIntAttribute(XMLElement* element, const char* attribute, int& value, 
+                                ResourceName_t rname)
+{
+  XMLError xmlerror = elem->QueryIntAttribute(attribute, value);
+  if(xmlerror != XML_SUCCESS){
+    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, std::string{"cols"});
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc.ErrorStr());
+    log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
+    return false;
+  }
+  return true;
+}
+
+static bool isValidSpriteSheet(SpriteSheet& sheet)
+{
+  if((sheet._sheetSize._x * sheet._spriteSize._x) != _image.getWidth())
+    return false;
+
+  if((sheet._sheetSize._y * sheet._spriteSize._y) != _image.getHeight())
+    return false;
+
+  return true;
 }
 
 bool loadSprites(const ResourceManifest_t& manifest)
 {
+  log::log(log::INFO, log::msg_gfx_loading_sprites);
+
   if(errorSprite._pixels.size() == 0)
     genErrorSprite();
-
-  // reuse the same instance to avoid repeated internal allocations.
-  BmpImage image {};
 
   for(auto &pair : manifest){
     ResourceKey_t rkey = pair.first;
     ResourceName_t rname = pair.second;
+
+    std::stringstream ss{};
+    ss << "key:" << rkey << " name:" << rname;
+    log::log(log::INFO, log::msg_gfx_loading_sprite, ss.str());
 
     auto search = sprites.find(rkey);
     if(search != sprites.end()){
@@ -318,22 +348,51 @@ bool loadSprites(const ResourceManifest_t& manifest)
       continue;
     }
 
-    std::string filepath {};
-    filepath += spritesdir;
-    filepath += rname;
-    filepath += BmpImage::FILE_EXTENSION;
-    if(!image.load(filepath)){
+    std::string bmppath {};
+    bmppath += spritesdir;
+    bmppath += rname;
+    bmppath += BmpImage::FILE_EXTENSION;
+    if(!sheet._image.load(bmppath)){
       log::log(log::ERROR, log::msg_gfx_fail_load_sprite, std::string{rname});
       log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
       sprites.insert(std::make_pair(rkey, errorSprite));
       continue;
     }
 
-    Sprite sprite {};
-    sprite._pixels = image.getPixels();
-    sprite._size._x = image.getWidth();
-    sprite._size._y = image.getHeight();
-    sprites.insert(std::make_pair(rkey, std::move(sprite)));
+    std::string xmlpath {};
+    xmlpath += spritesdir;
+    xmlpath += rname;
+    xmlpath += SPRITESHEET_XML_FILE_EXTENSION;
+    XMLDocument doc{};
+    doc.LoadFile(xmlpath.str());
+    if(doc.Error()){
+      log::log(log::ERROR, log::msg_gfx_fail_xml_parse, xmlpath); 
+      log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
+      log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc.ErrorStr());
+      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
+      continue;
+    }
+
+    SpriteSheet sheet {};
+
+    XMLElement* element = doc.FirstChildElement("spritesheet");
+    if(!extractIntAttribute(element, "rows", sheet._sheetSize._y, rname)) continue;
+    if(!extractIntAttribute(element, "cols", sheet._sheetSize._x, rname)) continue;
+
+    element = doc.FirstChildElement("sprites");
+    if(!extractIntAttribute(element, "width", sheet._spriteSize._x, rname)) continue;
+    if(!extractIntAttribute(element, "height", sheet._spriteSize._y, rname)) continue;
+
+    sheet._spriteCount = sheet._sheetSize._x * sheet._sheetSize._y;
+
+    if(!isValidSpriteSheet(sheet)){
+      log::log(log::ERROR, log::msg_gfx_sheet_invalid, std::string{rname});
+      log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
+      sprites.insert(std::make_pair(rkey, errorSprite));
+      continue;
+    }
+
+    sprites.insert(std::make_pair(rkey, std::move(sheet)));
   }
 }
 
