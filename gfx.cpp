@@ -297,7 +297,7 @@ Sprite SpriteSheet::getSprite(int spriteNo) const
 {
   // The game/app should make sure this never happens; should be aware of which sprite sheets
   // have what spriteNos.
-  assert(0 < spriteNo && spriteNo < _spriteCount);
+  assert(0 <= spriteNo && spriteNo < _spriteCount);
 
   Sprite sprite;
   int row = spriteNo / _sheetSize._x;
@@ -305,7 +305,7 @@ Sprite SpriteSheet::getSprite(int spriteNo) const
   sprite._rowmin = row * _spriteSize._y;
   sprite._colmin = col * _spriteSize._x;
   sprite._rowmax = (row + 1) * _spriteSize._y;
-  sprite._colmax = (col + 1) * _spriteSize._y;
+  sprite._colmax = (col + 1) * _spriteSize._x;
   sprite._image = &_image;
 
   return sprite;
@@ -363,6 +363,7 @@ bool loadSprites(const ResourceManifest_t& manifest)
     bmppath += BmpImage::FILE_EXTENSION;
     if(!sheet._image.load(bmppath)){
       log::log(log::ERROR, log::msg_gfx_fail_load_sprite, std::string{rname});
+      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
       log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
       sprites.insert(std::make_pair(rkey, errorSprite));
       continue;
@@ -379,6 +380,8 @@ bool loadSprites(const ResourceManifest_t& manifest)
       log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
       log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc.ErrorStr());
       log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
+      log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
+      sprites.insert(std::make_pair(rkey, errorSprite));
       continue;
     }
 
@@ -394,6 +397,7 @@ bool loadSprites(const ResourceManifest_t& manifest)
 
     if(!isValidSpriteSheet(sheet)){
       log::log(log::ERROR, log::msg_gfx_sheet_invalid, std::string{rname});
+      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
       log::log(log::INFO, log::msg_gfx_using_error_sprite, std::string{});
       sprites.insert(std::make_pair(rkey, errorSprite));
       continue;
