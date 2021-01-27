@@ -42,7 +42,7 @@ public:
   int getHeight() const {return _size._y;}
   Vector2i getSize() const {return _size;}
 
-public:
+private:
   static constexpr int BMPMAGIC {0x4D42};
   static constexpr int SRGBMAGIC {0x73524742};
 
@@ -102,12 +102,12 @@ public:
     uint32_t _colorSpaceMagic;
   };
 
-public:
+private:
   void allocatePixels(Vector2i size);
   void extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
   void extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
 
-public:
+private:
   Color4u** _pixels;    // _pixels = ptr to rows, thus accessed _pixels[row][col]
   Vector2i _size;       // x=width/numCols, y=height/numRows
 };

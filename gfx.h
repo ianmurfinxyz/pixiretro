@@ -50,7 +50,7 @@ struct SpriteSheet
   SpriteSheet& operator=(const SpriteSheet&) default;
   SpriteSheet& operator=(SpriteSheet&&) default;
 
-  Sprite getSprite() const;
+  Sprite getSprite(int spriteNo) const;
 
   BmpImage _image;
   Vector2i _spriteSize;    // x=width pixels, y=height pixels.
@@ -283,7 +283,9 @@ void fastFillLayer(int shade, Layer layer);
 // as the mainloop.
 void slowFillLayer(Color4u color, Layer layer);
 
-void drawSprite(Vector2i position, ResourceKey_t key, Layer layer);
+// Draws a sprite to a rendering layer. The resource key must be that of a sprite sheet and the
+// spriteNo is the number of the sprite on the sprite sheet to draw.
+void drawSprite(Vector2i position, ResourceKey_t key, int spriteNo, Layer layer);
 void drawBitmap(Layer layer);
 void drawRectangle(Layer layer);
 void drawLine(Layer layer);

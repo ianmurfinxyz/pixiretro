@@ -24,6 +24,7 @@ namespace pxr
 namespace gfx
 {
 
+
 bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
 bool operator==(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi == rhs._hi;}
 
@@ -51,18 +52,6 @@ struct Screen
   Color4u _bitmapColor;
   int _pxSize;
   int _pxCount;
-};
-
-struct Sprite
-{
-  Sprite() = default;
-  Sprite(const Sprite&) = default;
-  Sprite(Sprite&&) = default;
-  Sprite& operator=(const Sprite&) = default;
-  Sprite& operator=(Sprite&&) = default;
-
-  std::vector<Color4u> _pixels; // flattened 2D array accessed [col + (row * width)]
-  Vector2i _size;               // x(num cols) and y(num rows) dimensions of sprite.
 };
 
 static constexpr int SPRITESHEET_XML_FILE_EXTENSION {".ss"};
@@ -291,6 +280,24 @@ void shutdown()
 // GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
 
+Sprite SpriteSheet::getSprite(int spriteNo) const
+{
+  // The game/app should make sure this never happens; should be aware of which sprite sheets
+  // have what spriteNos.
+  assert(0 < spriteNo && spriteNo < _spriteCount);
+
+  Sprite sprite;
+  int row = spriteNo / _sheetSize._x;
+  int col = spriteNo % _sheetSize._x;
+  sprite._rowmin = row * _spriteSize._y;
+  sprite._colmin = col * _spriteSize._x;
+  sprite._rowmax = (row + 1) * _spriteSize._y;
+  sprite._colmax = (col + 1) * _spriteSize._y;
+  sprite._image = &_image;
+
+  return sprite;
+}
+
 static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
@@ -448,7 +455,7 @@ void slowFillLayer(Color4u color, Layer layer)
     pixelColor = color;
 }
 
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, Layer layer)
+void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   auto& screen = screens[layer];
@@ -459,19 +466,26 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, Layer layer)
   // been loaded before trying to draw them.
   assert(search != sprites.end());
 
-  const Sprite& sprite = (*search).second;
+  Sprite sprite = (*search).second.getSprite(spriteNo);
+  Color4u** spritePxs = sprite._image.getPixels();
 
-  int spritePixelNo{0}, screenRow{0}, screenCol{0};
-  for(int spriteRow = 0; spriteRow < sprite._size._y; ++spriteRow){
+  // note: spritesheets are validated to ensure the range of rows and cols of all their sprites 
+  // lie within the image, thus don't need to check that here.
+
+  int screenRow {0}, screenCol{0};
+  for(int spriteRow = sprite._rowmin; spriteRow < sprite._rowmax; ++spriteRow){
     screenRow = position._y + spriteRow;
-    if(0 < screenRow && screenRow < screen._size._y){
-      for(int spriteCol = 0; spriteCol < sprite._size._x; ++spriteCol){
-        screenCol = position._x + spriteCol;
-        if(0 < screenCol && screenCol < screen._size._x){
-          screen._pixelColors[screenCol + (screenRow * screen._size._x)] = sprite._pixels[spritePixelNo]; 
-          ++spritePixelNo;
-        }
-      }
+    if(screenRow < 0) 
+      continue;
+    if(screenRow >= screen._size._y)
+      break;
+    for(int spriteCol = sprite._colmin; spriteCol < sprite._colmax; ++spriteCol){
+      screenCol = position._x + spriteCol;
+      if(spriteCol < 0)
+        continue;
+      if(spriteCol >= screen._size._x)
+        break;
+      screen._pxColors[screenCol + (screenRow * screen._size._x)] = spritePxs[spriteRow][spriteCol]; 
     }
   }
 }
