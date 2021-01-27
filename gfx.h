@@ -60,7 +60,10 @@ struct SpriteSheet
 };
 
 // Directory where this module expects to find sprite resources when loading.
+// note: these are unix paths; if decide to support windows will need to make thus a conditional
+// during compilation.
 constexpr const char* spritesdir = "assets/sprites/";
+constexpr const char* fontsdir = "assets/fonts/";
 
 // A unique key to identify a gfx resource. If 2 resources use the same key only the first
 // encountered will be loaded. It is left to clients of this module to ensure uniqueness. Keys
