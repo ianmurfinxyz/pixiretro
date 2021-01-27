@@ -46,8 +46,8 @@ public:
     pxr::gfx::fastFillLayer(20, pxr::gfx::LAYER_BACKGROUND);
 
     pxr::gfx::clearLayer(pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(pxr::Vector2i{50, 20}, SPRITEID_CRAB, pxr::gfx::LAYER_STAGE);
+    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, pxr::gfx::LAYER_STAGE);
+    pxr::gfx::drawSprite(pxr::Vector2i{50, 20}, SPRITEID_CRAB, 0, pxr::gfx::LAYER_STAGE);
   }
 
   void onReset()

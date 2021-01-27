@@ -16,8 +16,9 @@
 #include "math.h"
 #include "color.h"
 #include "bmpimage.h"
-#include "spritesheet.h"
 #include "log.h"
+
+using namespace tinyxml2;
 
 namespace pxr
 {
@@ -54,7 +55,7 @@ struct Screen
   int _pxCount;
 };
 
-static constexpr int SPRITESHEET_XML_FILE_EXTENSION {".ss"};
+static constexpr const char* SPRITESHEET_XML_FILE_EXTENSION {".ss"};
 
 static constexpr int openglVersionMajor = 3;
 static constexpr int openglVersionMinor = 0;
@@ -143,7 +144,7 @@ static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
   }
 }
 
-void initializeScreens(Configuration config)
+static void initializeScreens(Configuration config)
 {
   for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
     auto& screen = screens[layer];
@@ -158,9 +159,9 @@ void initializeScreens(Configuration config)
       screen._cmode = ColorMode::FULL_RGB;
     }
 
-    screen._size = config._screenSize[layer];
-    assert(0 < screen._size._x && screen._size._x <= screen::MAX_WIDTH);
-    assert(0 < screen._size._y && screen._size._y <= screen::MAX_HEIGHT);
+    screen._size = config._layerSize[layer];
+    assert(0 < screen._size._x && screen._size._x <= Screen::MAX_WIDTH);
+    assert(0 < screen._size._y && screen._size._y <= Screen::MAX_HEIGHT);
     screen._pxCount  = screen._size._x * screen._size._y;
   
     screen._pxColors = new Color4u[screen._pxCount];
@@ -172,14 +173,14 @@ void initializeScreens(Configuration config)
     screen._bands.push_back(ColorBand{colors::white, std::numeric_limits<int>::max()});
     screen._bitmapColor = colors::white;
 
-    std::sstream ss {};
+    std::stringstream ss {};
     ss << "[w:" << screen._size._x << ", h:" << screen._size._y << "] "
-       << "mem:" << (screen._pxCount * sizeof Color4u) / 1024 << "kib";
+       << "mem:" << (screen._pxCount * sizeof(Color4u)) / 1024 << "kib";
     log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
   }
 }
 
-void freeScreens()
+static void freeScreens()
 {
   for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
     auto& screen = screens[layer];
@@ -188,6 +189,16 @@ void freeScreens()
     screen._pxColors = nullptr;
     screen._pxPositions = nullptr;
   }
+}
+
+static void genErrorSprite()
+{
+  static constexpr int squareSize = 8;
+
+  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
+  errorSprite._sheetSize = Vector2i{1, 1};
+  errorSprite._spriteCount = 1;
+  errorSprite._image.create(errorSprite._spriteSize, colors::red);
 }
 
 bool initialize(Configuration config)
@@ -266,6 +277,8 @@ bool initialize(Configuration config)
 
   initializeScreens(config);  
 
+  genErrorSprite();
+
   return true;
 }
 
@@ -298,24 +311,14 @@ Sprite SpriteSheet::getSprite(int spriteNo) const
   return sprite;
 }
 
-static void genErrorSprite()
+static bool extractIntAttribute(XMLElement* element, const char* attribute, int* value, 
+                                ResourceName_t rname, XMLDocument* doc)
 {
-  static constexpr int squareSize = 8;
-
-  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
-  errorSprite._sheetSize = Vector2i{1, 1};
-  errorSprite._spriteCount = 1;
-  errorSprite._image.create(errorSprite._spriteSize, colors::red);
-}
-
-static bool extractIntAttribute(XMLElement* element, const char* attribute, int& value, 
-                                ResourceName_t rname)
-{
-  XMLError xmlerror = elem->QueryIntAttribute(attribute, value);
+  XMLError xmlerror = element->QueryIntAttribute(attribute, value);
   if(xmlerror != XML_SUCCESS){
     log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, std::string{"cols"});
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc.ErrorStr());
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc->ErrorName());
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc->ErrorStr());
     log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
     return false;
   }
@@ -324,10 +327,10 @@ static bool extractIntAttribute(XMLElement* element, const char* attribute, int&
 
 static bool isValidSpriteSheet(SpriteSheet& sheet)
 {
-  if((sheet._sheetSize._x * sheet._spriteSize._x) != _image.getWidth())
+  if((sheet._sheetSize._x * sheet._spriteSize._x) != sheet._image.getWidth())
     return false;
 
-  if((sheet._sheetSize._y * sheet._spriteSize._y) != _image.getHeight())
+  if((sheet._sheetSize._y * sheet._spriteSize._y) != sheet._image.getHeight())
     return false;
 
   return true;
@@ -336,9 +339,6 @@ static bool isValidSpriteSheet(SpriteSheet& sheet)
 bool loadSprites(const ResourceManifest_t& manifest)
 {
   log::log(log::INFO, log::msg_gfx_loading_sprites);
-
-  if(errorSprite._pixels.size() == 0)
-    genErrorSprite();
 
   for(auto &pair : manifest){
     ResourceKey_t rkey = pair.first;
@@ -354,6 +354,8 @@ bool loadSprites(const ResourceManifest_t& manifest)
       log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
       continue;
     }
+
+    SpriteSheet sheet {};
 
     std::string bmppath {};
     bmppath += spritesdir;
@@ -371,7 +373,7 @@ bool loadSprites(const ResourceManifest_t& manifest)
     xmlpath += rname;
     xmlpath += SPRITESHEET_XML_FILE_EXTENSION;
     XMLDocument doc{};
-    doc.LoadFile(xmlpath.str());
+    doc.LoadFile(xmlpath.c_str());
     if(doc.Error()){
       log::log(log::ERROR, log::msg_gfx_fail_xml_parse, xmlpath); 
       log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
@@ -380,15 +382,13 @@ bool loadSprites(const ResourceManifest_t& manifest)
       continue;
     }
 
-    SpriteSheet sheet {};
-
     XMLElement* element = doc.FirstChildElement("spritesheet");
-    if(!extractIntAttribute(element, "rows", sheet._sheetSize._y, rname)) continue;
-    if(!extractIntAttribute(element, "cols", sheet._sheetSize._x, rname)) continue;
+    if(!extractIntAttribute(element, "rows", &sheet._sheetSize._y, rname, &doc)) continue;
+    if(!extractIntAttribute(element, "cols", &sheet._sheetSize._x, rname, &doc)) continue;
 
     element = doc.FirstChildElement("sprites");
-    if(!extractIntAttribute(element, "width", sheet._spriteSize._x, rname)) continue;
-    if(!extractIntAttribute(element, "height", sheet._spriteSize._y, rname)) continue;
+    if(!extractIntAttribute(element, "width", &sheet._spriteSize._x, rname, &doc)) continue;
+    if(!extractIntAttribute(element, "height", &sheet._spriteSize._y, rname, &doc)) continue;
 
     sheet._spriteCount = sheet._sheetSize._x * sheet._sheetSize._y;
 
@@ -405,16 +405,16 @@ bool loadSprites(const ResourceManifest_t& manifest)
 
 bool loadFonts(const ResourceManifest_t& manifest)
 {
-  BmpImage image {};
-  for(auto &pair : manifest){
-    ResourceKey_t rkey = pair.first;
-    ResourceName_t rname = pair.second;
+  //BmpImage image {};
+  //for(auto &pair : manifest){
+  //  ResourceKey_t rkey = pair.first;
+  //  ResourceName_t rname = pair.second;
 
-    std::string
-   
-    XMLDocument doc {}; 
-    doc.load(
-  }
+  //  std::string
+  // 
+  //  XMLDocument doc {}; 
+  //  doc.load(
+  //}
 }
 
 //----------------------------------------------------------------------------------------------//
@@ -437,22 +437,22 @@ void clearWindow(Color4u color)
 void clearLayer(Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  memset(screens[layer]._pixelColors.data(), alphaKey, screens[layer]._pxCount * sizeof(Color4u));
+  memset(screens[layer]._pxColors, alphaKey, screens[layer]._pxCount * sizeof(Color4u));
 }
 
 void fastFillLayer(int shade, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   shade = std::max(0, std::min(shade, 255));
-  memset(screens[layer]._pixelColors.data(), shade, screens[layer]._pxCount * sizeof(Color4u));
+  memset(screens[layer]._pxColors, shade, screens[layer]._pxCount * sizeof(Color4u));
 }
 
 void slowFillLayer(Color4u color, Layer layer)
 {
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   Screen& screen = screens[layer];
-  for(auto& pixelColor : screen._pixelColors)
-    pixelColor = color;
+  for(int px = 0; px < screen._pxCount; ++px)
+    screen._pxColors[px] = color;
 }
 
 void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer layer)
@@ -467,7 +467,7 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer 
   assert(search != sprites.end());
 
   Sprite sprite = (*search).second.getSprite(spriteNo);
-  Color4u** spritePxs = sprite._image.getPixels();
+  const Color4u* const * spritePxs = sprite._image->getPixels();
 
   // note: spritesheets are validated to ensure the range of rows and cols of all their sprites 
   // lie within the image, thus don't need to check that here.

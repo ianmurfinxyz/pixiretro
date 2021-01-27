@@ -6,6 +6,7 @@
 
 #include "color.h"
 #include "math.h"
+#include "bmpimage.h"
 
 namespace pxr
 {
@@ -22,7 +23,7 @@ struct Sprite
   int _colmin;
   int _rowmax;
   int _colmax;
-  BmpImage* _image;
+  const BmpImage* _image;
 };
 
 // A sprite sheet imposes an ordered structure to a bmpimage; it imposes a regular 2D grid
@@ -47,8 +48,8 @@ struct SpriteSheet
   SpriteSheet() = default;
   SpriteSheet(const SpriteSheet&) = default;
   SpriteSheet(SpriteSheet&&) = default;
-  SpriteSheet& operator=(const SpriteSheet&) default;
-  SpriteSheet& operator=(SpriteSheet&&) default;
+  SpriteSheet& operator=(const SpriteSheet&) = default;
+  SpriteSheet& operator=(SpriteSheet&&) = default;
 
   Sprite getSprite(int spriteNo) const;
 
@@ -249,13 +250,13 @@ struct Configuration
 {
   std::string _windowTitle;
   Vector2i _windowSize;
-  Vector2i _screenSize[LAYER_COUNT];    // a size for each layer.
+  Vector2i _layerSize[LAYER_COUNT];    // a size for each layer.
   bool _fullscreen;
 };
 
 // Initializes the gfx subsystem. Returns true if success and false if fatal error. Upon
-// returning false calls to other drawing functions have undefined results. Must be called
-// prior to any drawing functions.
+// returning false calls to other module functions have undefined results thus must be called
+// prior to any other function.
 bool initialize(Configuration config);
 
 // Call to shutdown the module upon app termination.

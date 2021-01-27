@@ -98,10 +98,10 @@ void Engine::initialize(std::unique_ptr<App> app)
   gfxconfig._windowTitle = std::string{ss.str()};
   gfxconfig._windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
   gfxconfig._windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
-  gfxconfig._backgroundLayerSize = _app->getBackgroundLayerSize();
-  gfxconfig._stageLayerSize = _app->getStageLayerSize();
-  gfxconfig._uiLayerSize = _app->getUiLayerSize();
-  gfxconfig._engineStatsLayerSize = engineStatsLayerSize;
+  gfxconfig._layerSize[gfx::LAYER_BACKGROUND] = _app->getBackgroundLayerSize();
+  gfxconfig._layerSize[gfx::LAYER_STAGE] = _app->getStageLayerSize();
+  gfxconfig._layerSize[gfx::LAYER_UI] = _app->getUiLayerSize();
+  gfxconfig._layerSize[gfx::LAYER_ENGINE_STATS] = engineStatsLayerSize;
   gfxconfig._fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
 
   gfx::initialize(gfxconfig);
@@ -212,7 +212,7 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
-  gfx::clearWindow(colors::gainsboro);
+  gfx::clearWindow(gfx::colors::gainsboro);
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);

@@ -8,6 +8,8 @@
 #include <fstream>
 #include <cmath>
 #include <cstring>
+#include <cassert>
+#include <sstream>
 #include "color.h"
 #include "bmpimage.h"
 #include "log.h"
@@ -24,12 +26,7 @@ BmpImage::BmpImage() :
 
 BmpImage::~BmpImage()
 {
-  if(_pixels != nullptr){
-    for(int row = 0; row < _size._y; ++row)
-      delete[] _pixels[row];
-    delete[] _pixels;
-  }
-  _pixels = nullptr;
+  freePixels();
 }
 
 BmpImage::BmpImage(const BmpImage& other) :
@@ -40,7 +37,7 @@ BmpImage::BmpImage(const BmpImage& other) :
   _pixels = new Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row){
     _pixels[row] = new Color4u[_size._x];
-    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
   }
 }
 
@@ -52,28 +49,28 @@ BmpImage::BmpImage(BmpImage&& other)
   other._size.zero();
 }
 
-BmpImage::BmpImage& BmpImage::operator=(const BmpImage& other)
+BmpImage& BmpImage::operator=(const BmpImage& other)
 {
   if(_pixels != nullptr && _size == other._size){ 
     for(int row = 0; row < _size._y; ++row){
-      memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+      memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
     }
     return *this;
   }
 
-  ~BmpImage();
+  freePixels();
   _size = other._size;
   _pixels = new Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row){
     _pixels[row] = new Color4u[_size._x];
-    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof Color4u);
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
   }
   return *this;
 }
 
-BmpImage::BmpImage& operator=(BmpImage&& other)
+BmpImage& BmpImage::operator=(BmpImage&& other)
 {
-  ~BmpImage();   
+  freePixels();   
   _pixels = other._pixels;
   other._pixels = nullptr;
   _size = other._size;
@@ -83,14 +80,14 @@ BmpImage::BmpImage& operator=(BmpImage&& other)
 
 const Color4u BmpImage::getPixel(int row, int col)
 {
-  assert(0 <= row && row < _size.y);
+  assert(0 <= row && row < _size._y);
   assert(0 <= col && col <= _size._x);
   return _pixels[row][col];
 }
 
 const Color4u* BmpImage::getRow(int row)
 {
-  assert(0 <= row && row < _size.y);
+  assert(0 <= row && row < _size._y);
   return _pixels[row];
 }
 
@@ -162,9 +159,9 @@ bool BmpImage::load(std::string filepath)
     return false;
   }
 
-  _size = Vector2i{infoHead._bmpWidth_px, std::abs(infohead._bmpHeight_px)};
+  _size = Vector2i{infoHead._bmpWidth_px, std::abs(infoHead._bmpHeight_px)};
   if(_size._x <= 0 || _size._y <= 0 || _size._x > BMP_MAX_WIDTH || _size._y > BMP_MAX_HEIGHT){
-    std::sstream ss{};
+    std::stringstream ss{};
     ss << "[w:" << _size._x << ",h:" << _size._y << "]";
     log::log(log::ERROR, log::msg_bmp_unsupported_size, ss.str());
     return false;
@@ -209,9 +206,6 @@ bool BmpImage::load(std::string filepath)
     break;
   }
 
-  _width_px = infoHead._bmpWidth_px;
-  _height_px = infoHead._bmpHeight_px;
-
   return true;
 }
 
@@ -224,7 +218,7 @@ void BmpImage::create(Vector2i size, Color4u clearColor)
 
 void BmpImage::clear(Color4u color)
 {
-  if(pixels == nullptr)
+  if(_pixels == nullptr)
     return;
 
   for(int row = 0; row < _size._y; ++row)
@@ -232,9 +226,19 @@ void BmpImage::clear(Color4u color)
       _pixels[row][col] = color;
 }
 
-bool BmpImage::reallocatePixels()
+void BmpImage::freePixels()
 {
-  ~BmpImage();
+  if(_pixels != nullptr){
+    for(int row = 0; row < _size._y; ++row)
+      delete[] _pixels[row];
+    delete[] _pixels;
+  }
+  _pixels = nullptr;
+}
+
+void BmpImage::reallocatePixels()
+{
+  freePixels();
   _pixels = new Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row)
     _pixels[row] = new Color4u[_size._x];
@@ -273,8 +277,6 @@ void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, I
     pixelOffset_bytes += (numRows - 1) * rowSize_bytes;
     rowOffset_bytes *= -1;
   }
-
-  _pixels.reserve(infoHead._bmpWidth_px * numRows);
 
   int seekPos {pixelOffset_bytes};
   char* buffer = new char[rowSize_bytes];

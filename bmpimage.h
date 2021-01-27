@@ -36,7 +36,7 @@ public:
 
   const Color4u getPixel(int row, int col);
   const Color4u* getRow(int row);
-  const Color4u** getPixels() const {return _pixels;}
+  const Color4u* const* getPixels() const {return _pixels;}
 
   int getWidth() const {return _size._x;}
   int getHeight() const {return _size._y;}
@@ -103,7 +103,8 @@ private:
   };
 
 private:
-  void allocatePixels(Vector2i size);
+  void freePixels();
+  void reallocatePixels();
   void extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
   void extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
 
