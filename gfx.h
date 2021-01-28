@@ -290,12 +290,15 @@ void slowFillLayer(Color4u color, Layer layer);
 // Draws a sprite to a rendering layer. The resource key must be that of a sprite sheet and the
 // spriteNo is the number of the sprite on the sprite sheet to draw.
 void drawSprite(Vector2i position, ResourceKey_t key, int spriteNo, Layer layer);
+
 void drawBitmap(Layer layer);
 void drawRectangle(Layer layer);
 void drawLine(Layer layer);
 void drawParticles(Layer layer);
 void drawPixel(Vector2i position, Color4u color, Layer layer);
-void drawText(Layer layer);
+
+
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer);
 
 // Called by the engine after calling App::onDraw to present the results of all drawing to the 
 // window. It is not necessary to call this function within your app.

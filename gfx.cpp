@@ -10,8 +10,6 @@
 #include <limits>
 #include <cassert>
 
-#include <iostream>
-
 #include "tinyxml2.h"  // TODO move to a lib dir
 
 #include "gfx.h"
@@ -577,7 +575,6 @@ bool loadFonts(const ResourceManifest_t& manifest)
       if(!extractIntAttribute(charElement, "xadvance", &glyph._xadvance, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
       ++charsRead;
       charElement = charElement->NextSiblingElement("char");
-      std::cout << charsRead << std::endl;
     }
     while(charElement != 0 && charsRead < Font::ASCII_CHAR_COUNT);
 
@@ -676,9 +673,9 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer 
       break;
     for(int spriteCol = sprite._colmin; spriteCol < sprite._colmax; ++spriteCol){
       screenCol = position._x + spriteCol;
-      if(spriteCol < 0)
+      if(screenCol < 0)
         continue;
-      if(spriteCol >= screen._size._x)
+      if(screenCol >= screen._size._x)
         break;
       screen._pxColors[screenCol + (screenRow * screen._size._x)] = spritePxs[spriteRow][spriteCol]; 
     }
@@ -705,8 +702,56 @@ void drawPixel(Layer layer)
 {
 }
 
-void drawText(Layer layer)
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
 {
+  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
+  auto& screen = screens[layer];
+
+  auto search = fonts.find(fontKey);
+  assert(search != fonts.end());
+  Font& font = (*search).second;
+  const Color4u* const* fontPxs = font._image.getPixels();
+
+  for(char c : text){
+    assert(' ' <= c && c <= '~');
+    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
+    
+    int screenRow{0}, screenCol{0};
+    for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
+      screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
+
+      // Drawing top-to-bottom thus if we are beyond the bottom screen border then their may
+      // be some more glyph rows that are above it.
+      if(screenRow < 0) 
+        continue;
+
+      // If we are beyond the top border then all subsequent glyph rows will also be beyond.
+      if(screenRow >= screen._size._y)
+        break;
+
+      for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
+        screenCol = position._x + glyphCol + glyph._xoffset;
+
+        // If we are beyond the left border then their may be some more glyph columns within 
+        // the screen.
+        if(screenCol < 0)
+          continue;
+
+        // Drawing left-to-right thus if screen column is beyond the right-most screen border
+        // then all subsequent characters will be too.
+        if(screenCol >= screen._size._x)
+          return;
+
+        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+
+        if(pxColor.getAlpha() == alphaKey)
+          continue;
+        
+        screen._pxColors[screenCol + (screenRow * screen._size._x)] = pxColor;
+      }
+    }
+    position._x += glyph._xadvance + font._glyphSpace;
+  }
 }
 
 void present()
