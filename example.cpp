@@ -48,11 +48,11 @@ public:
     pxr::gfx::clearLayer(pxr::gfx::LAYER_STAGE);
     pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, pxr::gfx::LAYER_STAGE);
     pxr::gfx::drawSprite(pxr::Vector2i{50, 20}, SPRITEID_CRAB, 0, pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawText(pxr::Vector2i{20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
-    pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
-    pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
-    pxr::gfx::drawText(pxr::Vector2i{20, 140}, "\"this is a quote\"", 0, pxr::gfx::LAYER_UI);
-    pxr::gfx::drawText(pxr::Vector2i{20, 150}, "$cat file.txt >> main.cpp -la", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{-20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{20, 140}, "\"this is a quote\"", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{20, 150}, "$cat file.txt >> main.cpp -la", 0, pxr::gfx::LAYER_UI);
   }
 
   void onReset()

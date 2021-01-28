@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <thread>
 #include <sstream>
+#include <iomanip>
 #include "engine.h"
 #include "log.h"
 #include "app.h"
@@ -81,7 +82,7 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
-  _updateTicker = Ticker{&Engine::onUpdateTick, this, fpsLockHz, 5, true};
+  _updateTicker = Ticker{&Engine::onUpdateTick, this, fpsLockHz, 1, true};
   _drawTicker = Ticker{&Engine::onDrawTick, this, fpsLockHz, 1, false};
 
   _app = std::move(app);
@@ -195,6 +196,22 @@ void Engine::mainloop()
 
 void Engine::drawEngineStats()
 {
+  gfx::clearLayer(gfx::LAYER_ENGINE_STATS);
+
+  std::stringstream ss{};
+
+  ss << std::setprecision(3);
+  ss << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  "
+     << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  "
+     << "frame FPS: " << _measuredFrameFrequency << "hz";
+  gfx::drawText({10, 20}, ss.str(), engineFontKey, gfx::LAYER_ENGINE_STATS);
+
+  std::stringstream().swap(ss);
+
+  ss << std::setprecision(3);
+  ss << "game time: " << durationToMinutes(_gameClock.getNow()) << "mins  "
+     << "real time: " << durationToMinutes(_realClock.getNow()) << "mins";
+  gfx::drawText({10, 10}, ss.str(), engineFontKey, gfx::LAYER_ENGINE_STATS);
 }
 
 void Engine::drawPauseDialog()
@@ -210,7 +227,7 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
-  gfx::clearWindow(gfx::colors::gainsboro);
+  gfx::clearWindow(gfx::colors::black);
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);

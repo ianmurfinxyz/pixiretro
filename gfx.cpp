@@ -119,7 +119,10 @@ static void setViewport(iRect viewport)
 static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
 {
   // recalculate pixel size.
-  if(screen._smode == PxSizeMode::AUTO_MAX){
+  if(screen._smode == PxSizeMode::AUTO_MIN){
+    screen._pxSize = 1;
+  }
+  else if(screen._smode == PxSizeMode::AUTO_MAX){
     // note: integer math here thus all division results are implicitly floored as required.
     int pxw = windowSize._x / screen._size._x;  
     int pxh = windowSize._y / screen._size._y;
@@ -781,9 +784,6 @@ void setLayerPxSizeMode(PxSizeMode mode, Layer layer)
   // a call to 'setLayerPixelSize'.
   if(mode == PxSizeMode::MANUAL)
     return;
-
-  if(mode == PxSizeMode::AUTO_MIN)
-    screen._pxSize = 1;
 
   autoAdjustScreen(windowSize, screen);
 }
