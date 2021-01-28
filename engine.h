@@ -7,6 +7,7 @@
 
 #include "filerc.h"
 #include "app.h"
+#include "gfx.h"
 
 namespace pxr
 {
@@ -32,6 +33,10 @@ private:
   static constexpr Duration_t minFramePeriod {1'000'000};
 
   static constexpr Vector2i engineStatsLayerSize {400, 200};
+
+  // Engine reserves this resource key for the font it uses to output engine stats.
+  static constexpr gfx::ResourceKey_t engineFontKey {0};
+  static constexpr gfx::ResourceName_t engineFontName {"dogica8"};
 
   // Keys used by the engine for user controlled engine features. If these keys
   // clash with your application controls they can be changed here.

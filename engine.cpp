@@ -106,10 +106,8 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   gfx::initialize(gfxconfig);
 
-  //assets = std::make_unique<Assets>();
-
-  //Assets::Manifest_t manifest {{engineFontKey, engineFontName, engineFontScale}};
-  //assets->loadFonts(manifest);
+  gfx::ResourceManifest_t manifest {{engineFontKey, engineFontName}};
+  gfx::loadFonts(manifest);
 
   _framesDone = 0;
   _framesDoneThisSecond = 0;

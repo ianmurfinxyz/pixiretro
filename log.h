@@ -24,8 +24,8 @@ constexpr const char* msg_gfx_fail_create_opengl_context = "failed to create ope
 constexpr const char* msg_gfx_fail_set_opengl_attribute = "failed to set opengl attribute";
 constexpr const char* msg_gfx_opengl_version = "using opengl version";
 constexpr const char* msg_gfx_loading_sprites = "starting sprite loading";
-constexpr const char* msg_gfx_loading_asset = "loading sprite";
-constexpr const char* msg_gfx_fail_load_asset = "failed to load the bitmap image of assets";
+constexpr const char* msg_gfx_loading_asset = "loading asset";
+constexpr const char* msg_gfx_fail_load_asset_bmp = "failed to load the bitmap image of asset";
 constexpr const char* msg_gfx_using_error_sprite = "susbtituting unloaded sprite with 8x8 red square";
 constexpr const char* msg_gfx_using_error_font = "susbtituting unloaded font with 8px blank error font";
 constexpr const char* msg_gfx_loading_fonts = "starting font loading";
@@ -39,9 +39,10 @@ constexpr const char* msg_gfx_fail_xml_attribute = "failed to read xml attribute
 constexpr const char* msg_gfx_fail_xml_element = "failed to find xml element";
 constexpr const char* msg_gfx_tinyxml_error_name = "tinyxml2 error name";
 constexpr const char* msg_gfx_tinyxml_error_desc = "tinyxml2 error desc";
-constexpr const char* msg_gfx_asset_invalid = "invalid asset as xml data does not match bmp image";
+constexpr const char* msg_gfx_asset_invalid_xml_bmp_mismatch = "invalid asset as xml data does not match bmp image";
 constexpr const char* msg_gfx_font_size_mismatch = "font xml file states image size different to font bmp file";
 constexpr const char* msg_gfx_missing_ascii_glyphs = "loaded font does not contain glyphs for all 95 printable ascii chars";
+constexpr const char* msg_gfx_font_fail_checksum = "loaded font failed the checksum test; may be duplicate ascii chars";
 
 // bitmap (bmp) file log strings.
 

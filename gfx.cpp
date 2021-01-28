@@ -10,6 +10,8 @@
 #include <limits>
 #include <cassert>
 
+#include <iostream>
+
 #include "tinyxml2.h"  // TODO move to a lib dir
 
 #include "gfx.h"
@@ -57,7 +59,7 @@ struct Screen
 
 struct Glyph
 {
-  int _id;       // ascii code
+  int _ascii;
   int _x;
   int _y;
   int _width;
@@ -71,6 +73,7 @@ struct Font
 {
   static constexpr char* FILE_EXTENSION {".fn"};
   static constexpr int ASCII_CHAR_COUNT {95};
+  static constexpr int ASCII_CHAR_CHECKSUM {7505}; // sum of ascii codes 32 to 126.
 
   std::array<Glyph, ASCII_CHAR_COUNT> _glyphs;
   BmpImage _image;
@@ -80,7 +83,6 @@ struct Font
 };
 
 static constexpr const char* SPRITESHEET_XML_FILE_EXTENSION {".ss"};
-static constexpr const char* FONT_XML_FILE_EXTENSION {".fn"};
 
 static constexpr int openglVersionMajor = 3;
 static constexpr int openglVersionMinor = 0;
@@ -339,6 +341,8 @@ void shutdown()
 // GFX RESOURCES                                                                                //
 //----------------------------------------------------------------------------------------------//
 
+enum AssetID { AID_SPRITE, AID_FONT };
+
 Sprite SpriteSheet::getSprite(int spriteNo) const
 {
   // The game/app should make sure this never happens; should be aware of which sprite sheets
@@ -357,26 +361,40 @@ Sprite SpriteSheet::getSprite(int spriteNo) const
   return sprite;
 }
 
+static void useErrorAsset(ResourceKey_t rkey, AssetID aid)
+{
+  switch(aid){
+    case AID_SPRITE:
+      log::log(log::INFO, log::msg_gfx_using_error_sprite);
+      sprites.insert(std::make_pair(rkey, errorSprite));
+      break;
+    case AID_FONT:
+      log::log(log::INFO, log::msg_gfx_using_error_font);
+      fonts.insert(std::make_pair(rkey, errorFont));
+      break;
+  }
+}
+
 static bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath, ResourceKey_t rkey, 
                              AssetID aid)
 {
   doc->LoadFile(xmlpath.c_str());
-  if(doc.Error()){
+  if(doc->Error()){
     log::log(log::ERROR, log::msg_gfx_fail_xml_parse, xmlpath); 
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc.ErrorName());
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc.ErrorStr());
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc->ErrorName());
+    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc->ErrorStr());
     useErrorAsset(rkey, aid);
     return false;
   }
   return true;
 }
 
-static bool extractChildElement(XMLElement* parent, XMLElement* child, const char* childname,
+static bool extractChildElement(XMLNode* parent, XMLElement** child, const char* childname,
                                 ResourceKey_t rkey, AssetID aid)
 {
-  child = parent->FirstChildElement(childname);
-  if(element == 0){
-    log::log(log::error, log::msg_gfx_fail_xml_element, childname);
+  *child = parent->FirstChildElement(childname);
+  if(*child == 0){
+    log::log(log::ERROR, log::msg_gfx_fail_xml_element, childname);
     useErrorAsset(rkey, aid);
     return false;
   }
@@ -389,9 +407,7 @@ static bool extractIntAttribute(XMLElement* element, const char* attribute, int*
 {
   XMLError xmlerror = element->QueryIntAttribute(attribute, value);
   if(xmlerror != XML_SUCCESS){
-    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, std::string{"cols"});
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc->ErrorName());
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc->ErrorStr());
+    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, std::string{attribute});
     useErrorAsset(rkey, aid);
     return false;
   }
@@ -407,20 +423,6 @@ static bool isValidSpriteSheet(SpriteSheet& sheet)
     return false;
 
   return true;
-}
-
-static void useErrorAsset(ResourceKey_t rkey, AssetID aid)
-{
-  switch(aid){
-    case AID_SPRITE:
-      log::log(log::INFO, log::msg_gfx_using_error_sprite);
-      sprites.insert(std::make_pair(rkey, errorSprite));
-      break;
-    case AID_FONT:
-      log::log(log::INFO, log::msg_gfx_using_error_font);
-      fonts.insert(std::make_pair(rkey, errorFont));
-      break;
-  }
 }
 
 bool loadSprites(const ResourceManifest_t& manifest)
@@ -463,17 +465,17 @@ bool loadSprites(const ResourceManifest_t& manifest)
 
     XMLElement* element {nullptr};
 
-    if(!extractChildElement(&doc, element, "spritesheet", rkey, AID_SPRITE)) continue;
+    if(!extractChildElement(&doc, &element, "spritesheet", rkey, AID_SPRITE)) continue;
     if(!extractIntAttribute(element, "rows", &sheet._sheetSize._y, rkey, rname, &doc, AID_SPRITE)) continue;
     if(!extractIntAttribute(element, "cols", &sheet._sheetSize._x, rkey, rname, &doc, AID_SPRITE)) continue;
-    if(!extractChildElement(&doc, element, "sprites", rkey, AID_SPRITE)) continue;
+    if(!extractChildElement(&doc, &element, "sprites", rkey, AID_SPRITE)) continue;
     if(!extractIntAttribute(element, "width", &sheet._spriteSize._x, rkey, rname, &doc, AID_SPRITE)) continue;
     if(!extractIntAttribute(element, "height", &sheet._spriteSize._y, rkey, rname, &doc, AID_SPRITE)) continue;
 
     sheet._spriteCount = sheet._sheetSize._x * sheet._sheetSize._y;
 
     if(!isValidSpriteSheet(sheet)){
-      log::log(log::ERROR, log::msg_gfx_asset_invalid, std::string{rname});
+      log::log(log::ERROR, log::msg_gfx_asset_invalid_xml_bmp_mismatch, std::string{rname});
       log::log(log::INFO, log::msg_gfx_using_error_sprite);
       sprites.insert(std::make_pair(rkey, errorSprite));
       continue;
@@ -507,17 +509,17 @@ bool loadFonts(const ResourceManifest_t& manifest)
     std::string bmppath{};
     bmppath += fontsdir;
     bmppath += rname;
-    bmppath += Font::FILE_EXTENSION;
+    bmppath += BmpImage::FILE_EXTENSION;
     if(!font._image.load(bmppath)){
       log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, std::string{rname});
-      useErrorAsset(rkey);
+      useErrorAsset(rkey, AID_FONT);
       continue;
     }
 
     std::string xmlpath {};
     xmlpath += fontsdir;
     xmlpath += rname;
-    xmlpath += FONT_XML_FILE_EXTENSION;
+    xmlpath += Font::FILE_EXTENSION;
     XMLDocument doc{};
     parseXmlDocument(&doc, xmlpath, rkey, AID_FONT);
 
@@ -527,17 +529,17 @@ bool loadFonts(const ResourceManifest_t& manifest)
     XMLElement* charsElement {nullptr};
     XMLElement* charElement {nullptr};
 
-    if(!extractChildElement(&doc, fontElement, "font", rkey, AID_FONT)) continue;
+    if(!extractChildElement(&doc, &fontElement, "font", rkey, AID_FONT)) continue;
 
-    if(!extractChildElement(fontElement, infoElement, "info", rkey, AID_FONT)) continue;
+    if(!extractChildElement(fontElement, &infoElement, "info", rkey, AID_FONT)) continue;
     if(!extractIntAttribute(infoElement, "lineHeight", &font._lineHeight, rkey, rname, &doc, AID_FONT)) continue;
     if(!extractIntAttribute(infoElement, "baseline", &font._baseLine, rkey, rname, &doc, AID_FONT)) continue;
     if(!extractIntAttribute(infoElement, "glyphspace", &font._glyphSpace, rkey, rname, &doc, AID_FONT)) continue;
 
     Vector2i xmlSize{};
-    if(!extractChildElement(fontElement, bitmapElement, "bitmap", rkey, AID_FONT)) continue;
-    if(!extractIntAttribute(bitmapElement, "width", &xmlSize._x, rname, &doc)) continue;
-    if(!extractIntAttribute(bitmapElement, "height", &xmlSize._y, rname, &doc)) continue;
+    if(!extractChildElement(fontElement, &bitmapElement, "bitmap", rkey, AID_FONT)) continue;
+    if(!extractIntAttribute(bitmapElement, "width", &xmlSize._x, rkey, rname, &doc, AID_FONT)) continue;
+    if(!extractIntAttribute(bitmapElement, "height", &xmlSize._y, rkey, rname, &doc, AID_FONT)) continue;
 
     Vector2i bmpSize = font._image.getSize();
 
@@ -546,37 +548,43 @@ bool loadFonts(const ResourceManifest_t& manifest)
       ss << "in xml file '" << xmlpath << "' [w:" << xmlSize._x << ", h:" << xmlSize._y << "] : "
          << "in bmp file '" << bmppath << "' [w:" << bmpSize._x << ", h:" << bmpSize._y << "]";
       log::log(log::ERROR, log::msg_gfx_font_size_mismatch, ss.str());
-      log::log(log::INFO, log::msg_gfx_asset_invalid);
+      log::log(log::INFO, log::msg_gfx_asset_invalid_xml_bmp_mismatch);
       useErrorAsset(rkey, AID_FONT);
     }
 
     int charsCount {0};
-    if(!extractChildElement(fontElement, charsElement, "chars", rkey, AID_FONT)) continue;
-    if(!extractIntAttribute(charsElement, "count", &charsCount, rname, &doc)) continue;
+    if(!extractChildElement(fontElement, &charsElement, "chars", rkey, AID_FONT)) continue;
+    if(!extractIntAttribute(charsElement, "count", &charsCount, rkey, rname, &doc, AID_FONT)) continue;
 
-    if(charsCount != font::ASCII_CHAR_COUNT){
+    if(charsCount != Font::ASCII_CHAR_COUNT){
       log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, rname);
       useErrorAsset(rkey, AID_FONT);
       continue;
     }
 
     int charsRead {0};
-    if(!extractChildElement(charsElement, charElement, "char", rkey, AID_FONT)) continue;
+    bool isError {false};
+    if(!extractChildElement(charsElement, &charElement, "char", rkey, AID_FONT)) continue;
     do{
       Glyph& glyph = font._glyphs[charsRead];
-      if(!extractIntAttribute(charElement, "id", &glyph._id, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "x", &glyph._x, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "y", &glyph._y, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "width", &glyph._width, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "height", &glyph._height, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "xoffset", &glyph._xoffset, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "yoffset", &glyph._yoffset, rkey, rname, &doc, AID_FONT)) continue;
-      if(!extractIntAttribute(charElement, "xadvance", &glyph._xadvance, rkey, rname, &doc, AID_FONT)) continue;
+      if(!extractIntAttribute(charElement, "ascii", &glyph._ascii, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "x", &glyph._x, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "y", &glyph._y, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "width", &glyph._width, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "height", &glyph._height, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "xoffset", &glyph._xoffset, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "yoffset", &glyph._yoffset, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
+      if(!extractIntAttribute(charElement, "xadvance", &glyph._xadvance, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
       ++charsRead;
+      charElement = charElement->NextSiblingElement("char");
+      std::cout << charsRead << std::endl;
     }
-    while(charElement = charElement->NexSiblingElement("char") && charsRead < font::ASCII_CHAR_COUNT);
+    while(charElement != 0 && charsRead < Font::ASCII_CHAR_COUNT);
 
-    if(charsRead != font::ASCII_CHAR_COUNT){
+    if(isError)
+      continue;
+
+    if(charsRead != Font::ASCII_CHAR_COUNT){
       log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, rname);
       useErrorAsset(rkey, AID_FONT);
       continue;
@@ -585,13 +593,21 @@ bool loadFonts(const ResourceManifest_t& manifest)
     // chars in the xml file may be listed in any order but we require them in ascending order
     // of ascii value.
     std::sort(font._glyphs.begin(), font._glyphs.end(), [](const Glyph& g0, const Glyph& g1) {
-      return g0._id < g1._id;
+      return g0._ascii < g1._ascii;
     });
 
-    // note: from this point on will do no further validation of font. Will assume there are no
-    // duplicate glyphs (no duplicate ascii codes), and that the glyphs read do cover the desired
-    // range of printable ascii characters (32 to 126).
-    
+    // checksum is used to to test for the condition in which we have the correct number of 
+    // glyphs but some are duplicates of the same character.
+    int checksum {0};
+    for(auto& glyph : font._glyphs)
+      checksum += glyph._ascii;
+
+    if(checksum != Font::ASCII_CHAR_CHECKSUM){
+      log::log(log::ERROR, log::msg_gfx_font_fail_checksum);
+      useErrorAsset(rkey, AID_FONT);
+      continue;
+    }
+
     fonts.insert(std::make_pair(rkey, std::move(font)));
   }
 }
