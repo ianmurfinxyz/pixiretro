@@ -8,6 +8,9 @@
 #include "input.h"
 #include "gfx.h"
 
+#include <iostream>
+
+
 namespace pxr
 {
 
@@ -177,7 +180,12 @@ void Engine::mainloop()
   }
 
   _updateTicker.doTicks(gameNow, realNow);
+
+  auto now0 = std::chrono::high_resolution_clock::now();
   _drawTicker.doTicks(gameNow, realNow);
+  auto now1 = std::chrono::high_resolution_clock::now();
+  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  std::cout << "drawTicker.doTicks time: " << dt.count() << "us " << std::endl;
 
   ++_framesDone;
   ++_framesDoneThisSecond;
@@ -212,6 +220,10 @@ void Engine::drawEngineStats()
   ss << "game time: " << durationToMinutes(_gameClock.getNow()) << "mins  "
      << "real time: " << durationToMinutes(_realClock.getNow()) << "mins";
   gfx::drawText({10, 10}, ss.str(), engineFontKey, gfx::LAYER_ENGINE_STATS);
+  
+  //std::cout << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
+  //std::cout << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
+  //std::cout << "frame FPS: " << _measuredFrameFrequency << "hz" << std::endl;
 }
 
 void Engine::drawPauseDialog()
@@ -227,7 +239,12 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
+
+  auto now0 = std::chrono::high_resolution_clock::now();
   gfx::clearWindow(gfx::colors::black);
+  auto now1 = std::chrono::high_resolution_clock::now();
+  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  std::cout << "clearWindow time: " << dt.count() << "us " << std::endl;
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);
@@ -239,6 +256,7 @@ void Engine::onDrawTick(float tickPeriodSeconds)
     drawEngineStats();
 
   gfx::present();
+
 }
 
 double Engine::durationToMilliseconds(Duration_t d)

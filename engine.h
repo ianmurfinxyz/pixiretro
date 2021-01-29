@@ -47,7 +47,7 @@ private:
   static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
 
   // Lock the FPS to this frequency (or less).
-  static constexpr Duration_t fpsLockHz {static_cast<int64_t>(1.0e9 / 60.0)}; 
+  static constexpr Duration_t fpsLockHz {static_cast<int64_t>(1.0e9 / 100.0)}; 
 
   // Clock to record the real passage of time since the app booted.
   class RealClock

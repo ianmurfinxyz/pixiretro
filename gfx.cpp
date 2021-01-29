@@ -10,6 +10,9 @@
 #include <limits>
 #include <cassert>
 
+#include <iostream>
+#include <chrono>
+
 #include "tinyxml2.h"  // TODO move to a lib dir
 
 #include "gfx.h"
@@ -707,6 +710,7 @@ void drawPixel(Layer layer)
 
 void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
 {
+  auto now0 = std::chrono::high_resolution_clock::now();
   assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
   auto& screen = screens[layer];
 
@@ -716,49 +720,84 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
   const Color4u* const* fontPxs = font._image.getPixels();
 
   for(char c : text){
-    assert(' ' <= c && c <= '~');
+    //assert(' ' <= c && c <= '~');
     const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
     
     int screenRow{0}, screenCol{0};
     for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
       screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
 
-      // Drawing top-to-bottom thus if we are beyond the bottom screen border then their may
-      // be some more glyph rows that are above it.
-      if(screenRow < 0) 
-        continue;
-
-      // If we are beyond the top border then all subsequent glyph rows will also be beyond.
-      if(screenRow >= screen._size._y)
-        break;
-
       for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
         screenCol = position._x + glyphCol + glyph._xoffset;
 
-        // If we are beyond the left border then their may be some more glyph columns within 
-        // the screen.
-        if(screenCol < 0)
-          continue;
-
-        // Drawing left-to-right thus if screen column is beyond the right-most screen border
-        // then all subsequent characters will be too.
-        if(screenCol >= screen._size._x)
-          return;
-
         const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
 
-        if(pxColor.getAlpha() == alphaKey)
-          continue;
-        
         screen._pxColors[screenCol + (screenRow * screen._size._x)] = pxColor;
       }
     }
     position._x += glyph._xadvance + font._glyphSpace;
   }
+  auto now1 = std::chrono::high_resolution_clock::now();
+  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  std::cout << "drawText time: " << dt.count() << "us" << std::endl;
+  std::cout << "\t\ttext: " << text << std::endl;
 }
+
+//void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
+//{
+//  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
+//  auto& screen = screens[layer];
+//
+//  auto search = fonts.find(fontKey);
+//  assert(search != fonts.end());
+//  Font& font = (*search).second;
+//  const Color4u* const* fontPxs = font._image.getPixels();
+//
+//  for(char c : text){
+//    assert(' ' <= c && c <= '~');
+//    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
+//    
+//    int screenRow{0}, screenCol{0};
+//    for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
+//      screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
+//
+//      // Drawing top-to-bottom thus if we are beyond the bottom screen border then their may
+//      // be some more glyph rows that are above it.
+//      if(screenRow < 0) 
+//        continue;
+//
+//      // If we are beyond the top border then all subsequent glyph rows will also be beyond.
+//      if(screenRow >= screen._size._y)
+//        break;
+//
+//      for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
+//        screenCol = position._x + glyphCol + glyph._xoffset;
+//
+//        // If we are beyond the left border then their may be some more glyph columns within 
+//        // the screen.
+//        if(screenCol < 0)
+//          continue;
+//
+//        // Drawing left-to-right thus if screen column is beyond the right-most screen border
+//        // then all subsequent characters will be too.
+//        if(screenCol >= screen._size._x)
+//          return;
+//
+//        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+//
+//        if(pxColor.getAlpha() == alphaKey)
+//          continue;
+//        
+//        screen._pxColors[screenCol + (screenRow * screen._size._x)] = pxColor;
+//      }
+//    }
+//    position._x += glyph._xadvance + font._glyphSpace;
+//  }
+//}
 
 void present()
 {
+  auto now0 = std::chrono::high_resolution_clock::now();
   for(auto& screen : screens){
     glVertexPointer(2, GL_INT, 0, screen._pxPositions);
     glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
@@ -766,6 +805,9 @@ void present()
     glDrawArrays(GL_POINTS, 0, screen._pxCount);
   }
   SDL_GL_SwapWindow(window);
+  auto now1 = std::chrono::high_resolution_clock::now();
+  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  std::cout << "present time: " << dt.count() << "us" << std::endl;
 }
 
 void setLayerColorMode(ColorMode mode, Layer layer)

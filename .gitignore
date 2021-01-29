@@ -1,3 +1,4 @@
-todo
 log
 example
+gmon.out
+callgrind.out.*
