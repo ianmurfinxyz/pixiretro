@@ -27,32 +27,36 @@ namespace pxr
 namespace gfx
 {
 
+static constexpr int MIN_OPENGL_VERSION_MAJOR = 2;
+static constexpr int MIN_OPENGL_VERSION_MINOR = 1;
+static constexpr int DEF_OPENGL_VERSION_MAJOR = 3;
+static constexpr int DEF_OPENGL_VERSION_MINOR = 0;
 
-bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
-bool operator==(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi == rhs._hi;}
+static constexpr int ALPHA_KEY = 0;
 
-static constexpr const char* SPRITESHEET_XML_FILE_EXTENSION {".ss"};
-
-static constexpr int openglVersionMajor = 3;
-static constexpr int openglVersionMinor = 0;
-static constexpr int alphaKey = 0;
-
-static Configuration config;
+static std::string windowTitle;
+static Vector2i windowSize;
+static bool fullscreen;
+static int minPixelSize;
+static int maxPixelSize;
 static SDL_Window* window;
 static SDL_GLContext glContext;
 static iRect viewport;
-static Vector2i windowSize;
-static int minPixelSize;
-static int maxPixelSize;
-static std::array<Screen, LAYER_COUNT> screens;
-static std::unordered_map<ResourceKey_t, SpriteSheet> sprites;
-static std::unordered_map<ResourceKey_t, Font> fonts;
+static std::vector<Screen> screens;
+static std::vector<SpriteSheet> sprites;
+static std::vector<Font> fonts;
 static SpriteSheet errorSprite;
 static Font errorFont;
 
-//----------------------------------------------------------------------------------------------//
-// GFX SETUP                                                                                    //
-//----------------------------------------------------------------------------------------------//
+static bool operator<(const ColorBand& lhs, const ColorBand& rhs)
+{
+  return lhs._hi < rhs._hi;
+}
+
+static bool operator==(const ColorBand& lhs, const ColorBand& rhs)
+{
+  return lhs._hi == rhs._hi;
+}
 
 static void setViewport(iRect viewport)
 {
@@ -65,22 +69,163 @@ static void setViewport(iRect viewport)
   pxr::gfx::viewport = viewport;
 }
 
-// Recalculate screen position, pixel sizes, pixel positions etc to a account for a change in 
+// 
+// Generates a red sqaure sprite.
+//
+static void genErrorSprite()
+{
+  static constexpr int squareSize = 8;
+
+  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
+  errorSprite._sheetSize = Vector2i{1, 1};
+  errorSprite._spriteCount = 1;
+  errorSprite._image.create(errorSprite._spriteSize, colors::red);
+}
+
+//
+// Generates an 8px font with all 95 printable ascii characters where all characters are just 
+// blank red squares.
+//
+static void genErrorFont()
+{
+  errorFont._lineHeight = 8;
+  errorFont._baseLine = 1;
+  errorFont._glyphSpace = 0;
+  errorFont._image.create(Vector2i{256, 24}, colors::red);
+  for(auto& glyph : errorFont._glyphs){
+    glyph._x = 0;
+    glyph._y = 0;
+    glyph._width = 6;
+    glyph._height = 6;
+    glyph._xoffset = 1;
+    glyph._yoffset = 0;
+    glyph._xadvance = 8;
+  }
+}
+
+bool initialize(std::windowTitle_, Vector2i windowSize_, bool fullscreen_)
+{
+  log::log(log::info, log::msg_gfx_initializing);
+
+  windowSize = windowSize_;
+  windowTitle = windowTitle_;
+  fullscreen = fullscreen_;
+
+  uint32_t flags = SDL_WINDOW_OPENGL;
+  if(fullscreen){
+    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    log::log(log::INFO, log::msg_gfx_fullscreen);
+  }
+
+  std::stringstream ss {};
+  ss << "{w:" << config._windowSize._x << ",h:" << config._windowSize._y << "}";
+  log::log(log::INFO, log::msg_gfx_creating_window, std::string{ss.str()});
+
+  window = SDL_CreateWindow(
+      windowTitle.c_str(), 
+      SDL_WINDOWPOS_UNDEFINED,
+      SDL_WINDOWPOS_UNDEFINED,
+      windowSize._x,
+      windowSize._y,
+      flags
+  );
+
+  if(window == nullptr){
+    log::log(log::FATAL, log::msg_gfx_fail_create_window, std::string{SDL_GetError()});
+    return false;
+  }
+
+  SDL_GL_GetDrawableSize(window, &windowSize._x, &windowSize._y);
+  std::stringstream().swap(ss);
+  ss << "{w:" << windowSize._x << ",h:" << windowSize._y << "}";
+  log::log(log::INFO, log::msg_gfx_created_window, std::string{ss.str()});
+
+  glContext = SDL_GL_CreateContext(window);
+  if(glContext == nullptr){
+    log::log(log::FATAL, log::msg_gfx_fail_create_opengl_context, std::string{SDL_GetError()});
+    return false;
+  }
+
+  if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, DEF_OPENGL_VERSION_MAJOR) < 0){
+    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
+    return false;
+  }
+
+  if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, DEF_OPENGL_VERSION_MINOR) < 0){
+    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
+    return false;
+  }
+
+  std::string glVersion {reinterpret_cast<const char*>(glGetString(GL_VERSION))};
+  log::log(log::INFO, log::msg_gfx_opengl_version, glVersion);
+
+  // TODO: extract version from string and check it meets min.
+
+  const char* glRenderer = reinterpret_cast<const char*>(glGetString(GL_Renderer));
+  log::log(log::INFO, log::msg_gfx_opengl_renderer, glRenderer);
+
+  const char* glVendor {reinterpret_cast<const char*>(glGetString(GL_VENDOR))};
+  log::log(log::INFO, log::msg_gfx_opengl_vendor, glVendor);
+
+  GLfloat params[2];
+  glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, params);
+  minPixelSize = params[0];
+  maxPixelSize = params[1];
+  std::stringstream().swap(ss);
+  ss << "[min:" << minPixelSize << ",max:" << maxPixelSize << "]";
+  log::log(log::INFO, log::msg_gfx_pixel_size_range, std::string{ss.str()});
+
+  setViewport(iRect{0, 0, windowSize._x, windowSize._y});
+
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_COLOR_ARRAY);
+  glEnable(GL_ALPHA_TEST);
+  glAlphaFunc(GL_GREATER, 0.f);
+
+  genErrorSprite();
+  genErrorFont();
+
+  return true;
+}
+
+static void freeScreens()
+{
+  for(auto& screen : screens){
+    delete[] screen._pxColors;
+    delete[] screen._pxPositions;
+    screen._pxColors = nullptr;
+    screen._pxPositions = nullptr;
+  }
+}
+
+void shutdown()
+{
+  freeScreens();
+  SDL_GL_DeleteContext(glContext);
+  SDL_DestroyWindow(window);
+}
+
+//
+// Recalculates screen position, pixel size, pixel positions etc to a account for a change in 
 // window size, display resolution or screen mode attributes.
+//
 static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
 {
-  // recalculate pixel size.
-  if(screen._smode == PxSizeMode::AUTO_MIN){
+  if(screen._smode == SizeMode::AUTO_MIN)
     screen._pxSize = 1;
-  }
-  else if(screen._smode == PxSizeMode::AUTO_MAX){
-    // note: integer math here thus all division results are implicitly floored as required.
+
+  //
+  // note: integer math here thus all division results are implicitly floored as required.
+  //
+  else if(screen._smode == SizeMode::AUTO_MAX){
     int pxw = windowSize._x / screen._size._x;  
     int pxh = windowSize._y / screen._size._y;
     screen._pxSize = std::max(std::min(pxw, pxh), 1);
   }
 
-  // recalculate screen position.
+  else if(screen._smode == SizeMode::manual)
+    screen._pxSize = screen._pxManualSize;
+
   switch(screen._pmode)
   {
   case PositionMode::MANUAL:
@@ -108,199 +253,60 @@ static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
     break;
   }
 
-  // recalculate pixel positions.
-  
+  //
   // Pixels are drawn as an array of points of _pxSize diameter. When drawing points in opengl, 
   // the position of the point is taken as the center position. For odd pixel sizes e.g. 7 the 
   // center pixel is simply 3,3 (= floor(7/2)). For even pixel sizes e.g. 8 the center of the 
   // pixel is considered the bottom-left pixel in the top-right quadrant, i.e. 4,4 (= floor(8/2)).
+  //
   int pixelCenterOffset = screen._pxSize / 2;
 
-  for(int row = 0; row < screen._size._y; ++row){
-    for(int col = 0; col < screen._size._x; ++col){
-      Vector2i& pxPosition = screen._pxPositions[col + (row * screen._size._x)];
+  for(int row = 0; row < screen._resolution._y; ++row){
+    for(int col = 0; col < screen._resolution._x; ++col){
+      Vector2i& pxPosition = screen._pxPositions[col + (row * screen._resolution._x)];
       pxPosition._x = screen._position._x + (col * screen._pxSize) + pixelCenterOffset;
       pxPosition._y = screen._position._y + (row * screen._pxSize) + pixelCenterOffset;
     }
   }
 }
 
-static void initializeScreens(Configuration config)
+int createScreen(Vector2i resolution)
 {
-  for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
-    auto& screen = screens[layer];
-    if(layer == LAYER_ENGINE_STATS){
-      screen._pmode = PositionMode::BOTTOM_LEFT;
-      screen._smode = PxSizeMode::AUTO_MIN;
-      screen._cmode = ColorMode::FULL_RGB;
-    }
-    else{
-      screen._pmode = PositionMode::CENTER;
-      screen._smode = PxSizeMode::AUTO_MAX;
-      screen._cmode = ColorMode::FULL_RGB;
-    }
+  Screen screen{};
 
-    screen._size = config._layerSize[layer];
-    assert(0 < screen._size._x && screen._size._x <= Screen::MAX_WIDTH);
-    assert(0 < screen._size._y && screen._size._y <= Screen::MAX_HEIGHT);
-    screen._pxCount  = screen._size._x * screen._size._y;
-  
-    screen._pxColors = new Color4u[screen._pxCount];
-    screen._pxPositions = new Vector2i[screen._pxCount];
-    
-    clearLayer(static_cast<Layer>(layer)); 
-    autoAdjustScreen(windowSize, screen);
-    
-    screen._bands.push_back(ColorBand{colors::white, std::numeric_limits<int>::max()});
-    screen._bitmapColor = colors::white;
+  screen._pmode = PositionMode::CENTER;
+  screen._smode = PxSizeMode::AUTO_MAX;
+  screen._cmode = ColorMode::FULL_RGB;
 
-    std::stringstream ss {};
-    ss << "[w:" << screen._size._x << ", h:" << screen._size._y << "] "
-       << "mem:" << (screen._pxCount * sizeof(Color4u)) / 1024 << "kib";
-    log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
-  }
-}
+  screen._position = Vector2i{0, 0};
+  screen._manualPosition = Vector2i{0, 0};
 
-static void freeScreens()
-{
-  for(int layer = LAYER_BACKGROUND; layer < LAYER_COUNT; ++layer){
-    auto& screen = screens[layer];
-    delete[] screen._pxColors;
-    delete[] screen._pxPositions;
-    screen._pxColors = nullptr;
-    screen._pxPositions = nullptr;
-  }
-}
+  assert(resolution._x > 0 && resolution._y > 0);
+  screen._resolution = resolution;
 
-static void genErrorSprite()
-{
-  static constexpr int squareSize = 8;
+  screen._bitmapColor = colors::white;
 
-  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
-  errorSprite._sheetSize = Vector2i{1, 1};
-  errorSprite._spriteCount = 1;
-  errorSprite._image.create(errorSprite._spriteSize, colors::red);
-}
+  screen._pxManualSize = 1;
+  screen._pxCount = screen._resolution._x * screen._resolution._y;
 
-// Produces a font with all 95 printable ascii characters where all characters are just blank
-// red squares.
-static void genErrorFont()
-{
-  errorFont._lineHeight = 8;
-  errorFont._baseLine = 1;
-  errorFont._glyphSpace = 0;
-  errorFont._image.create(Vector2i{256, 24}, colors::red);
-  for(auto& glyph : errorFont._glyphs){
-    glyph._x = 0;
-    glyph._y = 0;
-    glyph._width = 6;
-    glyph._height = 6;
-    glyph._xoffset = 1;
-    glyph._yoffset = 0;
-    glyph._xadvance = 8;
-  }
-}
+  screen._pxColors = new Color4u[screen._pxCount];
+  screen._pxPositions = new Vector2i[screen._pxCount];
 
-bool initialize(Configuration config)
-{
-  config = config;
+  screens.push_back(std::move(screen));
 
-  // create window.
-  
-  uint32_t flags = SDL_WINDOW_OPENGL;
-  if(config._fullscreen){
-    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-    log::log(log::INFO, log::msg_gfx_fullscreen);
-  }
+  ResourceKey_t screenid = screens.size() - 1;
+
+  clearScreenTransparent(screenid); 
+  autoAdjustScreen(windowSize, screen);
+
+  int memkib = ((screen._pxCount * sizeof(Color4u)) + (screen._pxCount * sizeof(Vector2i))) / 1024;
 
   std::stringstream ss {};
-  ss << "{w:" << config._windowSize._x << ",h:" << config._windowSize._y << "}";
-  log::log(log::INFO, log::msg_gfx_creating_window, std::string{ss.str()});
+  ss << "resolution:" << resolution._x << "x" << resolution._y << "  memory:" << memkib << "kib";
+  log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
 
-  window = SDL_CreateWindow(
-      config._windowTitle.c_str(), 
-      SDL_WINDOWPOS_UNDEFINED,
-      SDL_WINDOWPOS_UNDEFINED,
-      config._windowSize._x,
-      config._windowSize._y,
-      flags
-  );
-
-  if(window == nullptr){
-    log::log(log::FATAL, log::msg_gfx_fail_create_window, std::string{SDL_GetError()});
-    return false;
-  }
-
-  SDL_GL_GetDrawableSize(window, &windowSize._x, &windowSize._y);
-  std::stringstream().swap(ss);
-  ss << "{w:" << windowSize._x << ",h:" << windowSize._y << "}";
-  log::log(log::INFO, log::msg_gfx_created_window, std::string{ss.str()});
-
-  // create opengl context.
-
-  glContext = SDL_GL_CreateContext(window);
-  if(glContext == nullptr){
-    log::log(log::FATAL, log::msg_gfx_fail_create_opengl_context, std::string{SDL_GetError()});
-    return false;
-  }
-
-  if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, openglVersionMajor) < 0){
-    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
-  }
-  if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, openglVersionMinor) < 0){
-    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
-    return false;
-  }
-
-  std::string glVersion {reinterpret_cast<const char*>(glGetString(GL_VERSION))};
-  log::log(log::INFO, log::msg_gfx_opengl_version, glVersion);
-
-  std::string glRenderer {reinterpret_cast<const char*>(glGetString(GL_RENDERER))};
-  log::log(log::INFO, "renderer:", glRenderer);
-
-  std::string glVendor {reinterpret_cast<const char*>(glGetString(GL_VENDOR))};
-  log::log(log::INFO, "vendor:", glVendor);
-
-  std::string glExtensions {reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS))};
-  log::log(log::INFO, "extensions", glExtensions);
-
-  // set the the initial viewport.
-
-  setViewport(iRect{0, 0, windowSize._x, windowSize._y});
-
-  // setup persistent opengl context state.
-
-  glEnableClientState(GL_VERTEX_ARRAY);
-  glEnableClientState(GL_COLOR_ARRAY);
-  glEnable(GL_ALPHA_TEST);
-  glAlphaFunc(GL_GREATER, 0.f);
-  glDisable(GL_BLEND);
-
-  GLfloat params[2];
-  glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, params);
-  minPixelSize = params[0];
-  maxPixelSize = params[1];
-  std::stringstream().swap(ss);
-  ss << "[min:" << minPixelSize << ",max:" << maxPixelSize << "]";
-  log::log(log::INFO, log::msg_gfx_pixel_size_range, std::string{ss.str()});
-
-  initializeScreens(config);  
-
-  genErrorSprite();
-
-  return true;
+  return screenid;
 }
-
-void shutdown()
-{
-  freeScreens();
-  SDL_GL_DeleteContext(glContext);
-  SDL_DestroyWindow(window);
-}
-
-//----------------------------------------------------------------------------------------------//
-// GFX RESOURCES                                                                                //
-//----------------------------------------------------------------------------------------------//
 
 enum AssetID { AID_SPRITE, AID_FONT };
 
@@ -572,10 +578,6 @@ bool loadFonts(const ResourceManifest_t& manifest)
   }
 }
 
-//----------------------------------------------------------------------------------------------//
-// GFX DRAWING                                                                                  //
-//----------------------------------------------------------------------------------------------//
-
 void onWindowResize(Vector2i windowSize)
 {
   setViewport(iRect{0, 0, windowSize._x, windowSize._y});
@@ -583,29 +585,29 @@ void onWindowResize(Vector2i windowSize)
     autoAdjustScreen(windowSize, screen);
 }
 
-void clearWindow(Color4u color)
+void clearWindowColor(Color4f color)
 {
-  glClearColor(color.getfRed(), color.getfGreen(), color.getfBlue(), 1.f); 
+  glClearColor(color._r, color._g, color._b, color._a); 
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void clearLayer(Layer layer)
+void clearScreenTransparent(int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  memset(screens[layer]._pxColors, alphaKey, screens[layer]._pxCount * sizeof(Color4u));
+  assert(0 <= screenid && screenid < screens.size());
+  memset(screens[screenid]._pxColors, ALPHA_KEY, screens[screenid]._pxCount * sizeof(Color4u));
 }
 
-void fastFillLayer(int shade, Layer layer)
+void clearScreenShade(int shade, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
+  assert(0 <= screenid && screenid < screens.size());
   shade = std::max(0, std::min(shade, 255));
-  memset(screens[layer]._pxColors, shade, screens[layer]._pxCount * sizeof(Color4u));
+  memset(screens[screenid]._pxColors, shade, screens[screenid]._pxCount * sizeof(Color4u));
 }
 
-void slowFillLayer(Color4u color, Layer layer)
+void clearScreenColor(Color4u color, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  Screen& screen = screens[layer];
+  assert(0 <= screenid && screenid < screens.size());
+  Screen& screen = screens[screenid];
   for(int px = 0; px < screen._pxCount; ++px)
     screen._pxColors[px] = color;
 }
@@ -645,10 +647,6 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer 
   }
 }
 
-void drawBitmap(Layer layer)
-{
-}
-
 void drawRectangle(Layer layer)
 {
 }
@@ -657,100 +655,48 @@ void drawLine(Layer layer)
 {
 }
 
-void drawParticles(Layer layer)
-{
-}
-
-void drawPixel(Layer layer)
-{
-}
-
 void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
 {
-  auto now0 = std::chrono::high_resolution_clock::now();
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
 
-  auto search = fonts.find(fontKey);
-  assert(search != fonts.end());
-  Font& font = (*search).second;
+  assert(<0 <= fontKey && fontKey < fonts.size());
+  auto& font = fonts[fontKey];
   const Color4u* const* fontPxs = font._image.getPixels();
 
   for(char c : text){
-    //assert(' ' <= c && c <= '~');
+    assert(' ' <= c && c <= '~');
     const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
-    
-    int screenRow{0}, screenCol{0};
+    int screenRow{0}, screenCol{0}, screenRowOffset {0};
     for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
       screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
-
+      screenRowOffset = screenRow * screen._size._x;
+      if(screenRow < 0) continue;
+      if(screenRow >= screen._size._y) break;
       for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
         screenCol = position._x + glyphCol + glyph._xoffset;
+        if(screenCol < 0) continue;
+        if(screenCol >= screen._size._x) return;
+        Color& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(screen._cmode == ColorMode::FULL_RGB){
+          if(pxColor._a == ALPHA_KEY) continue;
+          screen._pxColors[screenCol + screenRowOffset] = pxColor;
+        }
+        else if(screen._cmode == ColorMode::YAXIS_BANDED){
 
-        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        }
+        else if(screen._cmode == ColorMode::xaxis_banded){
 
-        screen._pxColors[screenCol + (screenRow * screen._size._x)] = pxColor;
+        }
+        else{ 
+          if(pxColor._a == ALPHA_KEY) continue;
+          screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
+        }
       }
     }
     position._x += glyph._xadvance + font._glyphSpace;
   }
-  auto now1 = std::chrono::high_resolution_clock::now();
-  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  std::cout << "drawText time: " << dt.count() << "us" << std::endl;
-  std::cout << "\t\ttext: " << text << std::endl;
 }
-
-//void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
-//{
-//  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-//  auto& screen = screens[layer];
-//
-//  auto search = fonts.find(fontKey);
-//  assert(search != fonts.end());
-//  Font& font = (*search).second;
-//  const Color4u* const* fontPxs = font._image.getPixels();
-//
-//  for(char c : text){
-//    assert(' ' <= c && c <= '~');
-//    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
-//    
-//    int screenRow{0}, screenCol{0};
-//    for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
-//      screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
-//
-//      // Drawing top-to-bottom thus if we are beyond the bottom screen border then their may
-//      // be some more glyph rows that are above it.
-//      if(screenRow < 0) 
-//        continue;
-//
-//      // If we are beyond the top border then all subsequent glyph rows will also be beyond.
-//      if(screenRow >= screen._size._y)
-//        break;
-//
-//      for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
-//        screenCol = position._x + glyphCol + glyph._xoffset;
-//
-//        // If we are beyond the left border then their may be some more glyph columns within 
-//        // the screen.
-//        if(screenCol < 0)
-//          continue;
-//
-//        // Drawing left-to-right thus if screen column is beyond the right-most screen border
-//        // then all subsequent characters will be too.
-//        if(screenCol >= screen._size._x)
-//          return;
-//
-//        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
-//
-//        if(pxColor.getAlpha() == alphaKey)
-//          continue;
-//        
-//        screen._pxColors[screenCol + (screenRow * screen._size._x)] = pxColor;
-//      }
-//    }
-//    position._x += glyph._xadvance + font._glyphSpace;
-//  }
-//}
 
 void present()
 {

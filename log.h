@@ -17,12 +17,16 @@ constexpr const char* msg_fail_sdl_init = "failed to initialize SDL";
 
 // gfx log strings.
 
+constexpr const char* msg_gfx_initializing = "initializing gfx module";
+constexpr const char* msg_gfx_fullscreen = "activating fullscreen window mode";
 constexpr const char* msg_gfx_creating_window = "creating window";
 constexpr const char* msg_gfx_fail_create_window = "failed to create window";
 constexpr const char* msg_gfx_created_window = "successfully created window";
 constexpr const char* msg_gfx_fail_create_opengl_context = "failed to create opengl context";
 constexpr const char* msg_gfx_fail_set_opengl_attribute = "failed to set opengl attribute";
 constexpr const char* msg_gfx_opengl_version = "using opengl version";
+constexpr const char* msg_gfx_opengl_renderer = "using opengl renderer";
+constexpr const char* msg_gfx_opengl_vendor = "using opengl vendor";
 constexpr const char* msg_gfx_loading_sprites = "starting sprite loading";
 constexpr const char* msg_gfx_loading_asset = "loading asset";
 constexpr const char* msg_gfx_fail_load_asset_bmp = "failed to load the bitmap image of asset";
@@ -31,7 +35,6 @@ constexpr const char* msg_gfx_using_error_font = "susbtituting unloaded font wit
 constexpr const char* msg_gfx_loading_fonts = "starting font loading";
 constexpr const char* msg_gfx_duplicate_resource_key = "asset manifest contains duplicate resource key";
 constexpr const char* msg_gfx_skipping_asset_load = "skipping loading asset";
-constexpr const char* msg_gfx_fullscreen = "activating fullscreen window mode";
 constexpr const char* msg_gfx_pixel_size_range = "range of valid pixel sizes";
 constexpr const char* msg_gfx_created_vscreen = "created vscreen";
 constexpr const char* msg_gfx_fail_xml_parse = "parsing error in xml file";

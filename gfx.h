@@ -41,7 +41,7 @@ using ResourceName_t = const char*;
 constexpr int ASCII_CHAR_COUNT = 95;
 
 //
-// Sum of all printable ascii character codes from 32 (!) to 126 (~).
+// Sum of all printable ASCII character codes from 32 (!) to 126 (~) inclusive.
 //
 constexpr int ASCII_CHAR_CHECKSUM = 7505;
 
@@ -79,7 +79,7 @@ struct Font
 //     | F0 | F1 | F2 | F3 | ... |Fn-1|    [ a bitmap with n frames ]
 //     +----+----+----+----+     +----+
 //
-// All frames have the same dimensions and are layed out horizontally from left to right.
+// All frames have the same dimensions and are laid out horizontally from left to right.
 //
 struct Sprite
 {
@@ -105,9 +105,7 @@ struct Sprite
 //                     position on the screen being drawn to. The bands set the colors mapped
 //                     to each position. Color arguments in draw calls are ignored.
 //
-//      BITMAPS      - all pixels drawn adopt the 'bitmap color' set with a call to 
-//                     'setBitmapColor'. Color arguments in draw calls are ignored. The default
-//                     color is white.
+//      BITMAPS      - all pixels drawn adopt the bitmap color of the screen being drawn to.
 //
 enum class ColorMode
 {
@@ -215,23 +213,21 @@ constexpr int SCREEN_BAND_COUNT = 5;
 //
 struct Screen
 {
-  Color4u* _pxColors;                // accessed [col + (row * width)]
-  Vector2i* _pxPositions;            // accessed [col + (row * width)]
+  PositionMode _pmode;
+  SizeMode _smode;
+  ColorMode _cmode;
   Vector2i _position;                // position w.r.t the window.
   Vector2i _manualPosition;          // position w.r.t the window when in manual position mode.
   Vector2i _resolution;
-  PositionMode _pmode;
-  PxSizeMode _smode;
-  ColorMode _cmode;
   ColorBand _bands[SCREEN_BAND_COUNT];
   Color4u _bitmapColor;
   int _pxSize;                       // size of virtual pixels (unit: real pixels).
   int _pxManualSize;                 // size of virtual pixels when in manual size mode.
   int _pxCount;                      // total number of virtual pixels on the screen.
-};
 
-bool operator<(const ColorBand& lhs, const ColorBand& rhs);
-bool operator==(const ColorBand& lhs, const ColorBand& rhs);
+  Color4u* _pxColors;                // accessed [col + (row * width)]
+  Vector2i* _pxPositions;            // accessed [col + (row * width)]
+};
 
 //
 // Initializes the gfx subsystem. Returns true if success and false if fatal error.
@@ -255,7 +251,7 @@ void shutdown();
 // Returns the integer id of the screen for use with draw calls. Internally screens are stored
 // in an array thus returned ids start at 0 and increase by 1 with each new screen created.
 //
-int createScreen(Vector2i size);
+int createScreen(Vector2i resolution);
 
 //
 // Must be called whenever the window resizes to update the screens.
@@ -274,7 +270,8 @@ void onWindowResize(Vector2i windowSize);
 // see XML_RESOURCE_EXTENSION_SPRITES and BmpImage::FILE_EXTENSION.
 //
 // Returns the resource key the loaded sprite was mapped to which is needed for the drawing
-// routines.
+// routines. Internally sprites are stored in an array thus returned ids start at 0 and 
+// increase by 1 with each new sprite loaded.
 //
 ResourceKey_t loadSprite(ResourceName_t name);
 
@@ -290,7 +287,8 @@ ResourceKey_t loadSprite(ResourceName_t name);
 // see XML_RESOURCE_EXTENSION_FONTS and BmpImage::FILE_EXTENSION.
 //
 // Returns the resource key the loaded sprite was mapped to which is needed for the drawing
-// routines.
+// routines. Internally fonts are stored in an array thus returned ids start at 0 and 
+// increase by 1 with each new font loaded.
 //
 ResourceKey_t loadFont(ResourceName_t);
 
@@ -374,14 +372,14 @@ void setScreenManualPixelSize(int pxSize, int screenid);
 //
 // Configures a color band of a screen.
 //
-// note: setting hi to a value beyond the screen bounds disables the band.
+// note: setting hi to 0 disables the band.
 //
 void setScreenColorBand(Color4u color, int hi, int bandid, int screenid);
 
 //
 // Sets the bitmap color of a screen.
 //
-void setBitmapColor(Color4u color, int screenid);
+void setScreenBitmapColor(Color4u color, int screenid);
 
 } // namespace gfx
 } // namespace pxr
