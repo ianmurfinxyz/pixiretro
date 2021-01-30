@@ -6,7 +6,6 @@
 #include <cstring>
 #include <sstream>
 #include <cinttypes>
-#include <unordered_map>
 #include <limits>
 #include <cassert>
 
@@ -31,57 +30,6 @@ namespace gfx
 
 bool operator<(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi < rhs._hi;}
 bool operator==(const ColorBand& lhs, const ColorBand& rhs){return lhs._hi == rhs._hi;}
-
-// A virtual screen of virtual pixels. Each rendering layer is an instance of a screen.
-//
-// note: pixel data is stored via raw pointers to optimise rendering performance since pixels
-// must be read and written potentially tens of thousands of times in each draw tick 
-// (drawing routines are essentially software rending routines with only the results being
-// rendered via the GPU).
-//
-// note: pixel data is stored as a flattened 2D so it can be accessed directly by opengl.
-struct Screen
-{
-  static constexpr int MAX_WIDTH {800};   // Limit virtual screen resolution to SVGA.
-  static constexpr int MAX_HEIGHT {600};
-
-  Color4u* _pxColors;              // flattened 2D arrays accessed [col + (row * width)]
-  Vector2i* _pxPositions;
-  std::vector<ColorBand> _bands;
-  Vector2i _position;              // position w.r.t the window.
-  Vector2i _size;                  // x=width pixels, y=height pixels.
-  PositionMode _pmode;
-  PxSizeMode _smode;
-  ColorMode _cmode;
-  Color4u _bitmapColor;
-  int _pxSize;
-  int _pxCount;
-};
-
-struct Glyph
-{
-  int _ascii;
-  int _x;
-  int _y;
-  int _width;
-  int _height;
-  int _xoffset;
-  int _yoffset;
-  int _xadvance;
-};
-
-struct Font
-{
-  static constexpr char* FILE_EXTENSION {".fn"};
-  static constexpr int ASCII_CHAR_COUNT {95};
-  static constexpr int ASCII_CHAR_CHECKSUM {7505}; // sum of ascii codes 32 to 126.
-
-  std::array<Glyph, ASCII_CHAR_COUNT> _glyphs;
-  BmpImage _image;
-  int _lineHeight;
-  int _baseLine;
-  int _glyphSpace;
-};
 
 static constexpr const char* SPRITESHEET_XML_FILE_EXTENSION {".ss"};
 
@@ -306,6 +254,15 @@ bool initialize(Configuration config)
 
   std::string glVersion {reinterpret_cast<const char*>(glGetString(GL_VERSION))};
   log::log(log::INFO, log::msg_gfx_opengl_version, glVersion);
+
+  std::string glRenderer {reinterpret_cast<const char*>(glGetString(GL_RENDERER))};
+  log::log(log::INFO, "renderer:", glRenderer);
+
+  std::string glVendor {reinterpret_cast<const char*>(glGetString(GL_VENDOR))};
+  log::log(log::INFO, "vendor:", glVendor);
+
+  std::string glExtensions {reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS))};
+  log::log(log::INFO, "extensions", glExtensions);
 
   // set the the initial viewport.
 
@@ -798,12 +755,23 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
 void present()
 {
   auto now0 = std::chrono::high_resolution_clock::now();
-  for(auto& screen : screens){
-    glVertexPointer(2, GL_INT, 0, screen._pxPositions);
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
-    glPointSize(screen._pxSize);
-    glDrawArrays(GL_POINTS, 0, screen._pxCount);
-  }
+  //for(auto& screen : screens){
+  //  glVertexPointer(2, GL_INT, 0, screen._pxPositions);
+  //  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
+  //  glPointSize(screen._pxSize);
+  //  glDrawArrays(GL_POINTS, 0, screen._pxCount);
+  //}
+
+  glVertexPointer(2, GL_INT, 0, screens[LAYER_STAGE]._pxPositions);
+  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screens[LAYER_STAGE]._pxColors);
+  glPointSize(screens[LAYER_STAGE]._pxSize);
+  glDrawArrays(GL_POINTS, 0, screens[LAYER_STAGE]._pxCount);
+
+  glVertexPointer(2, GL_INT, 0, screens[LAYER_ENGINE_STATS]._pxPositions);
+  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screens[LAYER_ENGINE_STATS]._pxColors);
+  glPointSize(screens[LAYER_ENGINE_STATS]._pxSize);
+  glDrawArrays(GL_POINTS, 0, screens[LAYER_ENGINE_STATS]._pxCount);
+
   SDL_GL_SwapWindow(window);
   auto now1 = std::chrono::high_resolution_clock::now();
   auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);

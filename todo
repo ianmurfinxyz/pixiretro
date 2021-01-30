@@ -105,3 +105,63 @@ TODO - 29th jan
     function that was taking all the time. This is likely that it was taking all the CPU time (the 
     most expensive function run on the CPU) and the profilers were not measuring the time the CPU 
     was waiting for the GPU.
+
+  - Ok so I reduce the demand on the GPU and it made no difference! So my next best guess would
+    be that the GPU is intentionally limiting draw rate to sync with the screen. 
+    pen -> yep it appears to be due to vsync being enabled on my intel integrated graphics GPU.
+
+    If I run the engine on my old laptop with intel i3 M370 integrated graphics it runs at a 
+    limit of 60Hz. Running on my current computer with intel i5 ? with HD Graphics 4600 it runs
+    at a limit of 50Hz. Although note that it is the screen refresh rate which the FPS is being
+    clamped to.
+
+    This explains why timing each gl call shows the net result of the timings is always ~20ms
+    (to result in 50Hz) or ~16ms (to result in 60Hz) on my old laptop. If I reduce the demand on
+    the GPU the glClear call stalls, if I increase the demand on GPU via other gl calls the
+    glClear call returns much faster. If I overload the other calls the glClear call returns
+    in ~10us thus it is not the glClear call but the driver artifically limitiing frame rate.
+
+    Running the 'glxgears' program from the 'mesa-demos' (arch) package shows this is the case.
+    The demo renders some gears at the capped vsync rate. The rate capped to in the demo matches
+    the rate my engine is capped to on both this machine and my old laptop.
+
+    This post explains how to lift the vsync restriction:
+      https://www.microbasic.net/2015/04/how-to-disable-vsync-on-intel-card-linux/
+
+    It is interesting to note however that the vsync seems to be doing a rather poor job as the
+    rendering is very flickery on this machine at 50Hz whereas on my old laptop at 60Hz it is
+    not. Thus I can only conlude this machines vsync is actually out of sync.
+
+    Yup running the engine example with:
+      $ vblank_mode=0 ./example
+
+    runs it without vsync and it runs at capped tick rate with FPS of 980Hz. Without the 
+    vsyn the current example runs at a cap of ~750Hz. So performance is not that bad after all.
+
+    +- I was wrong on the vsync being out of sync. Movement is still very flickery even with 
+    |  unlimited frame rate. However on my old laptop it is not. The difference is that on my old
+    |  laptop the moving object clearly jumps 1 virtual pixel at a time (which on the scale of the
+WRONG  demo is ~6 real pixels) thus rather than smoothly moving across the screen it looks like it
+    |  is hopping across at regular intervals. On this machine (the newer one) the movement is smooth
+    |  with no hopping. You cannot tell that it is actually moving 6px at a time, but it looks very
+    |  flickery as a result. My guess is that there is some sort of GPU feature that is trying to
+    +- smooth the movement. Either that or it is the screen.
+
+          the flickeryness is actually just a product of the movement speed it would appear. The
+          object on my laptop was running slower because in my engine the update rate was 1000Hz
+          but the vsync was clamping it to 60Hz, thus if I integrate over a dt of 1/1000 secs but
+          do so only 60 time a second ... things move slower and thus flicker less -> dipshit ey!
+
+     +-    BOOM! just discovered that if I lock the engine to draw at the same rate of the screen then
+     |     the Graphics driver does not enable vsync, if I try to draw at a higher rate than the screen
+     |     refresh rate it does. Thus if I lock my engine to only draw the game at 60Hz and I am running
+ WRONG     the game on a screen that draws at 60Hz then simply running ./example without the vblank_mode=0
+     |     still results in no vsync. If I then lock the engine draws to 70Hz and run ./example then
+     |     the GPU will start blocking in the gl calls again to lock the draw rate the the 60Hz monitor
+     |     refresh rate. This is why I was encountering this problem. Because I was drawing at 60Hz but 
+     +-    the monitor I was running on refeshed at 50Hz thus the GPU driver was enabling vsync. -> NOPE!
+           wrong it does start blocking still. So ignore that theory :). 
+
+            I will leave it here to remind me its not the case.
+
+ Conclusion of all this, just disable vsync during development and carry on.

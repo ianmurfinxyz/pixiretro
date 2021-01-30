@@ -29,7 +29,7 @@ public:
 
     pxr::gfx::loadSprites(manifest);
 
-    _alienPosition = pxr::Vector2i{20, 20};
+    _alienPosition = pxr::Vector2i{10, 10};
     _alienSpeedX = 40;
   }
 
@@ -47,7 +47,7 @@ public:
 
     pxr::gfx::clearLayer(pxr::gfx::LAYER_STAGE);
     pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(pxr::Vector2i{50, 20}, SPRITEID_CRAB, 0, pxr::gfx::LAYER_STAGE);
+    pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, pxr::gfx::LAYER_STAGE);
     //pxr::gfx::drawText(pxr::Vector2i{-20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
@@ -74,7 +74,7 @@ public:
   static constexpr int versionMajor {1};
   static constexpr int versionMinor {0};
   static constexpr const char* name {"example-app"};
-  static constexpr pxr::Vector2i worldSize {512, 512};
+  static constexpr pxr::Vector2i worldSize {80, 50};
 
 public:
   ExampleApp() = default;
