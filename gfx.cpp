@@ -43,9 +43,9 @@ static SDL_Window* window;
 static SDL_GLContext glContext;
 static iRect viewport;
 static std::vector<Screen> screens;
-static std::vector<SpriteSheet> sprites;
+static std::vector<Sprite> sprites;
 static std::vector<Font> fonts;
-static SpriteSheet errorSprite;
+static Sprite errorSprite;
 static Font errorFont;
 
 static bool operator<(const ColorBand& lhs, const ColorBand& rhs)
@@ -76,9 +76,9 @@ static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
 
-  errorSprite._spriteSize = Vector2i{squareSize, squareSize};
-  errorSprite._sheetSize = Vector2i{1, 1};
-  errorSprite._spriteCount = 1;
+  errorSprite._frameSize = Vector2i{squareSize, squareSize};
+  errorSprite._spriteSize = errorSprite._frameSize;
+  errorSprite._frameCount = 1;
   errorSprite._image.create(errorSprite._spriteSize, colors::red);
 }
 
@@ -103,9 +103,9 @@ static void genErrorFont()
   }
 }
 
-bool initialize(std::windowTitle_, Vector2i windowSize_, bool fullscreen_)
+bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_)
 {
-  log::log(log::info, log::msg_gfx_initializing);
+  log::log(log::INFO, log::msg_gfx_initializing);
 
   windowSize = windowSize_;
   windowTitle = windowTitle_;
@@ -118,7 +118,7 @@ bool initialize(std::windowTitle_, Vector2i windowSize_, bool fullscreen_)
   }
 
   std::stringstream ss {};
-  ss << "{w:" << config._windowSize._x << ",h:" << config._windowSize._y << "}";
+  ss << "{w:" << windowSize._x << ",h:" << windowSize._y << "}";
   log::log(log::INFO, log::msg_gfx_creating_window, std::string{ss.str()});
 
   window = SDL_CreateWindow(
@@ -159,9 +159,9 @@ bool initialize(std::windowTitle_, Vector2i windowSize_, bool fullscreen_)
   std::string glVersion {reinterpret_cast<const char*>(glGetString(GL_VERSION))};
   log::log(log::INFO, log::msg_gfx_opengl_version, glVersion);
 
-  // TODO: extract version from string and check it meets min.
+  // TODO: extract version from string and check it meets min requirement.
 
-  const char* glRenderer = reinterpret_cast<const char*>(glGetString(GL_Renderer));
+  const char* glRenderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
   log::log(log::INFO, log::msg_gfx_opengl_renderer, glRenderer);
 
   const char* glVendor {reinterpret_cast<const char*>(glGetString(GL_VENDOR))};
@@ -211,44 +211,40 @@ void shutdown()
 //
 static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
 {
-  if(screen._smode == SizeMode::AUTO_MIN)
+  if(screen._smode == SizeMode::AUTO_MIN){
     screen._pxSize = 1;
-
-  //
-  // note: integer math here thus all division results are implicitly floored as required.
-  //
+  }
   else if(screen._smode == SizeMode::AUTO_MAX){
-    int pxw = windowSize._x / screen._size._x;  
-    int pxh = windowSize._y / screen._size._y;
+    int pxw = windowSize._x / screen._resolution._x;   // note: int division thus implicit floor.
+    int pxh = windowSize._y / screen._resolution._y;
     screen._pxSize = std::max(std::min(pxw, pxh), 1);
   }
-
-  else if(screen._smode == SizeMode::manual)
+  else if(screen._smode == SizeMode::MANUAL)
     screen._pxSize = screen._pxManualSize;
 
   switch(screen._pmode)
   {
   case PositionMode::MANUAL:
-    // no change.
+    screen._position = screen._manualPosition;
     break;
   case PositionMode::CENTER:
-    screen._position._x = std::clamp((windowSize._x - (screen._pxSize * screen._size._x)) / 2, 0, windowSize._x);
-    screen._position._y = std::clamp((windowSize._y - (screen._pxSize * screen._size._y)) / 2, 0, windowSize._y);
+    screen._position._x = std::clamp((windowSize._x - (screen._pxSize * screen._resolution._x)) / 2, 0, windowSize._x);
+    screen._position._y = std::clamp((windowSize._y - (screen._pxSize * screen._resolution._y)) / 2, 0, windowSize._y);
     break;
   case PositionMode::TOP_LEFT:
     screen._position._x = 0;
-    screen._position._y = windowSize._y - (screen._pxSize * screen._size._y);
+    screen._position._y = windowSize._y - (screen._pxSize * screen._resolution._y);
     break;
   case PositionMode::TOP_RIGHT:
-    screen._position._x = windowSize._x - (screen._pxSize * screen._size._x);
-    screen._position._y = windowSize._y - (screen._pxSize * screen._size._y);
+    screen._position._x = windowSize._x - (screen._pxSize * screen._resolution._x);
+    screen._position._y = windowSize._y - (screen._pxSize * screen._resolution._y);
     break;
   case PositionMode::BOTTOM_LEFT:
     screen._position._x = 0;
     screen._position._y = 0;
     break;
   case PositionMode::BOTTOM_RIGHT:
-    screen._position._x = windowSize._x - (screen._pxSize * screen._size._x);
+    screen._position._x = windowSize._x - (screen._pxSize * screen._resolution._x);
     screen._position._y = 0;
     break;
   }
@@ -272,29 +268,30 @@ static void autoAdjustScreen(Vector2i windowSize, Screen& screen)
 
 int createScreen(Vector2i resolution)
 {
-  Screen screen{};
+  assert(resolution._x > 0 && resolution._y > 0);
+
+  screens.push_back(Screen{});
+  ResourceKey_t screenid = screens.size() - 1;
+
+  auto& screen = screens.back();
+
+  for(auto& band : screen._bands){
+    band._color = colors::white;
+    band._hi = std::numeric_limits<int>::max();
+  }
 
   screen._pmode = PositionMode::CENTER;
-  screen._smode = PxSizeMode::AUTO_MAX;
+  screen._smode = SizeMode::AUTO_MAX;
   screen._cmode = ColorMode::FULL_RGB;
-
   screen._position = Vector2i{0, 0};
   screen._manualPosition = Vector2i{0, 0};
-
-  assert(resolution._x > 0 && resolution._y > 0);
   screen._resolution = resolution;
-
   screen._bitmapColor = colors::white;
-
   screen._pxManualSize = 1;
   screen._pxCount = screen._resolution._x * screen._resolution._y;
-
   screen._pxColors = new Color4u[screen._pxCount];
   screen._pxPositions = new Vector2i[screen._pxCount];
-
-  screens.push_back(std::move(screen));
-
-  ResourceKey_t screenid = screens.size() - 1;
+  screen._isEnabled = true;
 
   clearScreenTransparent(screenid); 
   autoAdjustScreen(windowSize, screen);
@@ -302,280 +299,208 @@ int createScreen(Vector2i resolution)
   int memkib = ((screen._pxCount * sizeof(Color4u)) + (screen._pxCount * sizeof(Vector2i))) / 1024;
 
   std::stringstream ss {};
-  ss << "resolution:" << resolution._x << "x" << resolution._y << "  memory:" << memkib << "kib";
+  ss << "resolution:" << resolution._x << "x" << resolution._y << "vpx mem:" << memkib << "kib";
   log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
 
   return screenid;
 }
 
-enum AssetID { AID_SPRITE, AID_FONT };
-
-Sprite SpriteSheet::getSprite(int spriteNo) const
+static ResourceKey_t useErrorSprite()
 {
-  // The game/app should make sure this never happens; should be aware of which sprite sheets
-  // have what spriteNos.
-  assert(0 <= spriteNo && spriteNo < _spriteCount);
-
-  Sprite sprite;
-  int row = spriteNo / _sheetSize._x;
-  int col = spriteNo % _sheetSize._x;
-  sprite._rowmin = row * _spriteSize._y;
-  sprite._colmin = col * _spriteSize._x;
-  sprite._rowmax = (row + 1) * _spriteSize._y;
-  sprite._colmax = (col + 1) * _spriteSize._x;
-  sprite._image = &_image;
-
-  return sprite;
+  log::log(log::INFO, log::msg_gfx_using_error_sprite);
+  sprites.push_back(errorSprite);
+  return sprites.size() - 1;
 }
 
-static void useErrorAsset(ResourceKey_t rkey, AssetID aid)
+static ResourceKey_t useErrorFont()
 {
-  switch(aid){
-    case AID_SPRITE:
-      log::log(log::INFO, log::msg_gfx_using_error_sprite);
-      sprites.insert(std::make_pair(rkey, errorSprite));
-      break;
-    case AID_FONT:
-      log::log(log::INFO, log::msg_gfx_using_error_font);
-      fonts.insert(std::make_pair(rkey, errorFont));
-      break;
-  }
+  log::log(log::INFO, log::msg_gfx_using_error_font);
+  fonts.push_back(errorFont);
+  return fonts.size() - 1;
 }
 
-static bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath, ResourceKey_t rkey, 
-                             AssetID aid)
+static bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath)
 {
+  log::log(log::INFO, log::msg_gfx_parsing_xml, xmlpath);
   doc->LoadFile(xmlpath.c_str());
   if(doc->Error()){
     log::log(log::ERROR, log::msg_gfx_fail_xml_parse, xmlpath); 
     log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc->ErrorName());
     log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc->ErrorStr());
-    useErrorAsset(rkey, aid);
     return false;
   }
   return true;
 }
 
-static bool extractChildElement(XMLNode* parent, XMLElement** child, const char* childname,
-                                ResourceKey_t rkey, AssetID aid)
+static bool extractChildElement(XMLNode* parent, XMLElement** child, const char* childname)
 {
   *child = parent->FirstChildElement(childname);
   if(*child == 0){
     log::log(log::ERROR, log::msg_gfx_fail_xml_element, childname);
-    useErrorAsset(rkey, aid);
     return false;
   }
   return true;
 }
 
-static bool extractIntAttribute(XMLElement* element, const char* attribute, int* value, 
-                                ResourceKey_t rkey, ResourceName_t rname, XMLDocument* doc, 
-                                AssetID aid)
+static bool extractIntAttribute(XMLElement* element, const char* attribute, int* value)
 {
   XMLError xmlerror = element->QueryIntAttribute(attribute, value);
   if(xmlerror != XML_SUCCESS){
-    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, std::string{attribute});
-    useErrorAsset(rkey, aid);
+    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, attribute);
     return false;
   }
   return true;
 }
 
-static bool isValidSpriteSheet(SpriteSheet& sheet)
+ResourceKey_t loadSprite(ResourceName_t name)
 {
-  if((sheet._sheetSize._x * sheet._spriteSize._x) != sheet._image.getWidth())
-    return false;
+    log::log(log::INFO, log::msg_gfx_loading_sprite, name);
 
-  if((sheet._sheetSize._y * sheet._spriteSize._y) != sheet._image.getHeight())
-    return false;
-
-  return true;
-}
-
-bool loadSprites(const ResourceManifest_t& manifest)
-{
-  log::log(log::INFO, log::msg_gfx_loading_sprites);
-
-  for(auto &pair : manifest){
-    ResourceKey_t rkey = pair.first;
-    ResourceName_t rname = pair.second;
-
-    std::stringstream ss{};
-    ss << "key:" << rkey << " name:" << rname;
-    log::log(log::INFO, log::msg_gfx_loading_asset, ss.str());
-
-    auto search = sprites.find(rkey);
-    if(search != sprites.end()){
-      log::log(log::WARN, log::msg_gfx_duplicate_resource_key, std::to_string(rkey));
-      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
-      continue;
-    }
-
-    SpriteSheet sheet{};
+    Sprite sprite{};
 
     std::string bmppath{};
-    bmppath += spritesdir;
-    bmppath += rname;
+    bmppath += RESOURCE_PATH_SPRITES;
+    bmppath += name;
     bmppath += BmpImage::FILE_EXTENSION;
-    if(!sheet._image.load(bmppath)){
-      log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, std::string{rname});
-      useErrorAsset(rkey, AID_SPRITE);
-      continue;
+    if(!sprite._image.load(bmppath)){
+      log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
+      return useErrorSprite();
     }
 
     std::string xmlpath {};
-    xmlpath += spritesdir;
-    xmlpath += rname;
-    xmlpath += SPRITESHEET_XML_FILE_EXTENSION;
+    xmlpath += RESOURCE_PATH_SPRITES;
+    xmlpath += name;
+    xmlpath += XML_RESOURCE_EXTENSION_SPRITES;
     XMLDocument doc{};
-    if(!parseXmlDocument(&doc, xmlpath, rkey, AID_SPRITE)) continue;
+    if(!parseXmlDocument(&doc, xmlpath)) 
+      return useErrorSprite();
 
     XMLElement* element {nullptr};
 
-    if(!extractChildElement(&doc, &element, "spritesheet", rkey, AID_SPRITE)) continue;
-    if(!extractIntAttribute(element, "rows", &sheet._sheetSize._y, rkey, rname, &doc, AID_SPRITE)) continue;
-    if(!extractIntAttribute(element, "cols", &sheet._sheetSize._x, rkey, rname, &doc, AID_SPRITE)) continue;
-    if(!extractChildElement(&doc, &element, "sprites", rkey, AID_SPRITE)) continue;
-    if(!extractIntAttribute(element, "width", &sheet._spriteSize._x, rkey, rname, &doc, AID_SPRITE)) continue;
-    if(!extractIntAttribute(element, "height", &sheet._spriteSize._y, rkey, rname, &doc, AID_SPRITE)) continue;
+    if(!extractChildElement(&doc, &element, "frames")) return useErrorSprite();
+    if(!extractIntAttribute(element, "count", &sprite._frameCount)) return useErrorSprite();
+    if(!extractIntAttribute(element, "width", &sprite._frameSize._x)) return useErrorSprite();
+    if(!extractIntAttribute(element, "height", &sprite._frameSize._y)) return useErrorSprite();
 
-    sheet._spriteCount = sheet._sheetSize._x * sheet._sheetSize._y;
-
-    if(!isValidSpriteSheet(sheet)){
-      log::log(log::ERROR, log::msg_gfx_asset_invalid_xml_bmp_mismatch, std::string{rname});
-      log::log(log::INFO, log::msg_gfx_using_error_sprite);
-      sprites.insert(std::make_pair(rkey, errorSprite));
-      continue;
+    if(sprite._frameSize._y != sprite._image.getHeight() ||
+      (sprite._frameSize._x * sprite._frameCount) != sprite._image.getWidth())
+    {
+      log::log(log::ERROR, log::msg_gfx_sprite_invalid_xml_bmp_mismatch, name);
+      return useErrorSprite();
     }
 
-    sprites.insert(std::make_pair(rkey, std::move(sheet)));
-  }
+    log::log(log::INFO, log::msg_gfx_loading_sprite_success);
+
+    sprites.push_back(std::move(sprite));
+    return sprites.size() - 1;
 }
 
-bool loadFonts(const ResourceManifest_t& manifest)
+ResourceKey_t loadFont(ResourceName_t name)
 {
-  log::log(log::INFO, log::msg_gfx_loading_fonts);
+  log::log(log::INFO, log::msg_gfx_loading_font, name);
 
-  for(auto &pair : manifest){
-    ResourceKey_t rkey = pair.first;
-    ResourceName_t rname = pair.second;
+  Font font{};
 
-    std::stringstream ss{};
-    ss << "key:" << rkey << " name:" << rname;
-    log::log(log::INFO, log::msg_gfx_loading_asset, ss.str());
-
-    auto search = fonts.find(rkey);
-    if(search != fonts.end()){
-      log::log(log::WARN, log::msg_gfx_duplicate_resource_key, std::to_string(rkey));
-      log::log(log::INFO, log::msg_gfx_skipping_asset_load, std::string{rname});
-      continue;
-    }
-
-    Font font{};
-
-    std::string bmppath{};
-    bmppath += fontsdir;
-    bmppath += rname;
-    bmppath += BmpImage::FILE_EXTENSION;
-    if(!font._image.load(bmppath)){
-      log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, std::string{rname});
-      useErrorAsset(rkey, AID_FONT);
-      continue;
-    }
-
-    std::string xmlpath {};
-    xmlpath += fontsdir;
-    xmlpath += rname;
-    xmlpath += Font::FILE_EXTENSION;
-    XMLDocument doc{};
-    parseXmlDocument(&doc, xmlpath, rkey, AID_FONT);
-
-    XMLElement* fontElement {nullptr};
-    XMLElement* infoElement {nullptr};
-    XMLElement* bitmapElement {nullptr};
-    XMLElement* charsElement {nullptr};
-    XMLElement* charElement {nullptr};
-
-    if(!extractChildElement(&doc, &fontElement, "font", rkey, AID_FONT)) continue;
-
-    if(!extractChildElement(fontElement, &infoElement, "info", rkey, AID_FONT)) continue;
-    if(!extractIntAttribute(infoElement, "lineHeight", &font._lineHeight, rkey, rname, &doc, AID_FONT)) continue;
-    if(!extractIntAttribute(infoElement, "baseline", &font._baseLine, rkey, rname, &doc, AID_FONT)) continue;
-    if(!extractIntAttribute(infoElement, "glyphspace", &font._glyphSpace, rkey, rname, &doc, AID_FONT)) continue;
-
-    Vector2i xmlSize{};
-    if(!extractChildElement(fontElement, &bitmapElement, "bitmap", rkey, AID_FONT)) continue;
-    if(!extractIntAttribute(bitmapElement, "width", &xmlSize._x, rkey, rname, &doc, AID_FONT)) continue;
-    if(!extractIntAttribute(bitmapElement, "height", &xmlSize._y, rkey, rname, &doc, AID_FONT)) continue;
-
-    Vector2i bmpSize = font._image.getSize();
-
-    if(xmlSize != bmpSize){
-      std::stringstream ss{};
-      ss << "in xml file '" << xmlpath << "' [w:" << xmlSize._x << ", h:" << xmlSize._y << "] : "
-         << "in bmp file '" << bmppath << "' [w:" << bmpSize._x << ", h:" << bmpSize._y << "]";
-      log::log(log::ERROR, log::msg_gfx_font_size_mismatch, ss.str());
-      log::log(log::INFO, log::msg_gfx_asset_invalid_xml_bmp_mismatch);
-      useErrorAsset(rkey, AID_FONT);
-    }
-
-    int charsCount {0};
-    if(!extractChildElement(fontElement, &charsElement, "chars", rkey, AID_FONT)) continue;
-    if(!extractIntAttribute(charsElement, "count", &charsCount, rkey, rname, &doc, AID_FONT)) continue;
-
-    if(charsCount != Font::ASCII_CHAR_COUNT){
-      log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, rname);
-      useErrorAsset(rkey, AID_FONT);
-      continue;
-    }
-
-    int charsRead {0};
-    bool isError {false};
-    if(!extractChildElement(charsElement, &charElement, "char", rkey, AID_FONT)) continue;
-    do{
-      Glyph& glyph = font._glyphs[charsRead];
-      if(!extractIntAttribute(charElement, "ascii", &glyph._ascii, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "x", &glyph._x, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "y", &glyph._y, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "width", &glyph._width, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "height", &glyph._height, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "xoffset", &glyph._xoffset, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "yoffset", &glyph._yoffset, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      if(!extractIntAttribute(charElement, "xadvance", &glyph._xadvance, rkey, rname, &doc, AID_FONT)) {isError = true; break;}
-      ++charsRead;
-      charElement = charElement->NextSiblingElement("char");
-    }
-    while(charElement != 0 && charsRead < Font::ASCII_CHAR_COUNT);
-
-    if(isError)
-      continue;
-
-    if(charsRead != Font::ASCII_CHAR_COUNT){
-      log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, rname);
-      useErrorAsset(rkey, AID_FONT);
-      continue;
-    }
-
-    // chars in the xml file may be listed in any order but we require them in ascending order
-    // of ascii value.
-    std::sort(font._glyphs.begin(), font._glyphs.end(), [](const Glyph& g0, const Glyph& g1) {
-      return g0._ascii < g1._ascii;
-    });
-
-    // checksum is used to to test for the condition in which we have the correct number of 
-    // glyphs but some are duplicates of the same character.
-    int checksum {0};
-    for(auto& glyph : font._glyphs)
-      checksum += glyph._ascii;
-
-    if(checksum != Font::ASCII_CHAR_CHECKSUM){
-      log::log(log::ERROR, log::msg_gfx_font_fail_checksum);
-      useErrorAsset(rkey, AID_FONT);
-      continue;
-    }
-
-    fonts.insert(std::make_pair(rkey, std::move(font)));
+  std::string bmppath{};
+  bmppath += RESOURCE_PATH_FONTS;
+  bmppath += name;
+  bmppath += BmpImage::FILE_EXTENSION;
+  if(!font._image.load(bmppath)){
+    log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
+    return useErrorFont();
   }
+
+  std::string xmlpath {};
+  xmlpath += RESOURCE_PATH_FONTS;
+  xmlpath += name;
+  xmlpath += XML_RESOURCE_EXTENSION_FONTS;
+  XMLDocument doc{};
+  if(!parseXmlDocument(&doc, xmlpath))
+    return useErrorFont();
+
+  XMLElement* xmlfont {nullptr};
+  XMLElement* xmlcommon {nullptr};
+  XMLElement* xmlchars {nullptr};
+  XMLElement* xmlchar {nullptr};
+
+  if(!extractChildElement(&doc, &xmlfont, "font")) return useErrorFont();
+  if(!extractChildElement(xmlfont, &xmlcommon, "common")) return useErrorFont();
+  if(!extractIntAttribute(xmlcommon, "lineHeight", &font._lineHeight)) return useErrorFont();
+  if(!extractIntAttribute(xmlcommon, "baseline", &font._baseLine)) return useErrorFont();
+  if(!extractIntAttribute(xmlcommon, "glyphspace", &font._glyphSpace)) return useErrorFont();
+
+  int charsCount {0};
+  if(!extractChildElement(xmlfont, &xmlchars, "chars")) return useErrorFont();
+  if(!extractIntAttribute(xmlchars, "count", &charsCount)) return useErrorFont();
+
+  if(charsCount != ASCII_CHAR_COUNT){
+    log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, name);
+    return useErrorFont();
+  }
+
+  int charsRead{0}, err{0};
+  if(!extractChildElement(xmlchars, &xmlchar, "char")) return useErrorFont();
+  do{
+    Glyph& glyph = font._glyphs[charsRead];
+    if(!extractIntAttribute(xmlchar, "ascii", &glyph._ascii)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "x", &glyph._x)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "y", &glyph._y)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "width", &glyph._width)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "height", &glyph._height)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "xoffset", &glyph._xoffset)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "yoffset", &glyph._yoffset)){++err; break;}
+    if(!extractIntAttribute(xmlchar, "xadvance", &glyph._xadvance)){++err; break;}
+    ++charsRead;
+    xmlchar = xmlchar->NextSiblingElement("char");
+  }
+  while(xmlchar != 0 && charsRead < ASCII_CHAR_COUNT);
+  if(err) return useErrorFont();
+
+  std::sort(font._glyphs.begin(), font._glyphs.end(), [](const Glyph& g0, const Glyph& g1) {
+    return g0._ascii < g1._ascii;
+  });
+
+  if(charsRead != ASCII_CHAR_COUNT){
+    log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, name);
+    return useErrorFont();
+  }
+
+  //
+  // check all glyphs lie within the bounds of the bmp to avoid any later segfaults.
+  //
+  int xmax{0}, xw{0}, ymax{0}, yh{0};
+  for(auto& glyph : font._glyphs){
+    if(glyph._x > xmax){
+      xmax = glyph._x;
+      xw = glyph._width;
+    }
+    if(glyph._y > ymax){
+      ymax = glyph._y;
+      yh = glyph._height;
+    }
+  }
+  if(xmax + xw > font._image.getWidth() || ymax + yh > font._image.getHeight()){
+    log::log(log::ERROR, log::msg_gfx_font_invalid_xml_bmp_mismatch);
+    return useErrorFont();
+  }
+
+  //
+  // checksum is used to to test for the condition in which we have the correct number of 
+  // glyphs but some are duplicates of the same character.
+  //
+  int checksum {0};
+  for(auto& glyph : font._glyphs){
+    checksum += glyph._ascii;
+  }
+  if(checksum != ASCII_CHAR_CHECKSUM){
+    log::log(log::ERROR, log::msg_gfx_font_fail_checksum);
+    return useErrorFont();
+  }
+
+  log::log(log::INFO, log::msg_gfx_loading_font_success);
+
+  fonts.push_back(std::move(font));
+  return fonts.size() - 1;
 }
 
 void onWindowResize(Vector2i windowSize)
@@ -612,84 +537,107 @@ void clearScreenColor(Color4u color, int screenid)
     screen._pxColors[px] = color;
 }
 
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, int spriteNo, Layer layer)
-{
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
-
-  auto search = sprites.find(spriteKey);
-
-  // The game/app should ensure this can never happen by ensuring all sprites have
-  // been loaded before trying to draw them.
-  assert(search != sprites.end());
-
-  Sprite sprite = (*search).second.getSprite(spriteNo);
-  const Color4u* const * spritePxs = sprite._image->getPixels();
-
-  // note: spritesheets are validated to ensure the range of rows and cols of all their sprites 
-  // lie within the image, thus don't need to check that here.
-
-  int screenRow {0}, screenCol{0};
-  for(int spriteRow = sprite._rowmin; spriteRow < sprite._rowmax; ++spriteRow){
-    screenRow = position._y + spriteRow;
-    if(screenRow < 0) 
-      continue;
-    if(screenRow >= screen._size._y)
-      break;
-    for(int spriteCol = sprite._colmin; spriteCol < sprite._colmax; ++spriteCol){
-      screenCol = position._x + spriteCol;
-      if(screenCol < 0)
-        continue;
-      if(screenCol >= screen._size._x)
-        break;
-      screen._pxColors[screenCol + (screenRow * screen._size._x)] = spritePxs[spriteRow][spriteCol]; 
-    }
-  }
-}
-
-void drawRectangle(Layer layer)
-{
-}
-
-void drawLine(Layer layer)
-{
-}
-
-void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Layer layer)
+void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frame, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  assert(<0 <= fontKey && fontKey < fonts.size());
+  assert(0 <= spriteKey && spriteKey < sprites.size());
+  auto& sprite = sprites[spriteKey];
+  const Color4u* const * spritePxs = sprite._image.getPixels();
+
+  assert(frame >= 0);
+  int frameOffsetX = frame >= sprite._frameCount ? 0 : frame;
+  frameOffsetX *= sprite._frameSize._x;
+
+  int screenRow {0}, screenCol{0}, screenRowOffset{0};
+  for(int spriteRow = 0; spriteRow < sprite._frameSize._y; ++spriteRow){
+    screenRow = position._y + spriteRow;
+    if(screenRow < 0) continue;
+    if(screenRow >= screen._resolution._y) break;
+    screenRowOffset = screenRow * screen._resolution._x;
+    for(int spriteCol = frameOffsetX; spriteCol < sprite._frameSize._x; ++spriteCol){
+      screenCol = position._x + spriteCol;
+      if(screenCol < 0) continue;
+      if(screenCol >= screen._resolution._x) break;
+      const Color4u& pxColor = spritePxs[spriteRow][spriteCol];
+      if(pxColor._a == ALPHA_KEY) continue;
+      if(screen._cmode == ColorMode::FULL_RGB){
+        screen._pxColors[screenCol + screenRowOffset] = pxColor;
+      }
+      else if(screen._cmode == ColorMode::YAXIS_BANDED){
+        int bandid{0};
+        while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+          ++bandid;
+        screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+      }
+      else if(screen._cmode == ColorMode::XAXIS_BANDED){
+        int bandid{0};
+        while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+          ++bandid;
+        screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+      }
+      else{
+        screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
+      }
+    }
+  }
+}
+
+void drawRectangle(iRect rect, Color4u color, int screenid)
+{
+}
+
+void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid)
+{
+}
+
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  assert(0 <= fontKey && fontKey < fonts.size());
   auto& font = fonts[fontKey];
   const Color4u* const* fontPxs = font._image.getPixels();
 
+  int baseLineY = position._y + font._baseLine;
   for(char c : text){
+    if(c == '\n'){
+      baseLineY -= font._lineHeight;
+      continue;
+    }
     assert(' ' <= c && c <= '~');
     const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
-    int screenRow{0}, screenCol{0}, screenRowOffset {0};
+    int screenRow{0}, screenCol{0}, screenRowBase{0}, screenRowOffset {0};
+    screenRowBase = baseLineY + glyph._yoffset;
     for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
-      screenRow = position._y + glyphRow + font._baseLine + glyph._yoffset;
-      screenRowOffset = screenRow * screen._size._x;
+      screenRow = screenRowBase + glyphRow;
       if(screenRow < 0) continue;
-      if(screenRow >= screen._size._y) break;
+      if(screenRow >= screen._resolution._y) break;
+      screenRowOffset = screenRow * screen._resolution._x;
       for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
         screenCol = position._x + glyphCol + glyph._xoffset;
         if(screenCol < 0) continue;
-        if(screenCol >= screen._size._x) return;
-        Color& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(screenCol >= screen._resolution._x) return;
+        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(pxColor._a == ALPHA_KEY) continue;
         if(screen._cmode == ColorMode::FULL_RGB){
-          if(pxColor._a == ALPHA_KEY) continue;
           screen._pxColors[screenCol + screenRowOffset] = pxColor;
         }
         else if(screen._cmode == ColorMode::YAXIS_BANDED){
-
+          int bandid{0};
+          while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+            ++bandid;
+          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
         }
-        else if(screen._cmode == ColorMode::xaxis_banded){
-
+        else if(screen._cmode == ColorMode::XAXIS_BANDED){
+          int bandid{0};
+          while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+            ++bandid;
+          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
         }
-        else{ 
-          if(pxColor._a == ALPHA_KEY) continue;
+        else{
           screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
         }
       }
@@ -700,114 +648,109 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
 
 void present()
 {
+  //--------------------------------------------------------------------------------
+  //
+  // TODO TEMP
+  //
+  //
   auto now0 = std::chrono::high_resolution_clock::now();
-  //for(auto& screen : screens){
-  //  glVertexPointer(2, GL_INT, 0, screen._pxPositions);
-  //  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
-  //  glPointSize(screen._pxSize);
-  //  glDrawArrays(GL_POINTS, 0, screen._pxCount);
-  //}
+  //
+  //
+  //--------------------------------------------------------------------------------
 
-  glVertexPointer(2, GL_INT, 0, screens[LAYER_STAGE]._pxPositions);
-  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screens[LAYER_STAGE]._pxColors);
-  glPointSize(screens[LAYER_STAGE]._pxSize);
-  glDrawArrays(GL_POINTS, 0, screens[LAYER_STAGE]._pxCount);
-
-  glVertexPointer(2, GL_INT, 0, screens[LAYER_ENGINE_STATS]._pxPositions);
-  glColorPointer(4, GL_UNSIGNED_BYTE, 0, screens[LAYER_ENGINE_STATS]._pxColors);
-  glPointSize(screens[LAYER_ENGINE_STATS]._pxSize);
-  glDrawArrays(GL_POINTS, 0, screens[LAYER_ENGINE_STATS]._pxCount);
+  for(auto& screen : screens){
+    if(!screen._isEnabled) continue;
+    glVertexPointer(2, GL_INT, 0, screen._pxPositions);
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
+    glPointSize(screen._pxSize);
+    glDrawArrays(GL_POINTS, 0, screen._pxCount);
+  }
 
   SDL_GL_SwapWindow(window);
+
+  //--------------------------------------------------------------------------------
+  //
+  // TODO TEMP
+  //
+  //
   auto now1 = std::chrono::high_resolution_clock::now();
   auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
   std::cout << "present time: " << dt.count() << "us" << std::endl;
+  //
+  //
+  //--------------------------------------------------------------------------------
 }
 
-void setLayerColorMode(ColorMode mode, Layer layer)
+void setScreenColorMode(ColorMode mode, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  screens[layer]._cmode = mode;
+  assert(0 <= screenid && screenid < screens.size());
+  screens[screenid]._cmode = mode;
 }
 
-void setLayerPxSizeMode(PxSizeMode mode, Layer layer)
+void setScreenSizeMode(SizeMode mode, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
   screen._smode = mode;
-
-  // setting to manual will keep the current pixel size until it is changed manually with
-  // a call to 'setLayerPixelSize'.
-  if(mode == PxSizeMode::MANUAL)
-    return;
-
   autoAdjustScreen(windowSize, screen);
 }
 
-void setLayerPositionMode(PositionMode mode, Layer layer)
+void setScreenPositionMode(PositionMode mode, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
-  
-  // setting to manual will keep the current position until it is changed manually with a 
-  // call to 'setLayerPosition'.
-  if(mode == PositionMode::MANUAL)
-    return;
-
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+  screen._pmode = mode;
   autoAdjustScreen(windowSize, screen);
 }
 
-void setLayerPosition(Vector2i position, Layer layer)
+void setScreenManualPosition(Vector2i position, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
-
-  // no effect if not in manual mode.
-  if(screen._pmode != PositionMode::MANUAL)
-    return;
-
-  screen._position = position;
-  autoAdjustScreen(windowSize, screen);
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+  screen._manualPosition = position;
+  if(screen._pmode == PositionMode::MANUAL)
+    autoAdjustScreen(windowSize, screen);
 }
 
-void setLayerPixelSize(int pxSize, Layer layer)
+void setScreenManualPixelSize(int pxSize, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
-
-  // no effect if not in manual mode.
-  if(screen._smode != PxSizeMode::MANUAL)
-    return;
-
-  pxSize = std::min(std::max(minPixelSize, pxSize), maxPixelSize);
-
-  screen._pxSize = pxSize;
-  autoAdjustScreen(windowSize, screen);
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+  screen._pxManualSize = std::min(std::max(minPixelSize, pxSize), maxPixelSize);
+  if(screen._smode == SizeMode::MANUAL)
+    autoAdjustScreen(windowSize, screen);
 }
 
-void setLayerColorBands(std::vector<ColorBand> bands, Layer layer, bool append)
+void setScreenColorBand(Color4u color, int hi, int bandid, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screenBands = screens[layer]._bands;
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
 
-  if(!append)
-    screenBands.clear();
+  assert(0 <= bandid && bandid < SCREEN_BAND_COUNT);
+  auto& band = screen._bands[bandid];
 
-  screenBands.insert(screenBands.end(), screenBands.begin(), bands.end());
-  std::sort(screenBands.begin(), screenBands.end());
-  screenBands.erase(std::unique(screenBands.begin(), screenBands.end()), screenBands.end());
+  band._color = color;
+  band._hi = hi != 0 ? hi : std::numeric_limits<int>::max();
+
+  std::sort(screen._bands.begin(), screen._bands.end());
 }
 
-void setBitmapColor(Color4u color, Layer layer)
+void setBitmapColor(Color4u color, int screenid)
 {
-  assert(LAYER_BACKGROUND <= layer && layer < LAYER_COUNT);
-  auto& screen = screens[layer];
+  assert(0 <= screenid && screenid < screens.size());
+  screens[screenid]._bitmapColor = color;
+}
 
-  // has no effect if not BITMAPS color mode.
-  if(screen._cmode != ColorMode::BITMAPS)
-    return;
+void enableScreen(int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  screens[screenid]._isEnabled = true;
+}
 
-  screen._bitmapColor = color;
+void disableScreen(int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  screens[screenid]._isEnabled = false;
 }
 
 } // namespace gfx

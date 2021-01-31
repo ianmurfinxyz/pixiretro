@@ -57,17 +57,14 @@ public:
     _active->onReset();
   }
 
-  // The app must provide this data to the engine so the window title can be
-  // composed.
+  //
+  // note: the implementation of these access functions must be useable prior to the call
+  // to onInit(); engine will call these accessors before onInit.
+  //
+
   virtual std::string getName() const = 0;
   virtual int getVersionMajor() const = 0;
   virtual int getVersionMinor() const = 0;
-
-  // The app must provide this info to the engine so the gfx layers can be initialized to
-  // the size required by the app.
-  virtual Vector2i getBackgroundLayerSize() const = 0;
-  virtual Vector2i getStageLayerSize() const = 0;
-  virtual Vector2i getUiLayerSize() const = 0;
 
 protected:
   std::unordered_map<std::string, std::shared_ptr<AppState>> _states;

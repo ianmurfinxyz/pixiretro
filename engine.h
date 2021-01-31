@@ -32,7 +32,8 @@ private:
   static constexpr Duration_t oneMinute {60'000'000'000};
   static constexpr Duration_t minFramePeriod {1'000'000};
 
-  static constexpr Vector2i engineStatsLayerSize {500, 200};
+  static constexpr Vector2i engineStatsScreenResolution {500, 200};
+  static constexpr int engineStatsScreenID {0};
 
   // Engine reserves this resource key for the font it uses to output engine stats.
   static constexpr gfx::ResourceKey_t engineFontKey {0};

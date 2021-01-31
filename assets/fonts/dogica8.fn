@@ -1,10 +1,8 @@
 <?xml version="1.0"?>
 <font>
-  <info face="dogica" size="8" bold="0" italic="0" lineHeight="8" baseline="1" glyphspace="0"/>
-  <bitmap file="dogica.bmp" width="256" height="24"/>
+  <common size="8" lineHeight="8" baseline="1" glyphspace="0"/>
   <chars count="95">
     <char ascii="32"   x="240" y="16"  width="6" height="8" xoffset="0" yoffset="0"  xadvance="7"/>
-
     <char ascii="33"   x="0"   y="0"   width="1" height="7" xoffset="3" yoffset="0"  xadvance="7"/>
     <char ascii="34"   x="8"   y="0"   width="4" height="3" xoffset="2" yoffset="4"  xadvance="7"/>
     <char ascii="35"   x="16"  y="0"   width="6" height="6" xoffset="0" yoffset="0"  xadvance="7"/>

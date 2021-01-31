@@ -28,9 +28,9 @@ struct Color4u
 
 struct Color4f
 {
-  constexpr Color4u() : _r{0}, _g{0}, _b{0}, _a{0}{}
+  constexpr Color4f() : _r{0}, _g{0}, _b{0}, _a{0}{}
 
-  constexpr Color4u(float r, float g, float b, float a = 0) :
+  constexpr Color4f(float r, float g, float b, float a = 0) :
     _r{r},
     _g{g},
     _b{b},

@@ -1,4 +1,5 @@
 #include <memory>
+#include <cassert>
 #include "engine.h"
 #include "app.h"
 #include "gfx.h"
@@ -6,29 +7,25 @@
 
 #include <iostream>
 
+static constexpr int STAGE_SCREEN_ID {1};
+static constexpr pxr::Vector2i worldSize {80, 50};
+
+enum SpriteID
+{
+  SPRITEID_SQUID,
+  SPRITEID_CRAB
+};
+
 class SplashState final : public pxr::AppState
 {
 public:
   static constexpr const char* name {"splash"};
-
-  enum SpriteID
-  {
-    SPRITEID_SQUID,
-    SPRITEID_CRAB
-  };
 
 public:
   SplashState(pxr::App* owner) : AppState(owner){}
 
   bool onInit()
   {
-    pxr::gfx::ResourceManifest_t manifest {
-      {SPRITEID_SQUID, "squid"},
-      {SPRITEID_CRAB, "crab"},
-    };
-
-    pxr::gfx::loadSprites(manifest);
-
     _alienPosition = pxr::Vector2i{10, 10};
     _alienSpeedX = 40;
   }
@@ -36,18 +33,15 @@ public:
   void onUpdate(double now, float dt)
   {
     _alienPosition._x += _alienSpeedX * dt;
-    if(_alienPosition._x < 0 || _alienPosition._x > (_owner->getStageLayerSize()._x - 20))
+    if(_alienPosition._x < 0 || _alienPosition._x > (worldSize._x - 20))
       _alienSpeedX *= -1;
   }
 
   void onDraw(double now, float dt)
   {
-    pxr::gfx::clearLayer(pxr::gfx::LAYER_BACKGROUND);
-    pxr::gfx::fastFillLayer(20, pxr::gfx::LAYER_BACKGROUND);
-
-    pxr::gfx::clearLayer(pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, pxr::gfx::LAYER_STAGE);
-    pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, pxr::gfx::LAYER_STAGE);
+    pxr::gfx::clearScreenShade(20, STAGE_SCREEN_ID);
+    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, STAGE_SCREEN_ID);
+    pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, STAGE_SCREEN_ID);
     //pxr::gfx::drawText(pxr::Vector2i{-20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
@@ -74,7 +68,6 @@ public:
   static constexpr int versionMajor {1};
   static constexpr int versionMinor {0};
   static constexpr const char* name {"example-app"};
-  static constexpr pxr::Vector2i worldSize {80, 50};
 
 public:
   ExampleApp() = default;
@@ -85,15 +78,19 @@ public:
     _active = std::shared_ptr<pxr::AppState>(new SplashState(this));
     _active->onInit();
     _states.emplace(_active->getName(), _active);
+
+    int screenid = pxr::gfx::createScreen(worldSize);
+    assert(screenid == STAGE_SCREEN_ID);
+
+    pxr::gfx::ResourceKey_t rkey = pxr::gfx::loadSprite("squid");
+    assert(rkey == SPRITEID_SQUID);
+    rkey = pxr::gfx::loadSprite("crab");
+    assert(rkey == SPRITEID_CRAB);
   }
 
   virtual std::string getName() const {return std::string{name};}
   virtual int getVersionMajor() const {return versionMajor;}
   virtual int getVersionMinor() const {return versionMinor;}
-
-  virtual pxr::Vector2i getBackgroundLayerSize() const {return worldSize;}
-  virtual pxr::Vector2i getStageLayerSize() const {return worldSize;}
-  virtual pxr::Vector2i getUiLayerSize() const {return worldSize;}
 };
 
 pxr::Engine engine;

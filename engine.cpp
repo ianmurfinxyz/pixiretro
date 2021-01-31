@@ -2,6 +2,7 @@
 #include <thread>
 #include <sstream>
 #include <iomanip>
+#include <cassert>
 #include "engine.h"
 #include "log.h"
 #include "app.h"
@@ -89,7 +90,6 @@ void Engine::initialize(std::unique_ptr<App> app)
   _drawTicker = Ticker{&Engine::onDrawTick, this, fpsLockHz, 1, false};
 
   _app = std::move(app);
-  _app->onInit();
 
   std::stringstream ss {};
   ss << _app->getName() 
@@ -98,20 +98,21 @@ void Engine::initialize(std::unique_ptr<App> app)
      << "." 
      << _app->getVersionMinor();
 
-  gfx::Configuration gfxconfig {};
-  gfxconfig._windowTitle = std::string{ss.str()};
-  gfxconfig._windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
-  gfxconfig._windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
-  gfxconfig._layerSize[gfx::LAYER_BACKGROUND] = _app->getBackgroundLayerSize();
-  gfxconfig._layerSize[gfx::LAYER_STAGE] = _app->getStageLayerSize();
-  gfxconfig._layerSize[gfx::LAYER_UI] = _app->getUiLayerSize();
-  gfxconfig._layerSize[gfx::LAYER_ENGINE_STATS] = engineStatsLayerSize;
-  gfxconfig._fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
+  Vector2i windowSize{};
+  windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
+  windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
+  bool fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
+  gfx::initialize(ss.str(), windowSize, fullscreen);
 
-  gfx::initialize(gfxconfig);
+  gfx::ResourceKey_t fontKey = gfx::loadFont(engineFontName);
+  assert(fontKey == engineFontKey);
 
-  gfx::ResourceManifest_t manifest {{engineFontKey, engineFontName}};
-  gfx::loadFonts(manifest);
+  int screenid = gfx::createScreen(engineStatsScreenResolution);
+  assert(screenid == engineStatsScreenID);
+  gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, screenid);
+  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, screenid);
+
+  _app->onInit();
 
   _framesDone = 0;
   _framesDoneThisSecond = 0;
@@ -204,7 +205,7 @@ void Engine::mainloop()
 
 void Engine::drawEngineStats()
 {
-  gfx::clearLayer(gfx::LAYER_ENGINE_STATS);
+  gfx::clearScreenTransparent(engineStatsScreenID);
 
   std::stringstream ss{};
 
@@ -212,14 +213,14 @@ void Engine::drawEngineStats()
   ss << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  "
      << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  "
      << "frame FPS: " << _measuredFrameFrequency << "hz";
-  gfx::drawText({10, 20}, ss.str(), engineFontKey, gfx::LAYER_ENGINE_STATS);
+  gfx::drawText({10, 20}, ss.str(), engineFontKey, engineStatsScreenID);
 
   std::stringstream().swap(ss);
 
   ss << std::setprecision(3);
   ss << "game time: " << durationToMinutes(_gameClock.getNow()) << "mins  "
      << "real time: " << durationToMinutes(_realClock.getNow()) << "mins";
-  gfx::drawText({10, 10}, ss.str(), engineFontKey, gfx::LAYER_ENGINE_STATS);
+  gfx::drawText({10, 10}, ss.str(), engineFontKey, engineStatsScreenID);
   
   //std::cout << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
   //std::cout << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
@@ -241,7 +242,7 @@ void Engine::onDrawTick(float tickPeriodSeconds)
 {
 
   auto now0 = std::chrono::high_resolution_clock::now();
-  gfx::clearWindow(gfx::colors::black);
+  gfx::clearWindowColor(gfx::colors::black);
   auto now1 = std::chrono::high_resolution_clock::now();
   auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
   std::cout << "clearWindow time: " << dt.count() << "us " << std::endl;

@@ -206,6 +206,11 @@ constexpr int SCREEN_BAND_COUNT = 5;
 // skipped. Note that this allows fully transparent pixels drawn in an image editor like GIMP
 // to be omitted when drawing.
 //
+// Further screens can be layered on top of one another. The draw order (layering) is determined
+// by the order in which they were created; first created last drawn (so first created is on the
+// bottom). Any transparent pixel within a layer is transparent to layers beneath, thus the
+// layers below will show through the transparent parts of a layer above.
+//
 // devnote: All drawing routines are effectively software routines thus read/write access to 
 // the virtual pixels needs to be optimal, thus pixel data is stored via raw pointer arrays.
 //
@@ -213,20 +218,20 @@ constexpr int SCREEN_BAND_COUNT = 5;
 //
 struct Screen
 {
+  std::array<ColorBand, SCREEN_BAND_COUNT> _bands;
   PositionMode _pmode;
   SizeMode _smode;
   ColorMode _cmode;
   Vector2i _position;                // position w.r.t the window.
   Vector2i _manualPosition;          // position w.r.t the window when in manual position mode.
   Vector2i _resolution;
-  ColorBand _bands[SCREEN_BAND_COUNT];
   Color4u _bitmapColor;
   int _pxSize;                       // size of virtual pixels (unit: real pixels).
   int _pxManualSize;                 // size of virtual pixels when in manual size mode.
   int _pxCount;                      // total number of virtual pixels on the screen.
-
   Color4u* _pxColors;                // accessed [col + (row * width)]
   Vector2i* _pxPositions;            // accessed [col + (row * width)]
+  bool _isEnabled;
 };
 
 //
@@ -267,7 +272,7 @@ void onWindowResize(Vector2i windowSize);
 // The naming format for the asset files is:
 //    <name>.<extension>
 //
-// see XML_RESOURCE_EXTENSION_SPRITES and BmpImage::FILE_EXTENSION.
+// see XML_RESOURCE_EXTENSION_SPRITES and BmpImage::FILE_EXTENSION for the extensions.
 //
 // Returns the resource key the loaded sprite was mapped to which is needed for the drawing
 // routines. Internally sprites are stored in an array thus returned ids start at 0 and 
@@ -284,18 +289,18 @@ ResourceKey_t loadSprite(ResourceName_t name);
 // The naming format for the asset files is:
 //    <name>.<extension>
 //
-// see XML_RESOURCE_EXTENSION_FONTS and BmpImage::FILE_EXTENSION.
+// see XML_RESOURCE_EXTENSION_FONTS and BmpImage::FILE_EXTENSION for the extensions.
 //
-// Returns the resource key the loaded sprite was mapped to which is needed for the drawing
+// Returns the resource key the loaded font was mapped to which is needed for the drawing
 // routines. Internally fonts are stored in an array thus returned ids start at 0 and 
 // increase by 1 with each new font loaded.
 //
-ResourceKey_t loadFont(ResourceName_t);
+ResourceKey_t loadFont(ResourceName_t name);
 
 //
 // Clears the entire window to a solid color.
 //
-void clearWindowColor(Color4u color);
+void clearWindowColor(Color4f color);
 
 //
 // Clears a screen to full transparency.
@@ -370,9 +375,11 @@ void setScreenManualPosition(Vector2i position, int screenid);
 void setScreenManualPixelSize(int pxSize, int screenid);
 
 //
-// Configures a color band of a screen.
+// Configures one of the color bands of a screen.
 //
 // note: setting hi to 0 disables the band.
+//
+// note: asserts 0 <= bandid < SCREEN_BAND_COUNT.
 //
 void setScreenColorBand(Color4u color, int hi, int bandid, int screenid);
 
@@ -380,6 +387,16 @@ void setScreenColorBand(Color4u color, int hi, int bandid, int screenid);
 // Sets the bitmap color of a screen.
 //
 void setScreenBitmapColor(Color4u color, int screenid);
+
+//
+// Enables a screen so it will be rendered to the window.
+//
+void enableScreen(int screenid);
+
+//
+// Disable a screen so it will not be rendered to the window.
+//
+void disableScreen(int screenid);
 
 } // namespace gfx
 } // namespace pxr
