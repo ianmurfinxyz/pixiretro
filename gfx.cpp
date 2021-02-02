@@ -9,7 +9,7 @@
 #include <limits>
 #include <cassert>
 
-#include <iostream>
+//#include <iostream>
 #include <chrono>
 
 #include "xmlutil.h"
@@ -375,8 +375,8 @@ ResourceKey_t loadSprite(ResourceName_t name)
     if(frame._size._x < 0 || frame._size._y < 0){++err; break;}
     if(frame._origin._x < 0 || frame._origin._y < 0){++err; break;}
     if(frame._origin._x >= frame._size._x || frame._origin._y >= frame._size._y){++err; break;}
-    if(frame._position._x + frame._size._x >= bmpSize._x){++err; break;}
-    if(frame._position._y + frame._size._y >= bmpSize._y){++err; break;}
+    if(frame._position._x + frame._size._x > bmpSize._x){++err; break;}
+    if(frame._position._y + frame._size._y > bmpSize._y){++err; break;}
   }
 
   if(err){
@@ -469,8 +469,8 @@ ResourceKey_t loadFont(ResourceName_t name)
     if(glyph._ascii < 32 || glyph._ascii > 126){++err; break;}
     if(glyph._x < 0 || glyph._y < 0){++err; break;}
     if(glyph._width < 0 || glyph._height < 0){++err; break;}
-    if(glyph._x + glyph._width >= bmpSize._x){++err; break;}
-    if(glyph._y + glyph._height >= bmpSize._y){++err; break;}
+    if(glyph._x + glyph._width > bmpSize._x){++err; break;}
+    if(glyph._y + glyph._height > bmpSize._y){++err; break;}
   }
 
   if(err){
@@ -655,7 +655,7 @@ void present()
   // TODO TEMP
   //
   //
-  auto now0 = std::chrono::high_resolution_clock::now();
+  //auto now0 = std::chrono::high_resolution_clock::now();
   //
   //
   //--------------------------------------------------------------------------------
@@ -675,9 +675,9 @@ void present()
   // TODO TEMP
   //
   //
-  auto now1 = std::chrono::high_resolution_clock::now();
-  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  std::cout << "present time: " << dt.count() << "us" << std::endl;
+  //auto now1 = std::chrono::high_resolution_clock::now();
+  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  //std::cout << "present time: " << dt.count() << "us" << std::endl;
   //
   //
   //--------------------------------------------------------------------------------

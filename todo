@@ -176,3 +176,11 @@ WRONG  demo is ~6 real pixels) thus rather than smoothly moving across the scree
   over ladders, ladders over girders etc.
 
   - update the sprite asset xml files to the new format.
+
+  - if the computer enables vsync and my frame rates is capped then this can cause timing problems
+  if my hard coded expected fps cap is different to the practival vsyc cap since my constant dt
+  will not be correct - will need to handle this somehow. Otherwise the entire engine breaks
+  if vsync is enabled and the game is running on a screen with a different refresh rate.
+
+  - also implement variable fps so can run cutscenes at 24hz instead of 60hz - dont need the
+  extra responsiveness for a movie so can save some CPU work.

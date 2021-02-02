@@ -100,7 +100,7 @@ class Cutscene
 private:
 
 public:
-  Cutscene() = default;
+  Cutscene();
 
   //
   // Load a cutscene from a xml cutscene file. Arg 'name' must be the name of file exluding

@@ -32,7 +32,7 @@ enum CutsceneKey
 static std::vector<pxr::cut::Cutscene> cutscenes;
 
 static constexpr int STAGE_SCREEN_ID {1};
-static constexpr pxr::Vector2i WORLD_SIZE {240, 280};
+static constexpr pxr::Vector2i WORLD_SIZE {224, 256};
 
 class SplashState final : public pxr::AppState
 {
@@ -61,7 +61,7 @@ public:
     //pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, STAGE_SCREEN_ID);
     //pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, STAGE_SCREEN_ID);
     //pxr::gfx::drawText(pxr::Vector2i{-20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
-    //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
+    //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, STAGE_SCREEN_ID);
     //pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 140}, "\"this is a quote\"", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 150}, "$cat file.txt >> main.cpp -la", 0, pxr::gfx::LAYER_UI);

@@ -81,18 +81,18 @@ Transition::Transition(std::vector<TPoint> points, float duration) :
   _to{1},
   _isDone{false}
 {
-  assert(points.size() != 0);
+  assert(_points.size() != 0);
 
   for(auto& p : _points)
     std::clamp(p._phase, 0.f, 1.f);
 
-  std::sort(points.begin(), points.end(), [](const TPoint& p0, const TPoint& p1){
+  std::sort(_points.begin(), _points.end(), [](const TPoint& p0, const TPoint& p1){
     return p0._phase <= p1._phase;
   });
 
   if(_points.size() == 1 || duration == 0.f){
     _to = 0;
-    _position = points.front()._position;
+    _position = _points.front()._position;
     _isDone = true;
   }
 }
@@ -197,6 +197,11 @@ void SceneElement::reset()
   _state = _startTime == 0.f ? State::ACTIVE : State::PENDING;
 }
 
+Cutscene::Cutscene() : 
+  _needsRedraw{true},
+  _elements{}
+{}
+
 bool Cutscene::load(std::string name)
 {
   log::log(log::INFO, log::msg_cut_loading, name);
@@ -284,8 +289,8 @@ void Cutscene::update(float dt)
 
 void Cutscene::draw(int screenid)
 {
-  if(!_needsRedraw)
-    return;
+  //if(!_needsRedraw)
+   // return;
 
   for(auto& element : _elements)
     element.draw(screenid);
@@ -297,6 +302,7 @@ void Cutscene::reset()
 {
   for(auto& element : _elements)
     element.reset();
+  _needsRedraw = true;
 }
 
 } // namespace cut

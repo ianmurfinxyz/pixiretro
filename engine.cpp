@@ -186,11 +186,11 @@ void Engine::mainloop()
 
   _updateTicker.doTicks(gameNow, realNow);
 
-  auto now0 = std::chrono::high_resolution_clock::now();
+  //auto now0 = std::chrono::high_resolution_clock::now();
   _drawTicker.doTicks(gameNow, realNow);
-  auto now1 = std::chrono::high_resolution_clock::now();
-  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  std::cout << "drawTicker.doTicks time: " << dt.count() << "us " << std::endl;
+  //auto now1 = std::chrono::high_resolution_clock::now();
+  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  //std::cout << "drawTicker.doTicks time: " << dt.count() << "us " << std::endl;
 
   ++_framesDone;
   ++_framesDoneThisSecond;
@@ -245,11 +245,11 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
 
-  auto now0 = std::chrono::high_resolution_clock::now();
+  //auto now0 = std::chrono::high_resolution_clock::now();
   gfx::clearWindowColor(gfx::colors::black);
-  auto now1 = std::chrono::high_resolution_clock::now();
-  auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  std::cout << "clearWindow time: " << dt.count() << "us " << std::endl;
+  //auto now1 = std::chrono::high_resolution_clock::now();
+  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
+  //std::cout << "clearWindow time: " << dt.count() << "us " << std::endl;
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);
