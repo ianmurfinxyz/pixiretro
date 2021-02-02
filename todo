@@ -165,3 +165,14 @@ WRONG  demo is ~6 real pixels) thus rather than smoothly moving across the scree
             I will leave it here to remind me its not the case.
 
  Conclusion of all this, just disable vsync during development and carry on.
+
+
+ - impelement the animation modes
+ - setup drawing sprites from the center position rather than the bottom-left - pass the center into
+  the gfx draw function? Make a seperate function? gfx::drawSpriteCentered(Vector2i position, ...)
+ - update the loader to load the new sprite xml format with the extra info - will also need to update
+ the sprite stuct to store it.
+  - need to consider draw order (painters algorithm) for scene elements - kong needs to be drawn
+  over ladders, ladders over girders etc.
+
+  - update the sprite asset xml files to the new format.

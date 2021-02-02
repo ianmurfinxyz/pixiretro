@@ -3,3 +3,4 @@ example
 gmon.out
 callgrind.out.*
 output*
+temp

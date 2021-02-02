@@ -171,6 +171,10 @@ void Engine::mainloop()
         }
         else if(event.key.keysym.sym == toggleDrawEngineStatsKey){
           _isDrawingEngineStats = !_isDrawingEngineStats;
+          if(!_isDrawingEngineStats)
+            gfx::disableScreen(engineStatsScreenID);
+          else
+            gfx::enableScreen(engineStatsScreenID);
           break;
         }
         // FALLTHROUGH

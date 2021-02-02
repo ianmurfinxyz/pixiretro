@@ -73,20 +73,50 @@ struct Font
 };
 
 //
-// A sprite divides a bitmap image up into frames like: 
+// A sprite frame is a sub-region of a sprite specified w.r.t a cartesian coordinate space local 
+// to the sprite. The sprite space is the same as that of the bmp image.
 //
-//     +----+----+----+----+     +----+
-//     | F0 | F1 | F2 | F3 | ... |Fn-1|    [ a bitmap with n frames ]
-//     +----+----+----+----+     +----+
+// Each frame within a sprite also has its own cartesian coordinate space which the frame's
+// origin is specified relative to. The frame space is thus a subspace of the sprite space and
+// is axis aligned and of equal scale to its parent space.
 //
-// All frames have the same dimensions and are laid out horizontally from left to right.
+//    sy                                 KEY:
+//    ^                                  sx = sprite's x axis
+//    |      fy                          sy = sprite's y axis
+//    |      ^. . . . . .                fx = frame's x axis
+//    |      |   ████   .                fy = frame's y axis
+//    |      |  ███X██  .
+//    |      | ██ ██ ██ .                fxp, fyp = position of frame space w.r.t sprite space.
+//    |      |  ██████  .
+//    |      o------------> fx           X = position of the frame origin w.r.t frame space.
+//    |  (fxp, fyp) 
+//    o----------------------> sx
+//
+// The frame position should be the pixel coordinate of the frame's bottom-left most pixel
+// w.r.t to the sprite space (the bmp image).
+//
+// The frame size is the dimensions of the frame w.r.t either space since both spaces have the
+// same scale.
+//
+// The origin should be a pixel coordinate w.r.t the frame space not the sprite. When drawing a
+// frame, the position argument to the draw call is taken as the position of the frame origin.
+// Thus if the origin is in the center of the frame then the frame will be drawn centered on the
+// position argument.
+//
+struct SpriteFrame
+{
+  Vector2i _position;
+  Vector2i _size;
+  Vector2i _origin;
+};
+
+//
+// A sprite organises a bitmap image into frames.
 //
 struct Sprite
 {
   BmpImage _image;
-  Vector2i _spriteSize;
-  Vector2i _frameSize;
-  int _frameCount;
+  std::vector<SpriteFrame> _frames;
 };
 
 //
@@ -298,6 +328,11 @@ ResourceKey_t loadSprite(ResourceName_t name);
 ResourceKey_t loadFont(ResourceName_t name);
 
 //
+// Provides access to the frame count of sprites.
+//
+int getSpriteFrameCount(ResourceKey_t spriteKey);
+
+//
 // Clears the entire window to a solid color.
 //
 void clearWindowColor(Color4f color);
@@ -327,7 +362,7 @@ void clearScreenColor(Color4u color, int screenid);
 //
 // Draw a sprite.
 //
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frame, int screenid);
+void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int screenid);
 
 // 
 // Draw a text string.

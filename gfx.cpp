@@ -12,7 +12,7 @@
 #include <iostream>
 #include <chrono>
 
-#include "tinyxml2.h"  // TODO move to a lib dir
+#include "xmlutil.h"
 
 #include "gfx.h"
 #include "math.h"
@@ -70,16 +70,19 @@ static void setViewport(iRect viewport)
 }
 
 // 
-// Generates a red sqaure sprite.
+// Generates a red sqaure sprite with the (single) frame's origin in the bottom-left.
 //
 static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
 
-  errorSprite._frameSize = Vector2i{squareSize, squareSize};
-  errorSprite._spriteSize = errorSprite._frameSize;
-  errorSprite._frameCount = 1;
+  Frame frame{};
+  frame._position = Vector2i{0, 0};
+  frame._size = Vector2i{squareSize, squareSize};
+  frame._origin = Vector2i{0, 0};
+
   errorSprite._image.create(errorSprite._spriteSize, colors::red);
+  errorSprite._frames.push_back(frame);
 }
 
 //
@@ -319,80 +322,72 @@ static ResourceKey_t useErrorFont()
   return fonts.size() - 1;
 }
 
-static bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath)
-{
-  log::log(log::INFO, log::msg_gfx_parsing_xml, xmlpath);
-  doc->LoadFile(xmlpath.c_str());
-  if(doc->Error()){
-    log::log(log::ERROR, log::msg_gfx_fail_xml_parse, xmlpath); 
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_name, doc->ErrorName());
-    log::log(log::INFO, log::msg_gfx_tinyxml_error_desc, doc->ErrorStr());
-    return false;
-  }
-  return true;
-}
-
-static bool extractChildElement(XMLNode* parent, XMLElement** child, const char* childname)
-{
-  *child = parent->FirstChildElement(childname);
-  if(*child == 0){
-    log::log(log::ERROR, log::msg_gfx_fail_xml_element, childname);
-    return false;
-  }
-  return true;
-}
-
-static bool extractIntAttribute(XMLElement* element, const char* attribute, int* value)
-{
-  XMLError xmlerror = element->QueryIntAttribute(attribute, value);
-  if(xmlerror != XML_SUCCESS){
-    log::log(log::ERROR, log::msg_gfx_fail_xml_attribute, attribute);
-    return false;
-  }
-  return true;
-}
-
 ResourceKey_t loadSprite(ResourceName_t name)
 {
-    log::log(log::INFO, log::msg_gfx_loading_sprite, name);
+  log::log(log::INFO, log::msg_gfx_loading_sprite, name);
 
-    Sprite sprite{};
+  Sprite sprite{};
 
-    std::string bmppath{};
-    bmppath += RESOURCE_PATH_SPRITES;
-    bmppath += name;
-    bmppath += BmpImage::FILE_EXTENSION;
-    if(!sprite._image.load(bmppath)){
-      log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
-      return useErrorSprite();
-    }
+  std::string bmppath{};
+  bmppath += RESOURCE_PATH_SPRITES;
+  bmppath += name;
+  bmppath += BmpImage::FILE_EXTENSION;
+  if(!sprite._image.load(bmppath)){
+    log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
+    return useErrorSprite();
+  }
 
-    std::string xmlpath {};
-    xmlpath += RESOURCE_PATH_SPRITES;
-    xmlpath += name;
-    xmlpath += XML_RESOURCE_EXTENSION_SPRITES;
-    XMLDocument doc{};
-    if(!parseXmlDocument(&doc, xmlpath)) 
-      return useErrorSprite();
+  std::string xmlpath {};
+  xmlpath += RESOURCE_PATH_SPRITES;
+  xmlpath += name;
+  xmlpath += XML_RESOURCE_EXTENSION_SPRITES;
+  XMLDocument doc{};
+  if(!parseXmlDocument(&doc, xmlpath)) 
+    return useErrorSprite();
 
-    XMLElement* element {nullptr};
+  XMLElement* xmlsprite{nullptr};
+  XMLElement* xmlframe{nullptr};
 
-    if(!extractChildElement(&doc, &element, "frames")) return useErrorSprite();
-    if(!extractIntAttribute(element, "count", &sprite._frameCount)) return useErrorSprite();
-    if(!extractIntAttribute(element, "width", &sprite._frameSize._x)) return useErrorSprite();
-    if(!extractIntAttribute(element, "height", &sprite._frameSize._y)) return useErrorSprite();
+  int err{0};
+  if(!extractChildElement(&doc, &xmlsprite, "sprite")) return useErrorSprite();
+  if(!extractChildElement(xmlsprite, &xmlframe, "frame")) return useErrorSprite();
+  do{
+    SpriteFrame frame{};
+    if(!extractIntAttribute(xmlframe, "x", &frame._position._x)){++err; break;}
+    if(!extractIntAttribute(xmlframe, "y", &frame._position._y)){++err; break;}
+    if(!extractIntAttribute(xmlframe, "w", &frame._size._x)){++err; break;}
+    if(!extractIntAttribute(xmlframe, "h", &frame._size._y)){++err; break;}
+    if(!extractIntAttribute(xmlframe, "ox", &frame._origin._x)){++err; break;}
+    if(!extractIntAttribute(xmlframe, "oy", &frame._origin._y)){++err; break;}
+    sprite._frames.push_back(frame);
+    xmlframe = xmlframe->NextSiblingElement("frame");
+  }
+  while(xmlframe != 0);
+  if(err) return useErrorSprite();
 
-    if(sprite._frameSize._y != sprite._image.getHeight() ||
-      (sprite._frameSize._x * sprite._frameCount) != sprite._image.getWidth())
-    {
-      log::log(log::ERROR, log::msg_gfx_sprite_invalid_xml_bmp_mismatch, name);
-      return useErrorSprite();
-    }
+  // 
+  // Validate all frames to avoid segfaults.
+  //
+  err = 0;
+  Vector2i bmpSize = sprite._image.getSize();
+  for(auto& frame : sprite._frames){
+    if(frame._position._x < 0 || frame._position._y < 0){++err; break;}
+    if(frame._size._x < 0 || frame._size._y < 0){++err; break;}
+    if(frame._origin._x < 0 || frame._origin._y < 0){++err; break;}
+    if(frame._origin._x >= frame._size._x || frame._origin._y >= frame._size._y){++err; break;}
+    if(frame._position._x + frame._size._x >= bmpSize._x){++err; break;}
+    if(frame._position._y + frame._size._y >= bmpSize._y){++err; break;}
+  }
 
-    log::log(log::INFO, log::msg_gfx_loading_sprite_success);
+  if(err){
+    log::log(log::ERROR, log::msg_gfx_sprite_invalid_xml_bmp_mismatch, name);
+    return useErrorSprite();
+  }
 
-    sprites.push_back(std::move(sprite));
-    return sprites.size() - 1;
+  log::log(log::INFO, log::msg_gfx_loading_sprite_success);
+
+  sprites.push_back(std::move(sprite));
+  return sprites.size() - 1;
 }
 
 ResourceKey_t loadFont(ResourceName_t name)
@@ -418,10 +413,10 @@ ResourceKey_t loadFont(ResourceName_t name)
   if(!parseXmlDocument(&doc, xmlpath))
     return useErrorFont();
 
-  XMLElement* xmlfont {nullptr};
-  XMLElement* xmlcommon {nullptr};
-  XMLElement* xmlchars {nullptr};
-  XMLElement* xmlchar {nullptr};
+  XMLElement* xmlfont{nullptr};
+  XMLElement* xmlcommon{nullptr};
+  XMLElement* xmlchars{nullptr};
+  XMLElement* xmlchar{nullptr};
 
   if(!extractChildElement(&doc, &xmlfont, "font")) return useErrorFont();
   if(!extractChildElement(xmlfont, &xmlcommon, "common")) return useErrorFont();
@@ -465,23 +460,22 @@ ResourceKey_t loadFont(ResourceName_t name)
     return useErrorFont();
   }
 
+  // 
+  // Validate all glyphs to avoid segfaults.
   //
-  // check all glyphs lie within the bounds of the bmp to avoid any later segfaults.
-  //
-  int xmax{0}, xw{0}, ymax{0}, yh{0};
-  for(auto& glyph : font._glyphs){
-    if(glyph._x > xmax){
-      xmax = glyph._x;
-      xw = glyph._width;
-    }
-    if(glyph._y > ymax){
-      ymax = glyph._y;
-      yh = glyph._height;
-    }
+  err = 0;
+  Vector2i bmpSize = font._image.getSize();
+  for(auto& glyph : fonts._glyphs){
+    if(glyph._ascii < 32 || glyph._ascii > 126){++err; break;}
+    if(glyph._x < 0 || glyph._y < 0){++err; break;}
+    if(glyph._width < 0 || glyph._height < 0){++err; break;}
+    if(glyph._x + glyph._width >= bmpSize._x){++err; break;}
+    if(glyph._y + glyph._height >= bmpSize._y){++err; break;}
   }
-  if(xmax + xw > font._image.getWidth() || ymax + yh > font._image.getHeight()){
+
+  if(err){
     log::log(log::ERROR, log::msg_gfx_font_invalid_xml_bmp_mismatch);
-    return useErrorFont();
+    return useErrorSprite();
   }
 
   //
@@ -501,6 +495,12 @@ ResourceKey_t loadFont(ResourceName_t name)
 
   fonts.push_back(std::move(font));
   return fonts.size() - 1;
+}
+
+int getSpriteFrameCount(ResourceKey_t spriteKey)
+{
+  assert(0 <= spriteKey && spriteKey < sprites.size());
+  return sprites[spriteKey]._frameCount;
 }
 
 void onWindowResize(Vector2i windowSize)
@@ -537,7 +537,7 @@ void clearScreenColor(Color4u color, int screenid)
     screen._pxColors[px] = color;
 }
 
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frame, int screenid)
+void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
@@ -546,21 +546,23 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frame, int scree
   auto& sprite = sprites[spriteKey];
   const Color4u* const * spritePxs = sprite._image.getPixels();
 
-  assert(frame >= 0);
-  int frameOffsetX = frame >= sprite._frameCount ? 0 : frame;
-  frameOffsetX *= sprite._frameSize._x;
+  assert(0 <= frameid);
+  frameid = frameid < sprite._frames.size() ? frameid : 0; // may be an error sprite with 1 frame.
+  auto& frame = sprites._frames[frameid];
 
-  int screenRow {0}, screenCol{0}, screenRowOffset{0};
-  for(int spriteRow = 0; spriteRow < sprite._frameSize._y; ++spriteRow){
-    screenRow = position._y + spriteRow;
+  int screenRow {0}, screenCol{0}, screenRowOffset{0} screenRowBase{0}, screenColBase{0};
+  screenRowBase = position._y + frame._origin._y;
+  screenColBase = position._x + frame._origin._x;
+  for(int frameRow = 0; frameRow < frame._size._y; ++frameRow){
+    screenRow = screenRowBase + frameRow;
     if(screenRow < 0) continue;
     if(screenRow >= screen._resolution._y) break;
     screenRowOffset = screenRow * screen._resolution._x;
-    for(int spriteCol = frameOffsetX; spriteCol < sprite._frameSize._x; ++spriteCol){
-      screenCol = position._x + spriteCol;
+    for(int frameCol = 0; frameCol < frame._size._x; ++frameCol){
+      screenCol = screenColBase + frameCol;
       if(screenCol < 0) continue;
       if(screenCol >= screen._resolution._x) break;
-      const Color4u& pxColor = spritePxs[spriteRow][spriteCol];
+      const Color4u& pxColor = spritePxs[frame._position._y + frameRow][frame._position._x + frameCol];
       if(pxColor._a == ALPHA_KEY) continue;
       if(screen._cmode == ColorMode::FULL_RGB){
         screen._pxColors[screenCol + screenRowOffset] = pxColor;

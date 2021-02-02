@@ -4,17 +4,35 @@
 #include "app.h"
 #include "gfx.h"
 #include "math.h"
+#include "cutscene.h"
 
 #include <iostream>
 
-static constexpr int STAGE_SCREEN_ID {1};
-static constexpr pxr::Vector2i worldSize {80, 50};
-
-enum SpriteID
+enum SpriteKey
 {
-  SPRITEID_SQUID,
-  SPRITEID_CRAB
+  SPKEY_RED_DOUBLE_LADDER_BLUE       = 0,
+  SPKEY_RED_SINGLE_LADDER_BLUE       = 1,
+  SPKEY_RED_GIRDER_LONG_FLAT         = 2, 
+  SPKEY_RED_GIRDER_LONG_RIGHT_SLOPE  = 3,
+  SPKEY_RED_GIRDER_LONG_LEFT_SLOPE   = 4,
+  SPKEY_RED_GIRDER_TOP_SLOPE         = 5,
+  SPKEY_RED_GIRDER_BOTTOM_SLOPE      = 6,
+  SPKEY_RED_GIRDER_BOTTOM_FLAT       = 7,
+  SPKEY_RED_GIRDER_SHORT             = 8,
+  SPKEY_KONG_CLIMB_PAULINE           = 9,
+  SPKEY_OIL_BARREL                   = 10,
+  SPKEY_OIL_FLAMES                   = 11,
 };
+
+enum CutsceneKey
+{
+  CUTSKEY_INTRO = 0,
+};
+
+static std::vector<cut::Cutscene> cutscenes;
+
+static constexpr int STAGE_SCREEN_ID {1};
+static constexpr pxr::Vector2i WORLD_SIZE {240, 280};
 
 class SplashState final : public pxr::AppState
 {
@@ -26,22 +44,22 @@ public:
 
   bool onInit()
   {
-    _alienPosition = pxr::Vector2i{10, 10};
-    _alienSpeedX = 40;
   }
 
   void onUpdate(double now, float dt)
   {
-    _alienPosition._x += _alienSpeedX * dt;
-    if(_alienPosition._x < 0 || _alienPosition._x > (worldSize._x - 20))
-      _alienSpeedX *= -1;
+    cutscenes[CUTSKEY_INTRO].update(dt);
   }
 
   void onDraw(double now, float dt)
   {
     pxr::gfx::clearScreenShade(20, STAGE_SCREEN_ID);
-    pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, STAGE_SCREEN_ID);
-    pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, STAGE_SCREEN_ID);
+
+    cutscenes[CUTSKEY_INTRO].draw(STAGE_SCREEN_ID);
+
+
+    //pxr::gfx::drawSprite(_alienPosition, SPRITEID_SQUID, 0, STAGE_SCREEN_ID);
+    //pxr::gfx::drawSprite(pxr::Vector2i{10, 10}, SPRITEID_CRAB, 0, STAGE_SCREEN_ID);
     //pxr::gfx::drawText(pxr::Vector2i{-20, 100}, "hello world", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 130}, "!\"#$%&`()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, pxr::gfx::LAYER_UI);
     //pxr::gfx::drawText(pxr::Vector2i{20, 120}, "[\\]^_'abcdefghijklmnopqrstuvwxyz{|}~", 0, pxr::gfx::LAYER_UI);
@@ -79,13 +97,38 @@ public:
     _active->onInit();
     _states.emplace(_active->getName(), _active);
 
-    int screenid = pxr::gfx::createScreen(worldSize);
+    int screenid = pxr::gfx::createScreen(WORLD_SIZE);
     assert(screenid == STAGE_SCREEN_ID);
 
-    pxr::gfx::ResourceKey_t rkey = pxr::gfx::loadSprite("squid");
-    assert(rkey == SPRITEID_SQUID);
-    rkey = pxr::gfx::loadSprite("crab");
-    assert(rkey == SPRITEID_CRAB);
+    pxr::gfx::ResourceKey_t rkey; 
+    rkey = pxr::gfx::loadSprite("blue_double_ladder");
+    assert(rkey == SPKEY_BLUE_DOUBLE_LADDER);
+    rkey = pxr::gfx::loadSprite("blue_single_ladder");
+    assert(rkey == SPKEY_BLUE_SINGLE_LADDER);
+    rkey = pxr::gfx::loadSprite("red_girder_long_flat");
+    assert(rkey == SPKEY_RED_GIRDER_LONG_FLAT);
+    rkey = pxr::gfx::loadSprite("red_girder_long_right_slope");
+    assert(rkey == SPKEY_RED_GIRDER_LONG_RIGHT_SLOPE);
+    rkey = pxr::gfx::loadSprite("red_girder_long_left_slope");
+    assert(rkey == SPKEY_RED_GIRDER_LONG_LEFT_SLOPE);
+    rkey = pxr::gfx::loadSprite("red_girder_top_slope");
+    assert(rkey == SPKEY_RED_GIRDER_TOP_SLOPE);
+    rkey = pxr::gfx::loadSprite("red_girder_bottom_slope");
+    assert(rkey == SPKEY_RED_GIRDER_BOTTOM_SLOPE);
+    rkey = pxr::gfx::loadSprite("red_girder_bottom_flat");
+    assert(rkey == SPKEY_RED_GIRDER_BOTTOM_FLAT);
+    rkey = pxr::gfx::loadSprite("red_girder_short");
+    assert(rkey == SPKEY_RED_GIRDER_SHORT);
+    rkey = pxr::gfx::loadSprite("kong_climb_pauline");
+    assert(rkey == SPKEY_KONG_CLIMB_PAULINE);
+    rkey = pxr::gfx::loadSprite("oil_barrel");
+    assert(rkey == SPKEY_OIL_BARREL);
+    rkey = pxr::gfx::loadSprite("oil_flames");
+    assert(rkey == SPKEY_OIL_FLAMES);
+
+    Cutscene cutscene{};
+    cutscene.load("intro");
+    cutscenes.push_back(std::move(cutscene));
   }
 
   virtual std::string getName() const {return std::string{name};}

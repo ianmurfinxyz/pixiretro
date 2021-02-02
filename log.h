@@ -32,22 +32,25 @@ constexpr const char* msg_gfx_loading_sprite = "loading sprite";
 constexpr const char* msg_gfx_loading_sprite_success = "successfully loaded sprite";
 constexpr const char* msg_gfx_loading_font = "loading font";
 constexpr const char* msg_gfx_loading_font_success = "successfully loaded font";
-constexpr const char* msg_gfx_parsing_xml = "pasing xml asset file";
 constexpr const char* msg_gfx_fail_load_asset_bmp = "failed to load the bitmap image of asset";
 constexpr const char* msg_gfx_using_error_sprite = "susbtituting unloaded sprite with 8x8 red square";
 constexpr const char* msg_gfx_using_error_font = "susbtituting unloaded font with 8px blank error font";
 constexpr const char* msg_gfx_loading_fonts = "starting font loading";
 constexpr const char* msg_gfx_pixel_size_range = "range of valid pixel sizes";
 constexpr const char* msg_gfx_created_vscreen = "created vscreen";
-constexpr const char* msg_gfx_fail_xml_parse = "parsing error in xml file";
-constexpr const char* msg_gfx_fail_xml_attribute = "failed to read xml attribute";
-constexpr const char* msg_gfx_fail_xml_element = "failed to find xml element";
-constexpr const char* msg_gfx_tinyxml_error_name = "tinyxml2 error name";
-constexpr const char* msg_gfx_tinyxml_error_desc = "tinyxml2 error desc";
-constexpr const char* msg_gfx_sprite_invalid_xml_bmp_mismatch = "invalid sprite : xml data implies a different bitmap size";
-constexpr const char* msg_gfx_font_invalid_xml_bmp_mismatch = "invalid font : char xml meta extends font bmp bounds";
 constexpr const char* msg_gfx_missing_ascii_glyphs = "loaded font does not contain glyphs for all 95 printable ascii chars";
 constexpr const char* msg_gfx_font_fail_checksum = "loaded font failed the checksum test; may be duplicate ascii chars";
+constexpr const char* msg_gfx_sprite_invalid_xml_bmp_mismatch = "invalid sprite : xml data implies a different bitmap size";
+constexpr const char* msg_gfx_font_invalid_xml_bmp_mismatch = "invalid font : char xml meta extends font bmp bounds";
+
+// xml log strings.
+
+constexpr const char* msg_xml_parsing = "pasing xml asset file";
+constexpr const char* msg_xml_fail_parse = "parsing error in xml file";
+constexpr const char* msg_xml_fail_read_attribute = "failed to read xml attribute";
+constexpr const char* msg_xml_fail_read_element = "failed to find xml element";
+constexpr const char* msg_xml_tinyxml_error_name = "tinyxml2 error name";
+constexpr const char* msg_xml_tinyxml_error_desc = "tinyxml2 error desc";
 
 // bitmap (bmp) file log strings.
 
