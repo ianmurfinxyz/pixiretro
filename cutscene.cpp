@@ -3,6 +3,7 @@
 #include "xmlutil.h"
 #include "math.h"
 #include "gfx.h"
+#include "log.h"
 
 //
 // TODO
@@ -19,6 +20,7 @@
 namespace pxr
 {
 namespace cut
+{
 
 Animation::Animation(gfx::ResourceKey_t spriteKey, int startFrame, int layer, float frameFrequency, Mode mode) :
   _mode{mode},
@@ -31,12 +33,12 @@ Animation::Animation(gfx::ResourceKey_t spriteKey, int startFrame, int layer, fl
   _frameFrequency{frameFrequency},
   _frameClock{0.f}
 {
-  assert(0 <= _mode && _mode <= RAND);
+  assert(STATIC <= _mode && _mode <= RAND);
 
   _frameCount = gfx::getSpriteFrameCount(_spriteKey);
   assert(startFrame < _frameCount);
 
-  if(_frequency == 0.f)
+  if(_frameFrequency == 0.f)
     _mode = STATIC;
 }
 
@@ -88,9 +90,9 @@ Transition::Transition(std::vector<TPoint> points, float duration) :
     return p0._phase <= p1._phase;
   });
 
-  if(points.size() == 1 || duration == 0.f){
+  if(_points.size() == 1 || duration == 0.f){
     _to = 0;
-    _position = points.font()._position;
+    _position = points.front()._position;
     _isDone = true;
   }
 }
@@ -105,8 +107,8 @@ bool Transition::update(float dt)
   _clock += dt;
   phase = _clock / _duration;
 
-  if(phase > _point[_to]._phase){
-    if(_point[_to]._phase == 1.f){
+  if(phase > _points[_to]._phase){
+    if(_points[_to]._phase == 1.f){
       _isDone = true;
       phase = 1.f;
     }
@@ -130,9 +132,9 @@ void Transition::reset()
   _clock = 0.f;
   _isDone = false;
 
-  if(points.size() == 1){
+  if(_points.size() == 1){
     _to = 0;
-    _position = points.font()._position;
+    _position = _points.front()._position;
     _isDone = true;
   }
 }
@@ -184,12 +186,12 @@ void SceneElement::draw(int screenid)
   if(_state != State::ACTIVE)
     return;
 
-  gfx::drawSprite(_transition.getPosition(), _animation.getSpriteKey(), _animtion.getFrame(), screenid); 
+  gfx::drawSprite(_transition.getPosition(), _animation.getSpriteKey(), _animation.getFrame(), screenid); 
 }
 
 void SceneElement::reset()
 {
-  _animtion.reset();
+  _animation.reset();
   _transition.reset();
   _clock = 0.f;
   _state = _startTime == 0.f ? State::ACTIVE : State::PENDING;
@@ -197,7 +199,7 @@ void SceneElement::reset()
 
 bool Cutscene::load(std::string name)
 {
-  log::log(log::INFO, log::msg_cut_loading_cutscene, name);
+  log::log(log::INFO, log::msg_cut_loading, name);
 
   std::string xmlpath{};
   xmlpath += RESOURCE_PATH_CUTSCENES;
@@ -210,7 +212,7 @@ bool Cutscene::load(std::string name)
   XMLElement* xmlscene{nullptr};
   XMLElement* xmlelement{nullptr};
 
-  if(!extractChildElement(&doc, xmlscene, "scene")) return false;
+  if(!extractChildElement(&doc, &xmlscene, "scene")) return false;
 
   float timingStart;
   float timingDuration;
@@ -229,44 +231,46 @@ bool Cutscene::load(std::string name)
   XMLElement* xmltransition{nullptr};
   XMLElement* xmlpoint{nullptr};
 
-  if(!extractChildElement(xmlscene, xmlelement, "element")) return false;
+  if(!extractChildElement(xmlscene, &xmlelement, "element")) return false;
   do{
-    if(!extractChildElement(xmlelement, xmltiming, "timing")) return false;
-    if(!extractFloatAttibute(xmltiming, "start", &timingStart)) return false;
-    if(!extractFloatAttibute(xmltiming, "duration", &timingDuration)) return false;
+    if(!extractChildElement(xmlelement, &xmltiming, "timing")) return false;
+    if(!extractFloatAttribute(xmltiming, "start", &timingStart)) return false;
+    if(!extractFloatAttribute(xmltiming, "duration", &timingDuration)) return false;
 
-    if(!extractChildElement(xmlelement, xmlanimation, "animation")) return false;
-    if(!extractIntAttibute(xmlanimation, "spritekey", &spriteKey)) return false;
-    if(!extractIntAttibute(xmlanimation, "startframe", &startFrame)) return false;
-    if(!extractIntAttibute(xmlanimation, "layer", &layer)) return false;
-    if(!extractIntAttibute(xmlanimation, "mode", &mode)) return false;
-    if(!extractFloatAttibute(xmlanimation, "frequency", &frequency)) return false;
+    if(!extractChildElement(xmlelement, &xmlanimation, "animation")) return false;
+    if(!extractIntAttribute(xmlanimation, "spritekey", &spriteKey)) return false;
+    if(!extractIntAttribute(xmlanimation, "startframe", &startFrame)) return false;
+    if(!extractIntAttribute(xmlanimation, "layer", &layer)) return false;
+    if(!extractIntAttribute(xmlanimation, "mode", &mode)) return false;
+    if(!extractFloatAttribute(xmlanimation, "frequency", &frequency)) return false;
 
-    if(!extractChildElement(xmlelement, xmltransition, "transition")) return false;
-    if(!extractFloatAttibute(xmltransition, "duration", &transitionDuration)) return false;
+    if(!extractChildElement(xmlelement, &xmltransition, "transition")) return false;
+    if(!extractFloatAttribute(xmltransition, "duration", &transitionDuration)) return false;
 
     std::vector<Transition::TPoint> _tpoints{};
-    if(!extractChildElement(xmltransition, xmlpoint, "point")) return false;
+    if(!extractChildElement(xmltransition, &xmlpoint, "point")) return false;
     do{
-      if(!extractIntAttibute(xmlpoint, "x", &transitionX)) return false;
-      if(!extractIntAttibute(xmlpoint, "y", &transitionY)) return false;
-      if(!extractFloatAttibute(xmlpoint, "phase", &transitionPhase)) return false;
-      _tpoints.emplace({{transitionX, transitionY}, transitionPhase});
+      if(!extractIntAttribute(xmlpoint, "x", &transitionX)) return false;
+      if(!extractIntAttribute(xmlpoint, "y", &transitionY)) return false;
+      if(!extractFloatAttribute(xmlpoint, "phase", &transitionPhase)) return false;
+      _tpoints.push_back({Vector2f(transitionX, transitionY), transitionPhase});
       xmlpoint = xmlpoint->NextSiblingElement("point");
     }
     while(xmlpoint != 0);
 
-    Animation animation{spriteKey, startFrame, layer, frequency, mode}; 
+    Animation animation{spriteKey, startFrame, layer, frequency, static_cast<Animation::Mode>(mode)}; 
     Transition transition{std::move(_tpoints), transitionDuration};
-    _elements.emplace({animation, std::move(transition), timingStart, timingDuration});
+    _elements.push_back({animation, std::move(transition), timingStart, timingDuration});
      
     xmlelement = xmlelement->NextSiblingElement("element");
   }
   while(xmlelement != 0);
 
   std::sort(_elements.begin(), _elements.end(), [](const SceneElement& e0, const SceneElement& e1){
-    return e0._animation.getLayer() < e1._animation.getLayer();
+    return e0.getAnimation().getLayer() < e1.getAnimation().getLayer();
   });
+
+  return true;
 }
 
 void Cutscene::update(float dt)

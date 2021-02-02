@@ -76,12 +76,12 @@ static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
 
-  Frame frame{};
+  SpriteFrame frame{};
   frame._position = Vector2i{0, 0};
   frame._size = Vector2i{squareSize, squareSize};
   frame._origin = Vector2i{0, 0};
 
-  errorSprite._image.create(errorSprite._spriteSize, colors::red);
+  errorSprite._image.create(frame._size, colors::red);
   errorSprite._frames.push_back(frame);
 }
 
@@ -465,7 +465,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   //
   err = 0;
   Vector2i bmpSize = font._image.getSize();
-  for(auto& glyph : fonts._glyphs){
+  for(auto& glyph : font._glyphs){
     if(glyph._ascii < 32 || glyph._ascii > 126){++err; break;}
     if(glyph._x < 0 || glyph._y < 0){++err; break;}
     if(glyph._width < 0 || glyph._height < 0){++err; break;}
@@ -475,7 +475,7 @@ ResourceKey_t loadFont(ResourceName_t name)
 
   if(err){
     log::log(log::ERROR, log::msg_gfx_font_invalid_xml_bmp_mismatch);
-    return useErrorSprite();
+    return useErrorFont();
   }
 
   //
@@ -500,7 +500,7 @@ ResourceKey_t loadFont(ResourceName_t name)
 int getSpriteFrameCount(ResourceKey_t spriteKey)
 {
   assert(0 <= spriteKey && spriteKey < sprites.size());
-  return sprites[spriteKey]._frameCount;
+  return sprites[spriteKey]._frames.size();
 }
 
 void onWindowResize(Vector2i windowSize)
@@ -548,9 +548,9 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int scr
 
   assert(0 <= frameid);
   frameid = frameid < sprite._frames.size() ? frameid : 0; // may be an error sprite with 1 frame.
-  auto& frame = sprites._frames[frameid];
+  auto& frame = sprite._frames[frameid];
 
-  int screenRow {0}, screenCol{0}, screenRowOffset{0} screenRowBase{0}, screenColBase{0};
+  int screenRow {0}, screenCol{0}, screenRowOffset{0}, screenRowBase{0}, screenColBase{0};
   screenRowBase = position._y + frame._origin._y;
   screenColBase = position._x + frame._origin._x;
   for(int frameRow = 0; frameRow < frame._size._y; ++frameRow){

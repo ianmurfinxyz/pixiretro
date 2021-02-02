@@ -1,4 +1,8 @@
 #include "xmlutil.h"
+#include "log.h"
+
+namespace pxr
+{
 
 bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath)
 {
@@ -32,3 +36,15 @@ bool extractIntAttribute(XMLElement* element, const char* attribute, int* value)
   }
   return true;
 }
+
+bool extractFloatAttribute(XMLElement* element, const char* attribute, float* value)
+{
+  XMLError xmlerror = element->QueryFloatAttribute(attribute, value);
+  if(xmlerror != XML_SUCCESS){
+    log::log(log::ERROR, log::msg_xml_fail_read_attribute, attribute);
+    return false;
+  }
+  return true;
+}
+
+} // namespace pxr

@@ -2,24 +2,27 @@
 #define _PIXIRETRO_CUTSCENE_H_
 
 #include <vector>
+#include <string>
+#include "gfx.h"
 
 namespace pxr
 {
 namespace cut
 {
 
-static constexpr const char* RESOURCE_PATH_CUTSCENES = "assets/cutscenes/"
-static constexpr const char* XML_RESOURCE_EXTENSION_CUTSCENES = ".scene"
+static constexpr const char* RESOURCE_PATH_CUTSCENES = "assets/cutscenes/";
+static constexpr const char* XML_RESOURCE_EXTENSION_CUTSCENES = ".scene";
 
 class Animation
 {
+public:
   //
   // The modes are as follows:
   //  STATIC  - a single sprite frame is always shown. Updates do nothing.
   //  LOOP    - the animation loops in ascending order of frame number.
   //  RAND    - the animation will choose a random frame from the sprite every frame change.
   //
-  enum class Mode { 
+  enum Mode { 
     STATIC = 0,     // These enum values are used within .scene files to specify
     LOOP   = 1,     // animation states. Don't change!
     RAND   = 2 
@@ -47,7 +50,7 @@ private:
 
 class Transition
 {
-public
+public:
   struct TPoint
   {
     Vector2f _position;
@@ -81,6 +84,7 @@ public:
   void reset();
 
   State getState() const {return _state;}
+  const Animation& getAnimation() const {return _animation;}
 
 private:
   Animation _animation;

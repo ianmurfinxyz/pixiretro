@@ -10,8 +10,8 @@
 
 enum SpriteKey
 {
-  SPKEY_RED_DOUBLE_LADDER_BLUE       = 0,
-  SPKEY_RED_SINGLE_LADDER_BLUE       = 1,
+  SPKEY_BLUE_DOUBLE_LADDER           = 0,
+  SPKEY_BLUE_SINGLE_LADDER           = 1,
   SPKEY_RED_GIRDER_LONG_FLAT         = 2, 
   SPKEY_RED_GIRDER_LONG_RIGHT_SLOPE  = 3,
   SPKEY_RED_GIRDER_LONG_LEFT_SLOPE   = 4,
@@ -29,7 +29,7 @@ enum CutsceneKey
   CUTSKEY_INTRO = 0,
 };
 
-static std::vector<cut::Cutscene> cutscenes;
+static std::vector<pxr::cut::Cutscene> cutscenes;
 
 static constexpr int STAGE_SCREEN_ID {1};
 static constexpr pxr::Vector2i WORLD_SIZE {240, 280};
@@ -126,8 +126,9 @@ public:
     rkey = pxr::gfx::loadSprite("oil_flames");
     assert(rkey == SPKEY_OIL_FLAMES);
 
-    Cutscene cutscene{};
-    cutscene.load("intro");
+    pxr::cut::Cutscene cutscene{};
+    bool result = cutscene.load("intro");
+    assert(result == true);
     cutscenes.push_back(std::move(cutscene));
   }
 

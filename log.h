@@ -33,8 +33,8 @@ constexpr const char* msg_gfx_loading_sprite_success = "successfully loaded spri
 constexpr const char* msg_gfx_loading_font = "loading font";
 constexpr const char* msg_gfx_loading_font_success = "successfully loaded font";
 constexpr const char* msg_gfx_fail_load_asset_bmp = "failed to load the bitmap image of asset";
-constexpr const char* msg_gfx_using_error_sprite = "susbtituting unloaded sprite with 8x8 red square";
-constexpr const char* msg_gfx_using_error_font = "susbtituting unloaded font with 8px blank error font";
+constexpr const char* msg_gfx_using_error_sprite = "substituting unloaded sprite with 8x8 red square";
+constexpr const char* msg_gfx_using_error_font = "substituting unloaded font with 8px blank error font";
 constexpr const char* msg_gfx_loading_fonts = "starting font loading";
 constexpr const char* msg_gfx_pixel_size_range = "range of valid pixel sizes";
 constexpr const char* msg_gfx_created_vscreen = "created vscreen";
@@ -51,6 +51,10 @@ constexpr const char* msg_xml_fail_read_attribute = "failed to read xml attribut
 constexpr const char* msg_xml_fail_read_element = "failed to find xml element";
 constexpr const char* msg_xml_tinyxml_error_name = "tinyxml2 error name";
 constexpr const char* msg_xml_tinyxml_error_desc = "tinyxml2 error desc";
+
+// cutscene log strings.
+
+constexpr const char* msg_cut_loading = "loading cutscene";
 
 // bitmap (bmp) file log strings.
 

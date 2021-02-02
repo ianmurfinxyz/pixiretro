@@ -22,8 +22,8 @@ constexpr const char* RESOURCE_PATH_FONTS = "assets/fonts/";
 //
 // The file extensions for the resource's xml meta files.
 //
-constexpr const char* XML_RESOURCE_EXTENSION_SPRITES = ".sp";
-constexpr const char* XML_RESOURCE_EXTENSION_FONTS = ".fn";
+constexpr const char* XML_RESOURCE_EXTENSION_SPRITES = ".sprite";
+constexpr const char* XML_RESOURCE_EXTENSION_FONTS = ".font";
 
 //
 // A unique key to identify a gfx resource for use in draw calls.
