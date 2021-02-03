@@ -83,6 +83,7 @@ static void genErrorSprite()
 
   errorSprite._image.create(frame._size, colors::red);
   errorSprite._frames.push_back(frame);
+  errorSprite._isErrorSprite = true;
 }
 
 //
@@ -384,6 +385,7 @@ ResourceKey_t loadSprite(ResourceName_t name)
     return useErrorSprite();
   }
 
+  sprite._isErrorSprite = false;
   log::log(log::INFO, log::msg_gfx_loading_sprite_success);
 
   sprites.push_back(std::move(sprite));
@@ -582,6 +584,57 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int scr
       else{
         screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
       }
+    }
+  }
+}
+
+void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, int colid, int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  assert(0 <= spriteKey && spriteKey < sprites.size());
+  auto& sprite = sprites[spriteKey];
+  const Color4u* const * spritePxs = sprite._image.getPixels();
+
+  assert(0 <= frameid);
+  frameid = frameid < sprite._frames.size() ? frameid : 0; // may be an error sprite with 1 frame.
+  auto& frame = sprite._frames[frameid];
+
+  colid = colid < frame._size._x ? colid : 0;
+
+  int screenRow {0}, screenCol{0}, screenRowOffset{0}, spriteCol{0};
+
+  screenCol = position._x + colid;
+  spriteCol = frame._position._x + colid;
+
+  if(screenCol < 0 || screenCol >= screen._resolution._x) 
+    return;
+
+  for(int frameRow = 0; frameRow < frame._size._y; ++frameRow){
+    screenRow = position._y + frameRow;
+    if(screenRow < 0) continue;
+    if(screenRow >= screen._resolution._y) break;
+    screenRowOffset = screenRow * screen._resolution._x;
+    const Color4u& pxColor = spritePxs[frame._position._y + frameRow][spriteCol];
+    if(pxColor._a == ALPHA_KEY) continue;
+    if(screen._cmode == ColorMode::FULL_RGB){
+      screen._pxColors[screenCol + screenRowOffset] = pxColor;
+    }
+    else if(screen._cmode == ColorMode::YAXIS_BANDED){
+      int bandid{0};
+      while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+        ++bandid;
+      screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+    }
+    else if(screen._cmode == ColorMode::XAXIS_BANDED){
+      int bandid{0};
+      while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+        ++bandid;
+      screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+    }
+    else{
+      screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
     }
   }
 }
@@ -822,6 +875,18 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey)
     size._y = size._y < glyph._height ? glyph._height : size._y;
   }
   return size;
+}
+
+bool isErrorSprite(ResourceKey_t spriteKey)
+{
+  assert(0 <= spriteKey && spriteKey < sprites.size());
+  return sprites[spriteKey]._isErrorSprite;
+}
+
+Vector2i getSpriteSize(ResourceKey_t spriteKey, int frameid)
+{
+  assert(0 <= spriteKey && spriteKey < sprites.size());
+  return sprites[spriteKey]._image.getSize();
 }
 
 } // namespace gfx

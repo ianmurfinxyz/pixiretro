@@ -85,6 +85,16 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
   }
 }
 
+void Engine::Ticker::reset()
+{
+  _tickerNow = Duration_t::zero();
+  _lastMeasureNow = Duration_t::zero();
+  _ticksDoneTotal = 0;
+  _ticksDoneThisHalfSecond = 0;
+  _ticksDoneThisFrame = 0;
+  _ticksAccumulated = 0;
+}
+
 void Engine::initialize(std::unique_ptr<App> app)
 {
   log::initialize();
@@ -97,13 +107,6 @@ void Engine::initialize(std::unique_ptr<App> app)
     log::log(log::FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
     exit(EXIT_FAILURE);
   }
-
-  _fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
-  Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
-  log::log(log::INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
-
-  _updateTicker = Ticker{&Engine::onUpdateTick, this, tickPeriod, 1, true};
-  _drawTicker = Ticker{&Engine::onDrawTick, this, tickPeriod, 1, false};
 
   _app = std::move(app);
 
@@ -131,9 +134,30 @@ void Engine::initialize(std::unique_ptr<App> app)
   gfx::disableScreen(_statsScreenId);
 
   _pauseScreenId = gfx::createScreen(pauseScreenResolution);
-  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);
-  gfx::disableScreen(_pauseScreenId);
-  drawPauseDialog();
+
+  _fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
+  Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
+  log::log(log::INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
+
+  _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 1, true};
+  _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
+
+  _splashKey = gfx::loadSprite(splashName);
+  if(gfx::isErrorSprite(_splashKey)){
+    log::log(log::ERROR, log::msg_eng_fail_load_splash);
+    onSplashExit();
+  }
+  else{
+    _splashSize = gfx::getSpriteSize(_splashKey, 0);
+    _splashPosition = Vector2i{
+      ((pauseScreenResolution._x - _splashSize._x) / 2),
+      ((pauseScreenResolution._y - _splashSize._y) / 2),
+    };
+    _splashProgress = 0;
+    _isSplashDone = false;
+    gfx::enableScreen(_pauseScreenId);
+    gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MAX, _pauseScreenId);
+  }
 
   gfx::Color4u clearColor {
     static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_RED)),
@@ -161,7 +185,15 @@ void Engine::shutdown()
 void Engine::run()
 {
   _realClock.reset();
-  while(!_isDone) mainloop();
+  while(!_isSplashDone) 
+    mainloop();
+  
+  _realClock.reset();
+  _gameClock.reset();
+  _updateTicker.reset();
+  _drawTicker.reset();
+  while(!_isDone) 
+    mainloop();
 }
 
 void Engine::mainloop()
@@ -176,6 +208,7 @@ void Engine::mainloop()
   while(SDL_PollEvent(&event) != 0){
     switch(event.type){
       case SDL_QUIT:
+        _isSplashDone = true;
         _isDone = true;
         return;
       case SDL_WINDOWEVENT:
@@ -196,6 +229,8 @@ void Engine::mainloop()
           break;
         }
         else if(event.key.keysym.sym == pauseGameClockKey){
+          if(!_isSplashDone)
+            continue;
           _gameClock.togglePause();
           if(_gameClock.isPaused())
             gfx::enableScreen(_pauseScreenId);
@@ -209,6 +244,10 @@ void Engine::mainloop()
             gfx::disableScreen(_statsScreenId);
           else
             gfx::enableScreen(_statsScreenId);
+          break;
+        }
+        else if(event.key.keysym.sym == skipSplashKey && !_isSplashDone){
+          onSplashExit(); 
           break;
         }
         // FALLTHROUGH
@@ -307,14 +346,64 @@ void Engine::onDrawTick(float tickPeriodSeconds)
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);
 
-  if(_gameClock.isPaused())
-    drawPauseDialog();
-
   if(_isDrawingEngineStats)
     drawEngineStats();
 
   gfx::present();
 
+}
+
+void Engine::onSplashUpdateTick(float tickPeriodSeconds)
+{
+  static int splashMode {0}; // 0=waiting, 1=splashing.
+  static float clock {0.f};
+  static float delay {splashDurationSeconds / _splashSize._x};
+
+  clock += tickPeriodSeconds;
+
+  if(splashMode == 0){
+    if(clock > splashWaitDurationSeconds){
+      clock = 0.f;
+      if(_splashProgress == _splashSize._x){
+        onSplashExit();
+      }
+      else
+        splashMode = 1;
+    }
+  }
+
+  else if(splashMode == 1){
+    if(clock > delay){
+      clock = 0.f;
+      ++_splashProgress;
+      if(_splashProgress >= _splashSize._x)
+        splashMode = 0;
+    }
+  }
+}
+
+void Engine::onSplashDrawTick(float tickPeriodSeconds)
+{
+  gfx::clearWindowColor(gfx::colors::silver);
+  gfx::clearScreenShade(1, _pauseScreenId);
+  
+  for(int col = 0; col < _splashProgress; ++col)
+    gfx::drawSpriteColumn(_splashPosition, _splashKey, 0, col, _pauseScreenId);
+
+  if(_isDrawingEngineStats)
+    drawEngineStats();
+
+  gfx::present();
+}
+
+void Engine::onSplashExit()
+{
+  _isSplashDone = true;
+  _updateTicker.setCallback(&Engine::onUpdateTick);
+  _drawTicker.setCallback(&Engine::onDrawTick);
+  gfx::disableScreen(_pauseScreenId);
+  drawPauseDialog();
+  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);
 }
 
 double Engine::durationToMilliseconds(Duration_t d)

@@ -117,6 +117,7 @@ struct Sprite
 {
   BmpImage _image;
   std::vector<SpriteFrame> _frames;
+  bool _isErrorSprite;
 };
 
 //
@@ -364,6 +365,12 @@ void clearScreenColor(Color4u color, int screenid);
 //
 void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int screenid);
 
+//
+// Takes a column of pixels from a specific frame of a sprite and draws it with the bottom
+// most pixel in the column at position.
+//
+void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, int colid, int screenid);
+
 // 
 // Draw a text string.
 //
@@ -438,6 +445,17 @@ void disableScreen(int screenid);
 // a text string for a given font. Dimensions are in units of virtual pixels.
 //
 Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey);
+
+//
+// Utility to test if a sprite resource key is associated with the error sprite. Allows testing
+// if a sprite load failed.
+//
+bool isErrorSprite(ResourceKey_t spriteKey);
+
+//
+// Utility to access the size of sprite frames.
+//
+Vector2i getSpriteSize(ResourceKey_t spriteKey, int frameid);
 
 } // namespace gfx
 } // namespace pxr

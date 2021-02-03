@@ -34,6 +34,9 @@ private:
   static constexpr Duration_t oneMinute {60'000'000'000};
   static constexpr Duration_t minFramePeriod {1'000'000};
 
+  static constexpr float splashDurationSeconds {0.5f};
+  static constexpr float splashWaitDurationSeconds {1.0f};
+
   static constexpr Vector2i statsScreenResolution {500, 200};
   static constexpr Vector2i pauseScreenResolution {100, 60};
 
@@ -48,6 +51,9 @@ private:
   static constexpr int resetGameClockScaleKey {SDLK_KP_HASH};
   static constexpr int pauseGameClockKey {SDLK_p};
   static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
+  static constexpr int skipSplashKey {SDLK_ESCAPE};
+
+  static constexpr const char* splashName {"pixiretro_splash"};
 
   // Clock to record the real passage of time since the app booted.
   class RealClock
@@ -70,6 +76,7 @@ private:
   public:
     GameClock() : _now{}, _scale{1.f}, _isPaused{false}{}
     void update(Duration_t realDt);
+    void reset(){_now = Duration_t::zero(); _scale = 1.f; _isPaused = false;}
     Duration_t getNow() const {return _now;}
     void incrementScale(float increment){_scale += increment;}
     void setScale(float scale){_scale = scale;}
@@ -108,11 +115,13 @@ private:
     Ticker() = default;
     Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod, int maxTicksPerFrame, bool isChasingGameNow);
     void doTicks(Duration_t gameNow, Duration_t realNow);
+    void reset();
     int getTicksDoneTotal() const {return _ticksDoneTotal;}
     int getTicksDoneThisFrame() const {return _ticksDoneThisFrame;}
     int getTicksAccumulated() const {return _ticksAccumulated;}
     const std::array<double, FPS_HISTORY_SIZE>& getTickFrequencyHistory() {return _measuredTickFrequencyHistory;}
     bool isNewTickFrequencySample() const {return _isNewTickFrequencySample;}
+    void setCallback(Callback_t onTick){_onTick = onTick;}
     
   private:
     Callback_t _onTick;
@@ -172,6 +181,11 @@ private:
   void onUpdateTick(float tickPeriodSeconds);
   void onDrawTick(float tickPeriodSeconds);
 
+  void splashLoop();
+  void onSplashUpdateTick(float tickPeriodSeconds);
+  void onSplashDrawTick(float tickPeriodSeconds);
+  void onSplashExit();
+
   double durationToMilliseconds(Duration_t d);
   double durationToSeconds(Duration_t d);
   double durationToMinutes(Duration_t d);
@@ -197,6 +211,12 @@ private:
 
   int _statsScreenId;
   int _pauseScreenId;
+
+  gfx::ResourceKey_t _splashKey;
+  Vector2i _splashPosition;
+  Vector2i _splashSize;
+  int _splashProgress;
+  bool _isSplashDone;
 
   std::unique_ptr<App> _app;
 

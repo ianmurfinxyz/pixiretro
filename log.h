@@ -15,6 +15,7 @@ constexpr const char* msg_log_to_stderr = "logging to standard error";
 
 constexpr const char* msg_eng_fail_sdl_init = "failed to initialize SDL";
 constexpr const char* msg_eng_locking_fps = "locking fps to";
+constexpr const char* msg_eng_fail_load_splash = "failed to splash sprite : skipping splash screen";
 
 // gfx log strings.
 
