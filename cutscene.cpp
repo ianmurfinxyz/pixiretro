@@ -5,6 +5,8 @@
 #include "gfx.h"
 #include "log.h"
 
+#include <iostream>
+
 //
 // TODO
 //
@@ -161,6 +163,7 @@ bool SceneElement::update(float dt)
     _clock += dt;
     if(_clock >= _startTime){
       _state = State::ACTIVE;
+      std::cout << "activated time=" << _clock << "s" << std::endl;
       dt = _clock - _startTime;
       _clock = 0.f;
     }
@@ -172,6 +175,7 @@ bool SceneElement::update(float dt)
     _clock += dt;
     if(_clock >= _duration){
       dt = _clock - _duration;
+      std::cout << "deactivated time=" << _clock << "s" << std::endl;
       _clock = -1.f;
     }
     aChanged = _animation.update(dt);

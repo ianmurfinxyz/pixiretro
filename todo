@@ -184,3 +184,13 @@ WRONG  demo is ~6 real pixels) thus rather than smoothly moving across the scree
 
   - also implement variable fps so can run cutscenes at 24hz instead of 60hz - dont need the
   extra responsiveness for a movie so can save some CPU work.
+
+  - need to debug the engine timing - the time on the game clock is not in sync with the actual
+  game as the game is updated with the constant dt and adding up the update dt's does not equal
+  the game clock time. This is evident from the inaccurate timing of the cutscenes w.r.t the 
+  game clock.
+
+  - DONE: engine timing is actually all correct I was reading the engine stats output wrong - am 
+  outputting in minutes - was reading 0.1 minute to be 10s but it of course is not, its 6s, thus
+  all is good but I should output the uptime and game now in a more inuitive format - I think
+  [ minutes : seconds : millseconds ]

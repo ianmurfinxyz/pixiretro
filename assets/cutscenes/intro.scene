@@ -51,7 +51,7 @@
     <timing start="0" duration="6"/>
     <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
-      <point x="16" y="164" phase="0"/>
+      <point x="0" y="164" phase="0"/>
     </transition>
   </element>
 
@@ -92,7 +92,7 @@
     <timing start="10" duration="5"/>
     <animation spritekey="3" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
-      <point x="0" y="40" phase="0"/>
+      <point x="0" y="28" phase="0"/>
     </transition>
   </element>
 
@@ -110,7 +110,7 @@
     <timing start="8" duration="7"/>
     <animation spritekey="3" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
-      <point x="0" y="106" phase="0"/>
+      <point x="0" y="93" phase="0"/>
     </transition>
   </element>
 
@@ -119,7 +119,7 @@
     <timing start="7" duration="8"/>
     <animation spritekey="4" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
-      <point x="16" y="132" phase="0"/>
+      <point x="16" y="127" phase="0"/>
     </transition>
   </element>
 
@@ -128,7 +128,7 @@
     <timing start="6" duration="9"/>
     <animation spritekey="5" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
-      <point x="16" y="164" phase="0"/>
+      <point x="0" y="160" phase="0"/>
     </transition>
   </element>
 

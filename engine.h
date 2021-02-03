@@ -8,6 +8,7 @@
 #include "filerc.h"
 #include "app.h"
 #include "gfx.h"
+#include "color.h"
 
 namespace pxr
 {
@@ -29,11 +30,12 @@ private:
 
   static constexpr Duration_t oneMillisecond {1'000'000};
   static constexpr Duration_t oneSecond {1'000'000'000};
+  static constexpr Duration_t oneHalfSecond {500'000'000};
   static constexpr Duration_t oneMinute {60'000'000'000};
   static constexpr Duration_t minFramePeriod {1'000'000};
 
-  static constexpr Vector2i engineStatsScreenResolution {500, 200};
-  static constexpr int engineStatsScreenID {0};
+  static constexpr Vector2i statsScreenResolution {500, 200};
+  static constexpr Vector2i pauseScreenResolution {100, 60};
 
   // Engine reserves this resource key for the font it uses to output engine stats.
   static constexpr gfx::ResourceKey_t engineFontKey {0};
@@ -46,9 +48,6 @@ private:
   static constexpr int resetGameClockScaleKey {SDLK_KP_HASH};
   static constexpr int pauseGameClockKey {SDLK_p};
   static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
-
-  // Lock the FPS to this frequency (or less).
-  static constexpr Duration_t fpsLockHz {static_cast<int64_t>(1.0e9 / 50.0)}; 
 
   // Clock to record the real passage of time since the app booted.
   class RealClock
@@ -94,10 +93,16 @@ private:
   // clock. When the time on the master clock exceeds the next quantised time unit on the
   // ticker, the ticker time jumps forward to said unit to catch up. Invoking the callback
   // upon jumping.
+  //
+  // This class also measures performance statistics regarding the frequency of invocation of
+  // its callback. Note that there is a difference between the target frequency and real measured
+  // frequency of inocation.
   class Ticker
   {
   public:
     using Callback_t = void (Engine::*)(float);
+
+    static constexpr int FPS_HISTORY_SIZE {10};
 
   public:
     Ticker() = default;
@@ -106,22 +111,30 @@ private:
     int getTicksDoneTotal() const {return _ticksDoneTotal;}
     int getTicksDoneThisFrame() const {return _ticksDoneThisFrame;}
     int getTicksAccumulated() const {return _ticksAccumulated;}
-    double getMeasuredTickFrequency() const {return _measuredTickFrequency;}
+    const std::array<double, FPS_HISTORY_SIZE>& getTickFrequencyHistory() {return _measuredTickFrequencyHistory;}
+    bool isNewTickFrequencySample() const {return _isNewTickFrequencySample;}
     
   private:
     Callback_t _onTick;
     Engine* _tickCtx;
-    Duration_t _tickerNow;           // current time in the ticker's timeline.
-    Duration_t _lastMeasureNow;      // time when tick frequency was last measured.
-    Duration_t _tickPeriod;          // ticker timeline is quantised; period of each jump/tick.
-    float _tickPeriodSeconds;        // precalculated as passed to callback every tick.
-    int _ticksDoneTotal;             // useful performance stat.
-    int _ticksDoneThisSecond;        // used to calculate tick frequency.
-    int _ticksDoneThisFrame;         // useful performance stat.
-    int _maxTicksPerFrame;           // limit to number of ticks in each call to doTicks.
-    int _ticksAccumulated;           // backlog of ticks that need to be done.
-    double _measuredTickFrequency;   // ticks per second (analagous to FPS for ticks).
-    bool _isChasingGameNow;          // ticker either 'chases' the real clock or the game clock.
+    Duration_t _tickerNow;             // current time in the ticker's timeline.
+    Duration_t _lastMeasureNow;        // time when tick frequency was last measured.
+    Duration_t _tickPeriod;            // ticker timeline is quantised; period of each jump/tick.
+    float _tickPeriodSeconds;          // precalculated as passed to callback every tick.
+    int _ticksDoneTotal;               // useful performance stat.
+    int _ticksDoneThisHalfSecond;      // used to calculate tick frequency.
+    int _ticksDoneThisFrame;           // useful performance stat.
+    int _maxTicksPerFrame;             // limit to number of ticks in each call to doTicks.
+    int _ticksAccumulated;             // backlog of ticks that need to be done.
+    bool _isChasingGameNow;            // ticker either 'chases' the real clock or the game clock.
+
+    // Recorded history of samples for ticks per second (analagous to FPS but for ticks). Only 
+    // storing the last FPS_HISTORY_SIZE samples with earlier samples being discarded.
+    std::array<double, FPS_HISTORY_SIZE> _measuredTickFrequencyHistory; 
+
+    // Flag cleared every frame, thus informs of a new sample only within those frames in which 
+    // a call to 'doTicks' generated a new sample.
+    bool _isNewTickFrequencySample;
   };
 
   class EngineRC final : public FileRC
@@ -133,14 +146,22 @@ private:
     {
       KEY_WINDOW_WIDTH, 
       KEY_WINDOW_HEIGHT, 
-      KEY_FULLSCREEN
+      KEY_FULLSCREEN,
+      KEY_CLEAR_RED,
+      KEY_CLEAR_GREEN,
+      KEY_CLEAR_BLUE,
+      KEY_FPS_LOCK
     };
 
     EngineRC() : FileRC({
       //    key               name        default   min      max
       {KEY_WINDOW_WIDTH,  "windowWidth",  {500},   {300},   {1000}},
       {KEY_WINDOW_HEIGHT, "windowHeight", {500},   {300},   {1000}},
-      {KEY_FULLSCREEN,    "fullscreen",   {false}, {false}, {true}}
+      {KEY_FULLSCREEN,    "fullscreen",   {false}, {false}, {true}},
+      {KEY_CLEAR_RED,     "clearRed",     {10},    {0},     {255}},
+      {KEY_CLEAR_GREEN,   "clearGreen",   {10},    {0},     {255}},
+      {KEY_CLEAR_BLUE,    "clearBlue",    {10},    {0},     {255}},
+      {KEY_FPS_LOCK,      "fpsLock",      {60},    {24},    {1000}}
     }){}
   };
 
@@ -154,6 +175,7 @@ private:
   double durationToMilliseconds(Duration_t d);
   double durationToSeconds(Duration_t d);
   double durationToMinutes(Duration_t d);
+  void durationToDigitalClock(Duration_t d, int& hours, int& mins, int& secs);
 
 private:
   EngineRC _rc;
@@ -164,14 +186,22 @@ private:
   RealClock _realClock;
   GameClock _gameClock;
 
+  gfx::Color4f _clearColor;
+
+  int _fpsLockHz;
+
   long _framesDone;
   int _framesDoneThisSecond;
   float _measuredFrameFrequency;
   Duration_t _lastFrameMeasureNow;
 
+  int _statsScreenId;
+  int _pauseScreenId;
+
   std::unique_ptr<App> _app;
 
   bool _isDrawingEngineStats;
+  bool _needRedrawEngineStats;
   bool _isDone;
 };
 

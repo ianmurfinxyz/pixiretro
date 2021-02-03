@@ -8,6 +8,7 @@
 #include "app.h"
 #include "input.h"
 #include "gfx.h"
+#include "color.h"
 
 #include <iostream>
 
@@ -35,15 +36,19 @@ Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod
   _tickerNow{0},
   _lastMeasureNow{0},
   _tickPeriod{tickPeriod},
-  _tickPeriodSeconds{static_cast<double>(tickPeriod.count()) / oneSecond.count()},
+  _tickPeriodSeconds{static_cast<float>(tickPeriod.count()) / oneSecond.count()},
   _ticksDoneTotal{0},
-  _ticksDoneThisSecond{0},
+  _ticksDoneThisHalfSecond{0},
   _ticksDoneThisFrame{0},
   _maxTicksPerFrame{maxTicksPerFrame},
   _ticksAccumulated{0},
-  _measuredTickFrequency{0},
-  _isChasingGameNow{isChasingGameNow}
-{}
+  _isChasingGameNow{isChasingGameNow},
+  _isNewTickFrequencySample{false}
+{
+  for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
+    _measuredTickFrequencyHistory[i] = 0.0;
+
+}
 
 void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
 {
@@ -61,15 +66,22 @@ void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
     (_tickCtx->*_onTick)(_tickPeriodSeconds);
   }
 
-  _ticksDoneThisSecond += _ticksDoneThisFrame;
+  _ticksDoneThisHalfSecond += _ticksDoneThisFrame;
   _ticksDoneTotal += _ticksDoneThisFrame;
 
-  if((realNow - _lastMeasureNow) >= oneSecond){
-    _measuredTickFrequency = (static_cast<double>(_ticksDoneThisSecond) / 
-                             (realNow - _lastMeasureNow).count()) * 
-                             oneSecond.count();
-    _ticksDoneThisSecond = 0;
+  _isNewTickFrequencySample = false;
+  if((realNow - _lastMeasureNow) >= oneHalfSecond){
+    double freqSample = (static_cast<double>(_ticksDoneThisHalfSecond) / 
+                        (realNow - _lastMeasureNow).count()) * oneHalfSecond.count() * 2;
+
+    for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
+      _measuredTickFrequencyHistory[i] = _measuredTickFrequencyHistory[i + 1];
+
+    _measuredTickFrequencyHistory[FPS_HISTORY_SIZE - 1] = freqSample;
+
+    _ticksDoneThisHalfSecond = 0;
     _lastMeasureNow = realNow;
+    _isNewTickFrequencySample = true;
   }
 }
 
@@ -82,12 +94,16 @@ void Engine::initialize(std::unique_ptr<App> app)
     _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
 
   if(SDL_Init(SDL_INIT_VIDEO) < 0){
-    log::log(log::FATAL, log::msg_fail_sdl_init, std::string{SDL_GetError()});
+    log::log(log::FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
     exit(EXIT_FAILURE);
   }
 
-  _updateTicker = Ticker{&Engine::onUpdateTick, this, fpsLockHz, 1, true};
-  _drawTicker = Ticker{&Engine::onDrawTick, this, fpsLockHz, 1, false};
+  _fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
+  Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
+  log::log(log::INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
+
+  _updateTicker = Ticker{&Engine::onUpdateTick, this, tickPeriod, 1, true};
+  _drawTicker = Ticker{&Engine::onDrawTick, this, tickPeriod, 1, false};
 
   _app = std::move(app);
 
@@ -106,13 +122,27 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   gfx::ResourceKey_t fontKey = gfx::loadFont(engineFontName);
   assert(fontKey == engineFontKey);
-
-  int screenid = gfx::createScreen(engineStatsScreenResolution);
-  assert(screenid == engineStatsScreenID);
-  gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, screenid);
-  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, screenid);
-
+  
   _app->onInit();
+
+  _statsScreenId = gfx::createScreen(statsScreenResolution);
+  gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, _statsScreenId);
+  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _statsScreenId);
+  gfx::disableScreen(_statsScreenId);
+
+  _pauseScreenId = gfx::createScreen(pauseScreenResolution);
+  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);
+  gfx::disableScreen(_pauseScreenId);
+  drawPauseDialog();
+
+  gfx::Color4u clearColor {
+    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_RED)),
+    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_GREEN)),
+    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_BLUE)),
+    255
+  };
+
+  _clearColor = clearColor;
 
   _framesDone = 0;
   _framesDoneThisSecond = 0;
@@ -167,14 +197,18 @@ void Engine::mainloop()
         }
         else if(event.key.keysym.sym == pauseGameClockKey){
           _gameClock.togglePause();
+          if(_gameClock.isPaused())
+            gfx::enableScreen(_pauseScreenId);
+          else
+            gfx::disableScreen(_pauseScreenId);
           break;
         }
         else if(event.key.keysym.sym == toggleDrawEngineStatsKey){
           _isDrawingEngineStats = !_isDrawingEngineStats;
           if(!_isDrawingEngineStats)
-            gfx::disableScreen(engineStatsScreenID);
+            gfx::disableScreen(_statsScreenId);
           else
-            gfx::enableScreen(engineStatsScreenID);
+            gfx::enableScreen(_statsScreenId);
           break;
         }
         // FALLTHROUGH
@@ -185,12 +219,10 @@ void Engine::mainloop()
   }
 
   _updateTicker.doTicks(gameNow, realNow);
-
-  //auto now0 = std::chrono::high_resolution_clock::now();
   _drawTicker.doTicks(gameNow, realNow);
-  //auto now1 = std::chrono::high_resolution_clock::now();
-  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  //std::cout << "drawTicker.doTicks time: " << dt.count() << "us " << std::endl;
+
+  if(_updateTicker.isNewTickFrequencySample() || _drawTicker.isNewTickFrequencySample())
+    _needRedrawEngineStats = true;
 
   ++_framesDone;
   ++_framesDoneThisSecond;
@@ -209,30 +241,56 @@ void Engine::mainloop()
 
 void Engine::drawEngineStats()
 {
-  gfx::clearScreenTransparent(engineStatsScreenID);
+  if(!_needRedrawEngineStats)
+    return;
+
+  gfx::clearScreenShade(1, _statsScreenId);
+
+  const auto& updateHistory = _updateTicker.getTickFrequencyHistory();
+  const auto& drawHistory = _drawTicker.getTickFrequencyHistory();
 
   std::stringstream ss{};
 
   ss << std::setprecision(3);
-  ss << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  "
-     << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  "
+  ss << "update FPS: " << updateHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
+     << "render FPS: " << drawHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
      << "frame FPS: " << _measuredFrameFrequency << "hz";
-  gfx::drawText({10, 20}, ss.str(), engineFontKey, engineStatsScreenID);
+  gfx::drawText({10, 20}, ss.str(), engineFontKey, _statsScreenId);
 
   std::stringstream().swap(ss);
 
+  int gameHours, gameMins, gameSecs, realHours, realMins, realSecs;
+  durationToDigitalClock(_gameClock.getNow(), gameHours, gameMins, gameSecs);
+  durationToDigitalClock(_realClock.getNow(), realHours, realMins, realSecs);
+
   ss << std::setprecision(3);
-  ss << "game time: " << durationToMinutes(_gameClock.getNow()) << "mins  "
-     << "real time: " << durationToMinutes(_realClock.getNow()) << "mins";
-  gfx::drawText({10, 10}, ss.str(), engineFontKey, engineStatsScreenID);
-  
-  //std::cout << "update FPS: " << _updateTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
-  //std::cout << "render FPS: " << _drawTicker.getMeasuredTickFrequency() << "hz  " << std::endl;
-  //std::cout << "frame FPS: " << _measuredFrameFrequency << "hz" << std::endl;
+  ss << "time [h:m:s] -- game=" << gameHours << ":" << gameMins << ":" << gameSecs
+                 << " -- real=" << realHours << ":" << realMins << ":" << realSecs;
+  gfx::drawText({10, 10}, ss.str(), engineFontKey, _statsScreenId);
+
+  _needRedrawEngineStats = false;
 }
 
 void Engine::drawPauseDialog()
 {
+  static constexpr const char* dialogTxt = "PAUSED";
+
+  gfx::clearScreenShade(1, _pauseScreenId);
+
+  int xmax = pauseScreenResolution._x - 1;
+  int ymax = pauseScreenResolution._y - 1;
+
+  gfx::drawLine(Vector2i{0, 0}, Vector2i{0, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+  gfx::drawLine(Vector2i{0, 0}, Vector2i{xmax, 0}, gfx::colors::barbiepink, _pauseScreenId);
+  gfx::drawLine(Vector2i{0, ymax}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+  gfx::drawLine(Vector2i{xmax, 0}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+
+  Vector2i pausedTxtPos{};
+  Vector2i pausedTxtBox = gfx::calculateTextSize(dialogTxt, engineFontKey);
+  pausedTxtPos._x = (xmax / 2) - (pausedTxtBox._x / 2); 
+  pausedTxtPos._y = (ymax / 2) - (pausedTxtBox._y / 2);
+
+  gfx::drawText(pausedTxtPos, dialogTxt, engineFontKey, _pauseScreenId);
 }
 
 void Engine::onUpdateTick(float tickPeriodSeconds)
@@ -244,12 +302,7 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
-
-  //auto now0 = std::chrono::high_resolution_clock::now();
-  gfx::clearWindowColor(gfx::colors::black);
-  //auto now1 = std::chrono::high_resolution_clock::now();
-  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  //std::cout << "clearWindow time: " << dt.count() << "us " << std::endl;
+  gfx::clearWindowColor(gfx::colors::silver);
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _app->onDraw(nowSeconds, tickPeriodSeconds);
@@ -277,6 +330,16 @@ double Engine::durationToSeconds(Duration_t d)
 double Engine::durationToMinutes(Duration_t d)
 {
   return static_cast<double>(d.count()) / static_cast<double>(oneMinute.count());
+}
+
+void Engine::durationToDigitalClock(Duration_t d, int& hours, int& mins, int& secs)
+{
+  int s = std::floor(durationToSeconds(d));
+  hours = s / 3600;
+  s %= 3600;
+  mins = s / 60;
+  s %= 60;
+  secs = s;
 }
 
 } // namespace pxr

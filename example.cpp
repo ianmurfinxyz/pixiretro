@@ -31,7 +31,7 @@ enum CutsceneKey
 
 static std::vector<pxr::cut::Cutscene> cutscenes;
 
-static constexpr int STAGE_SCREEN_ID {1};
+static constexpr int STAGE_SCREEN_ID {0};
 static constexpr pxr::Vector2i WORLD_SIZE {224, 256};
 
 class SplashState final : public pxr::AppState
@@ -53,7 +53,7 @@ public:
 
   void onDraw(double now, float dt)
   {
-    pxr::gfx::clearScreenShade(20, STAGE_SCREEN_ID);
+    pxr::gfx::clearScreenShade(1, STAGE_SCREEN_ID);
 
     cutscenes[CUTSKEY_INTRO].draw(STAGE_SCREEN_ID);
 

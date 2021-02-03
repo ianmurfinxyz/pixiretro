@@ -236,10 +236,10 @@ constexpr int SCREEN_BAND_COUNT = 5;
 // skipped. Note that this allows fully transparent pixels drawn in an image editor like GIMP
 // to be omitted when drawing.
 //
-// Further screens can be layered on top of one another. The draw order (layering) is determined
-// by the order in which they were created; first created last drawn (so first created is on the
-// bottom). Any transparent pixel within a layer is transparent to layers beneath, thus the
-// layers below will show through the transparent parts of a layer above.
+// Further screens can be stacked on top of one another. The draw order (stack order) is 
+// determined by the order in which the screens were created; first created first draw. Any
+// transparent pixels in a screen will allow the corresponding pixel of any screens lower in the 
+// stacking order to show through.
 //
 // devnote: All drawing routines are effectively software routines thus read/write access to 
 // the virtual pixels needs to be optimal, thus pixel data is stored via raw pointer arrays.
@@ -432,6 +432,12 @@ void enableScreen(int screenid);
 // Disable a screen so it will not be rendered to the window.
 //
 void disableScreen(int screenid);
+
+//
+// Utility function for calculating the dimensions of the smallest possible bounding box of 
+// a text string for a given font. Dimensions are in units of virtual pixels.
+//
+Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey);
 
 } // namespace gfx
 } // namespace pxr

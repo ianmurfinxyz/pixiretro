@@ -13,7 +13,8 @@ constexpr const char* msg_log_to_stderr = "logging to standard error";
 
 // engine log strings.
 
-constexpr const char* msg_fail_sdl_init = "failed to initialize SDL";
+constexpr const char* msg_eng_fail_sdl_init = "failed to initialize SDL";
+constexpr const char* msg_eng_locking_fps = "locking fps to";
 
 // gfx log strings.
 

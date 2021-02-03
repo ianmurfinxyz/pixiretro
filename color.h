@@ -44,6 +44,15 @@ struct Color4f
     _a{std::clamp(c._a / 255.f, 0.f, 1.f)}
   {}
 
+  const Color4f& operator=(const Color4u& c)
+  {
+    _r = std::clamp(c._r / 255.f, 0.f, 1.f);
+    _g = std::clamp(c._g / 255.f, 0.f, 1.f);
+    _b = std::clamp(c._b / 255.f, 0.f, 1.f);
+    _a = std::clamp(c._a / 255.f, 0.f, 1.f);
+    return *this;
+  }
+
   float _r;
   float _g;
   float _b;
@@ -71,6 +80,15 @@ namespace colors
   constexpr Color4u dimgray     {107, 107, 107, 255};
   constexpr Color4u davysgray   {87 , 87 , 87 , 255};
   constexpr Color4u jet         {53 , 53 , 53 , 255};
+
+  // pinks - more pinks: https://en.wikipedia.org/wiki/Shades_of_pink
+
+  constexpr Color4u pink        {255, 192, 203, 255};
+  constexpr Color4u lightpink   {255, 182, 193, 255};
+  constexpr Color4u hotpink     {255, 105, 180, 255};
+  constexpr Color4u deeppink    {255, 20 , 147, 255};
+  constexpr Color4u barbiepink  {218, 24 , 132, 255};  // couldn't resist! :)
+
 };
 
 

@@ -592,6 +592,58 @@ void drawRectangle(iRect rect, Color4u color, int screenid)
 
 void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid)
 {
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  p0._x = std::clamp(p0._x, 0, screen._resolution._x - 1);
+  p1._x = std::clamp(p1._x, 0, screen._resolution._x - 1);
+  p0._y = std::clamp(p0._y, 0, screen._resolution._y - 1);
+  p1._y = std::clamp(p1._y, 0, screen._resolution._y - 1);
+
+  //
+  // constants in line equation y=mx+c
+  //
+  int dx = static_cast<float>(p1._x - p0._x);
+  int dy = static_cast<float>(p1._y - p0._y);
+
+  if(dx == 0 && dy == 0)
+    return;
+
+  int ymin, ymax;
+  if(p0._y < p1._y){
+    ymin = p0._y;
+    ymax = p1._y;
+  }
+  else{
+    ymin = p1._y;
+    ymax = p0._y;
+  }
+
+  int xmin, xmax;
+  if(p0._x < p1._x){
+    xmin = p0._x;
+    xmax = p1._x;
+  }
+  else{
+    xmin = p1._x;
+    xmax = p0._x;
+  }
+
+  if(dx == 0)
+    for(int y = ymin; y < ymax; ++y)
+      screen._pxColors[xmin + (y * screen._resolution._x)] = color;
+
+  else if(dy == 0)
+    for(int x = xmin; x < xmax; ++x)
+      screen._pxColors[x + (ymin * screen._resolution._x)] = color;
+
+  else{
+    float m = static_cast<float>(dy) / dx;
+    for(int x = xmin; x <= xmax; ++x){
+      int y = (m * x) + ymin;
+      screen._pxColors[x + (y * screen._resolution._x)] = color;
+    }
+  }
 }
 
 void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, int screenid)
@@ -606,7 +658,7 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
   int baseLineY = position._y + font._baseLine;
   for(char c : text){
     if(c == '\n'){
-      baseLineY -= font._lineHeight;
+      //baseLineY -= font._lineHeight; TODO ignore for now.
       continue;
     }
     assert(' ' <= c && c <= '~');
@@ -753,6 +805,23 @@ void disableScreen(int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   screens[screenid]._isEnabled = false;
+}
+
+Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey)
+{
+  Vector2i size{0, 0};
+
+  assert(0 <= fontKey && fontKey < fonts.size());
+  auto& font = fonts[fontKey];
+
+  for(char c : text){
+    if(c == '\n') continue;
+    assert(' ' <= c && c <= '~');
+    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
+    size._x += glyph._xadvance + font._glyphSpace;
+    size._y = size._y < glyph._height ? glyph._height : size._y;
+  }
+  return size;
 }
 
 } // namespace gfx
