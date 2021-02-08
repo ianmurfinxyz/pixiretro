@@ -45,6 +45,16 @@ constexpr const char* msg_gfx_font_fail_checksum = "loaded font failed the check
 constexpr const char* msg_gfx_sprite_invalid_xml_bmp_mismatch = "invalid sprite : xml data implies a different bitmap size";
 constexpr const char* msg_gfx_font_invalid_xml_bmp_mismatch = "invalid font : char xml meta extends font bmp bounds";
 
+// sfx log strings.
+
+constexpr const char* msg_sfx_initializing = "initializing sfx module";
+constexpr const char* msg_sfx_listing_devices = "the following list of sound output devices are availible";
+constexpr const char* msg_sfx_device = "device";
+constexpr const char* msg_sfx_default_device = "default device";
+constexpr const char* msg_sfx_set_device_info = "to use an alternate device set the sound device id of the desired device in the enginerc file.";
+constexpr const char* msg_sfx_creating_device = "creating openAL sound device";
+constexpr const char* msg_sfx_fail_create_device = "failed to create openAL sound device";
+
 // xml log strings.
 
 constexpr const char* msg_xml_parsing = "pasing xml asset file";
