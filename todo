@@ -194,3 +194,70 @@ WRONG  demo is ~6 real pixels) thus rather than smoothly moving across the scree
   outputting in minutes - was reading 0.1 minute to be 10s but it of course is not, its 6s, thus
   all is good but I should output the uptime and game now in a more inuitive format - I think
   [ minutes : seconds : millseconds ]
+
+The next week or so:
+
+  - implement a simple particle system - want to add particle effects to the engine splash screen
+    spawning particles along the line of pixel columns appearing so its looks like a wave of a
+    magic wand summoning the letters.
+
+  - create loaders for .wav and .ogg sound files. refs:
+  http://soundfile.sapp.org/doc/WaveFormat/
+
+  - implement a sound system/module in the sytle of the gfx module using openal. Some good refs:
+    https://github.com/kcat/openal-soft/wiki/Programmer%27s-Guidehttps://github.com/kcat/openal-soft/wiki/Programmer%27s-Guide
+    https://indiegamedev.net/2020/02/15/the-complete-guide-to-openal-with-c-part-1-playing-a-sound/
+    https://indiegamedev.net/2020/02/25/the-complete-guide-to-openal-with-c-part-2-streaming-audio/
+    https://indiegamedev.net/2020/01/16/how-to-stream-ogg-files-with-openal-in-c/
+    https://indiegamedev.net/2020/01/23/game-engine-development-for-the-hobby-developer-part-3-audio/
+    https://github.com/kcat/openal-soft
+
+    want an audio streaming system so can stream music files whilst I play them. May not be
+    needed however since the music in these classic arcade games is prob short files played on
+    loop so can likely just load them into RAM in full. But want to do anyway just for fun.
+
+ - write blog posts on the streamer and the audio file loaders? also setup the blog post for 
+ the bmp loader. I have already written the article pretty much.
+
+- idea: learn about concurrency and make the engine multi-threaded - can have a driving main
+game logic thread which runs the logic and issue draw and audio requests (the draw requests
+can be queued and software rendered to the virtual screen via the render thread thus the render
+thread just copies pixels all the time) and the audio thread can handle streaming music and 
+sounds etc. To do this would likely want to make the virtual screens double buffered I think so
+can draw the last frame whilst rendering the next. This would allow lots more drawing I think
+whilst still maintaining a high fps. Can I record the performance of each thread. 
+
+This is actually not a new idea (as one would expect), it is pretty common to parallize the renderer
+since as a system its output does not feed into other systems. See this thread:
+https://www.reddit.com/r/gamedev/comments/96v3f4/concurrency_and_game_engines/
+This answer I found really useful as it talks about exactly what I was already thinking, especially
+with the adding of latency.
+
+"
+Hi, concurrency is a thorny problem in games mostly because there is a large and varied quantity of feedback from one update to the next. This creates a model of computation where the game is like a database occasionally acted upon by "queries", with a large amount of synchronization logic used to ensure that behaviors remain stable. Every time you're working with an FSM or employing a buffer to handle events later in your main loop or spawning and despawning objects, that's a potential synchronization point. Having to manage synchronization is an indicator that we are working with behaviors that are fundamentally concurrent, but a game engine does so in an informal fashion, and most problems are solved by cascading one form of feedback into the next in a predetermined order, so that each step of processing has exactly what it needs, and not some kind of mishmash of partially read or written data.
+Creating a high-concurrency engine out of this model is a matter of clarifying the synchronization, step by step, so that it can be formalized into asynchronous jobs that run independently. This creates a seemingly unending number of engineering puzzles - and it's definitely not the way you'd want to approach your prototyping, since it's way more succinct to address it as a fixed sequence. Shipping engines that take on the challenge are generally optimizing hotspots, but not the whole thing, so their ability to work concurrently is limited. Rendering happens to be exceptional to this in that rendering does not feed into other subsystems(generally speaking), so it can work on data in any order needed. Hence a lot of games will tack on a parallelized renderer.
+This brings to mind the most common trick used to get more parallel utilization: add latency. If you build in a predefined notion of latency, you can work on multiple frames at the same time, always kicking off a new one while presenting an old one. So a number of current engines always show gameplay that's a frame behind the main update loop. Gameplay logic also tends to add frames of latency to some events for reasons of convenience. It's never totally ideal to do this since it impacts responsiveness, but it is most likely "the future" if we take audio as the example and extrapolate(buffers of hundreds to thousands of samples rendered ahead of the one being presented).
+"
+
+This would be a good idea since I would want to demonstrate knowledge of multithreading when I
+apply to jobs and I dont want to do another project to do that.
+
+- So learn about concurrency over the next week along with audio and the other stuff listed above.
+https://www.youtube.com/watch?v=wXBcwHwIt_I - chero vid
+https://www.youtube.com/watch?v=5HWCsmE9DrE
+
+- an experimentation and learning week me thinks.
+
+https://www.youtube.com/watch?v=p9pnzz0alk0 
+-  the above vid around the 7min mark talks about the limitations on the audio thread and what
+requirements it must meet, such as never allocating memory and never locking the thread. Should
+learn more about this.
+
+- USE THE C++17 FALLTHROUGH STATEMENT IN MY ENGINE EVENT LOOP IN STEAD OF THE COMMENT - JUST
+BECAUSE ITS A NEW FEATURE I NEVER NEW EXISTED (1ST SAW THE IN CPPCON AUDIO VID), REF
+https://en.cppreference.com/w/cpp/language/attributes/fallthrough 
+note: will need to compile with -std=c++17 which I think I already am.
+
+- TODO - also setup a build system to build tinyxml2 as a lib and link, and my engine as a lib
+and link and prob also openal as a lib and link - will want to link to the game elf object. Will
+use make (and maybe bash) to setup this build system.

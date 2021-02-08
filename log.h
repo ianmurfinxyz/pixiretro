@@ -66,6 +66,22 @@ constexpr const char* msg_bmp_unsupported_colorspace = "loaded bitmap image usin
 constexpr const char* msg_bmp_unsupported_compression = "loaded bitmap image using unsupported compression mode";
 constexpr const char* msg_bmp_unsupported_size = "loaded bitmap image has unsupported size";
 
+// wavesound (wav) file log strings.
+
+constexpr const char* msg_wav_loading = "loading wave sound file";
+constexpr const char* msg_wav_fail_open = "failed to open wave sound file";
+constexpr const char* msg_wav_read_fail = "failed to read data from a wave sound file";
+constexpr const char* msg_wav_not_riff = "file not a riff file";
+constexpr const char* msg_wav_not_wave = "file not a wave file";
+constexpr const char* msg_wav_fmt_chunk_missing = "missing format chunk";
+constexpr const char* msg_wav_not_pcm = "detected non-pcm sound data in wave : unsupported";
+constexpr const char* msg_wav_bad_compressed = "detected compressed pcm data in wave : unsupported";
+constexpr const char* msg_wav_odd_channels = "detected unsupported number of sound channels";
+constexpr const char* msg_wav_odd_sample_bits = "detected unsupported number of bits per sample";
+constexpr const char* msg_wav_data_chunk_missing = "missing data chunk";
+constexpr const char* msg_wav_odd_data_size = "detected unsupported wave file size";
+constexpr const char* msg_wav_load_success = "successfully loaded wave file";
+
 // rcfile log strings.
 
 constexpr const char* msg_rcfile_fail_open = "failed to open an rc file";
