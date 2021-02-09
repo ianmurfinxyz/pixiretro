@@ -7,6 +7,14 @@
 namespace pxr
 {
 
+//
+// note: Only supports wave sounds with:
+//      
+//      sample depths == 8 || 16
+//      num channels  == 1 || 2
+//
+// i.e. mono8 || mono16 || stereo8 || stereo16.
+//
 class WaveSound
 {
 public:

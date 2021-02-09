@@ -14,7 +14,7 @@ using ResourceName_t = const char*;
 //
 //
 //
-bool initialize();
+bool initialize(int deviceid = -1);
 
 //
 //
@@ -24,17 +24,17 @@ void shutdown();
 //
 //
 //
-ResourceKey_t loadSound(ResourceName_t name);
+ResourceKey_t loadSound(ResourceName_t soundName);
 
 //
 //
 //
-bool unloadSound(ResourceKey_t soundid);
+bool unloadSound(ResourceKey_t soundKey);
 
 //
 //
 //
-void playSound(ResourceKey_t soundid);
+void playSound(ResourceKey_t soundKey);
 
 } // namespace sfx
 } // namespace pxr

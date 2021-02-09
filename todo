@@ -261,3 +261,9 @@ note: will need to compile with -std=c++17 which I think I already am.
 - TODO - also setup a build system to build tinyxml2 as a lib and link, and my engine as a lib
 and link and prob also openal as a lib and link - will want to link to the game elf object. Will
 use make (and maybe bash) to setup this build system.
+
+- the errors in openAL are a mess to handle - and to make matters worse (or better) many of them
+will never happen if you setup the library correctly - thus should I handle all errors or not?
+If I strip some of the error handling out then the code will be much simpler and prob a little
+faster. Should go through the functions and look at what errors should be handled and what 
+shouldn't.
