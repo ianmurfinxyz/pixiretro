@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cassert>
 #include <vector>
+#include <algorithm>
 #include "sfx.h"
 #include "log.h"
 #include "al.h"
@@ -81,21 +82,30 @@ static void genErrorSound()
   // Nyquist-Shannon sampling theorem states sampling frequency should be atleast twice 
   // that of largest wave frequency.
   //
-  static constexpr int waveToSampleFreqRatio {8};
+  // 0.1 means sample freq is x10 the wav freq and wave freq is 4410 which is an absolutely
+  // horrid high pitch tone...perfect! :)
+  //
+  static constexpr float waveToSampleFreqRatio {0.1};
   static constexpr float waveFreqRadPSec {(sampleFreqHz * waveToSampleFreqRatio) * (2.f * M_PI)};
 
-  char* pcm = new char[sampleCount];
+  unsigned char* pcm = new unsigned char[sampleCount];
   for(int s = 0; s < sampleCount; ++s){
-    pcm[s] = sinf(waveFreqRadPSec * (s * samplePeriodSec));  // wave equation = sin(wt)
+    //
+    // wave equation = sin(wt)
+    //
+    float sf = sinf(waveFreqRadPSec * (s * samplePeriodSec));
+
+    //
+    // sinf returns value within range [-1, +1]; need to convert to within range [0, 255] for
+    // mono 8-bit samples.
+    //
+    sf = std::clamp((sf + 1) * 127.5f, 0.f, 255.f);
+
+    pcm[s] = static_cast<unsigned char>(sf);
   }
 
-  ALuint buffer {0};
-  alGenBuffers(1, &buffer);
-  assert(alGetError() == AL_NO_ERROR);
-
-  alBufferData(buffer, AL_FORMAT_MONO8, reinterpret_cast<void*>(pcm), sampleCount, sampleFreqHz);
-  assert(alGetError() == AL_NO_ERROR);
-
+  alas(alGenBuffers(1, &errorSoundBuffer));
+  alas(alBufferData(errorSoundBuffer, AL_FORMAT_MONO8, reinterpret_cast<void*>(pcm), sampleCount, sampleFreqHz));
   delete[] pcm;
 }
 
