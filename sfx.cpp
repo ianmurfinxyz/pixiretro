@@ -55,15 +55,18 @@ alErrorCheck(FUNCTION_CALL, ON_ERROR_STATEMENT)\
 // MODULE DATA
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+using SoundBufferKey_t = ALuint;
+using SoundSourceKey_t = ALuint;
+
 static ALCdevice* sfxDevice {nullptr};
 static ALCcontext* sfxContext {nullptr};
 
 static constexpr int SOUND_SOURCE_COUNT {16};
-static std::array<ALuint, SOUND_SOURCE_COUNT> soundSources;
+static std::array<std::pair<SoundSourceKey_t, ResourceKey_t>, SOUND_SOURCE_COUNT> soundSources;
 
 ResourceKey_t nextSoundKey {0};
-static std::map<ResourceKey_t, ALuint> soundBuffers;
-ALuint errorSoundBuffer;
+static std::map<ResourceKey_t, SoundBufferKey_t> soundBuffers;
+SoundBufferKey_t errorSoundBuffer;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // MODULE FUNCTIONS
@@ -161,7 +164,7 @@ bool initialize(int deviceid)
   }
 
   //
-  // Create openAL source context.
+  // Create openAL context.
   //
 
   sfxContext = alcCreateContext(sfxDevice, nullptr);
@@ -187,14 +190,15 @@ bool initialize(int deviceid)
   //
   // setup sources.
   //
-  
-  alec(alGenSources(SOUND_SOURCE_COUNT, soundSources.data()), shutdown(); return false;);
 
-  for(auto source : soundSources){
-    alas(alSourcef(source, AL_PITCH, 1.f));
-    alas(alSourcef(source, AL_GAIN, 1.f));
-    alas(alSource3f(source, AL_POSITION, 0.f, 0.f, 0.f));
-    alas(alSource3f(source, AL_VELOCITY, 0.f, 0.f, 0.f));
+  for(auto& source : soundSources){
+    alec(alGenSources(1, &source.first), shutdown(); shutdown(); return false;);
+    source.second = -1;
+    alas(alSourcef(source.first, AL_PITCH, 1.f));
+    alas(alSourcef(source.first, AL_GAIN, 1.f));
+    alas(alSource3f(source.first, AL_POSITION, 0.f, 0.f, 0.f));
+    alas(alSource3f(source.first, AL_VELOCITY, 0.f, 0.f, 0.f));
+    alas(alSourcei(source.first, AL_LOOPING, AL_TRUE));
   }
 
   genErrorSound();
@@ -205,8 +209,8 @@ bool initialize(int deviceid)
 void shutdown()
 {
   for(auto source : soundSources)
-    if(alIsSource(source))
-      alas(alSourceStop(source));
+    if(alIsSource(source.first))
+      alas(alSourceStop(source.first));
 
   for(auto& [key, value] : soundBuffers){
     if(alIsBuffer(value)){
@@ -239,7 +243,7 @@ ResourceKey_t loadSound(ResourceName_t soundName)
   if(!wav.load(wavpath))
     return useErrorSound();
 
-  ALuint buffer {0};
+  SoundBufferKey_t buffer {0};
   alas(alGenBuffers(1, &buffer));
 
   int sampleBits = wav.getBitsPerSample();
@@ -270,26 +274,39 @@ void unloadSound(ResourceKey_t soundKey)
   }
 }
 
-void playSound(ResourceKey_t soundKey)
+void playSound(ResourceKey_t soundKey, bool loop)
 {
   auto search = soundBuffers.find(soundKey);
   if(search == soundBuffers.end()){
     log::log(log::WARN, log::msg_sfx_missing_sound, std::to_string(soundKey));
     return;
   }
-  ALuint buffer = search->second;
+  SoundBufferKey_t buffer = search->second;
 
   for(auto source : soundSources){
     ALint state;
-    alas(alGetSourcei(source, AL_SOURCE_STATE, &state));
+    alas(alGetSourcei(source.first, AL_SOURCE_STATE, &state));
     if(state != AL_PLAYING){
-      alas(alSourcei(source, AL_BUFFER, buffer));
-      alas(alSourcePlay(source));
+      if(source.second != soundKey){
+        alas(alSourcei(source.first, AL_BUFFER, buffer));
+        source.second = soundKey;
+      }
+      alas(alSourcei(source.first, AL_LOOPING, loop ? AL_TRUE : AL_FALSE));
+      alas(alSourcePlay(source.first));
       return;
     }
   }
 
   log::log(log::WARN, log::msg_sfx_no_free_sources);
+}
+
+void stopSound(ResourceKey_t soundKey)
+{
+  for(auto source : soundSources){
+    if(source.second == soundKey){
+      alas(alSourceStop(source.first));
+    }
+  }
 }
 
 } // namespace sfx

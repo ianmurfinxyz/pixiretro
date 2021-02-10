@@ -46,7 +46,15 @@ void unloadSound(ResourceKey_t soundKey);
 //
 // Plays a sound.
 //
-void playSound(ResourceKey_t soundKey);
+void playSound(ResourceKey_t soundKey, bool loop = false);
+
+//
+// Stop a sound playing. 
+//
+// note: there is no way to distinguish between 'instances' of a playing sound; this function 
+// will stop playing all instances of the sound with this sound key.
+//
+void stopSound(ResourceKey_t soundKey);
 
 } // namespace sfx
 } // namespace pxr

@@ -269,4 +269,9 @@ faster. Should go through the functions and look at what errors should be handle
 shouldn't.
 
 - read the openAL source + spec (some of it) and improve my sound engine if needed - compile and
-test and debug
+test and debug -- DONE
+
+- add the ability to start and stop sounds - and ability to have sound loop - to stop sounds may
+need to track which sounds (resource keys) are playing in which sources so can stop the source
+playing. - note: when implementing donkey kong will not need to stream music into a queued source
+as the music tracks are very short repetitive sounds that can just be looped.
