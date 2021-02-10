@@ -80,12 +80,12 @@ bool WaveSound::load(std::string filepath)
     return false;
   }
 
-  if(fmt._numChannels != 1 || fmt._numChannels != 2){
+  if(fmt._numChannels != 1 && fmt._numChannels != 2){
     log::log(log::ERROR, log::msg_wav_odd_channels, std::to_string(fmt._numChannels));
     return false;
   }
 
-  if(fmt._bitsPerSample != 8 || fmt._bitsPerSample != 16){
+  if(fmt._bitsPerSample != 8 && fmt._bitsPerSample != 16){
     log::log(log::ERROR, log::msg_wav_odd_sample_bits, std::to_string(fmt._bitsPerSample));
     return false;
   }

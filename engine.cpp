@@ -8,6 +8,7 @@
 #include "app.h"
 #include "input.h"
 #include "gfx.h"
+#include "sfx.h"
 #include "color.h"
 
 #include <iostream>
@@ -108,6 +109,14 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
+  if(!sfx::initialize()){
+    log::log(log::FATAL, log::msg_sfx_fail_init);
+    exit(EXIT_FAILURE);
+  }
+
+  auto key = sfx::loadSound("laser");
+  sfx::playSound(key);
+
   _app = std::move(app);
 
   std::stringstream ss {};
@@ -121,7 +130,10 @@ void Engine::initialize(std::unique_ptr<App> app)
   windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
   windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
   bool fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
-  gfx::initialize(ss.str(), windowSize, fullscreen);
+  if(!gfx::initialize(ss.str(), windowSize, fullscreen)){
+    log::log(log::FATAL, log::msg_gfx_fail_init);
+    exit(EXIT_FAILURE);
+  }
 
   gfx::ResourceKey_t fontKey = gfx::loadFont(engineFontName);
   assert(fontKey == engineFontKey);

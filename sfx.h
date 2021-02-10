@@ -41,7 +41,7 @@ ResourceKey_t loadSound(ResourceName_t soundName);
 //
 // Unload a sound. Frees the memory used by the sound data and frees the resource key.
 //
-bool unloadSound(ResourceKey_t soundKey);
+void unloadSound(ResourceKey_t soundKey);
 
 //
 // Plays a sound.

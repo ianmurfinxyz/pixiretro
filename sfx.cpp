@@ -2,8 +2,14 @@
 #include <sstream>
 #include <array>
 #include <map>
+#include <cmath>
+#include <cassert>
+#include <vector>
 #include "sfx.h"
 #include "log.h"
+#include "al.h"
+#include "alc.h"
+#include "wavesound.h"
 
 namespace pxr
 {
@@ -31,9 +37,9 @@ assert(alGetError() == AL_NO_ERROR);
 {\
   ALenum error = alGetError();\
   if(error != AL_NO_ERROR){\
-    log::log(log::ERROR, log::msg_openal_error, alGetString(error));\
-    log::log(log::ERROR, log::msg_openal_call, std::string{#FUNCTION_CALL});\
-    ON_ERROR_STATEMENT;
+    log::log(log::ERROR, log::msg_sfx_openal_error, alGetString(error));\
+    log::log(log::ERROR, log::msg_sfx_openal_call, std::string{#FUNCTION_CALL});\
+    ON_ERROR_STATEMENT;\
   }\
 }
 
@@ -68,7 +74,7 @@ ALuint errorSoundBuffer;
 static void genErrorSound()
 {
   static constexpr int sampleFreqHz {44100};
-  static constexpr int sampleCount {freq / 2};
+  static constexpr int sampleCount {sampleFreqHz / 2};
   static constexpr float samplePeriodSec {1.f / sampleFreqHz};
 
   //
@@ -76,15 +82,15 @@ static void genErrorSound()
   // that of largest wave frequency.
   //
   static constexpr int waveToSampleFreqRatio {8};
-  static constexpr float waveFreqRadPSec {(sampleFreq * waveToSampleFreqRatio) * (2.f * M_PI)};
+  static constexpr float waveFreqRadPSec {(sampleFreqHz * waveToSampleFreqRatio) * (2.f * M_PI)};
 
   char* pcm = new char[sampleCount];
   for(int s = 0; s < sampleCount; ++s){
-    pcm[s] = std::sinf(waveFreqRadPSec * (s * samplePeriodSec));  // wave equation = sin(wt)
+    pcm[s] = sinf(waveFreqRadPSec * (s * samplePeriodSec));  // wave equation = sin(wt)
   }
 
   ALuint buffer {0};
-  alGenBuffer(1, &buffer);
+  alGenBuffers(1, &buffer);
   assert(alGetError() == AL_NO_ERROR);
 
   alBufferData(buffer, AL_FORMAT_MONO8, reinterpret_cast<void*>(pcm), sampleCount, sampleFreqHz);
@@ -101,7 +107,7 @@ bool initialize(int deviceid)
   // Create openAL sound device.
   //
   
-  std::vector<ALCChar*> deviceNames;
+  std::vector<std::string> deviceNames;
   const ALCchar* names = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
   do{
     deviceNames.push_back(names);
@@ -116,10 +122,10 @@ bool initialize(int deviceid)
   //
   
   log::log(log::INFO, log::msg_sfx_listing_devices);
-  for(int i = 0; i < devices.size(); ++i){
+  for(int i = 0; i < deviceNames.size(); ++i){
     std::stringstream ss {};
     ss << "[" << i << "] : " << deviceNames[i];
-    log::log(log::INFO, log::msg_sfx_device, ss.c_str());
+    log::log(log::INFO, log::msg_sfx_device, ss.str());
   }
   log::log(log::INFO, log::msg_sfx_set_device_info);
 
@@ -132,11 +138,11 @@ bool initialize(int deviceid)
       log::log(log::ERROR, log::msg_sfx_invalid_deviceid, std::to_string(deviceid));
     }
     else{
-      deviceName = deviceNames[deviceid];
+      deviceName = deviceNames[deviceid].c_str();
     }
   }
 
-  log::log(log::ERROR, log::msg_sfx_creating_device, deviceName ? deviceName : std::string{});
+  log::log(log::INFO, log::msg_sfx_creating_device, deviceName ? deviceName : std::string{"default"});
 
   sfxDevice = alcOpenDevice(deviceName);
   if(!sfxDevice){
@@ -164,23 +170,17 @@ bool initialize(int deviceid)
   alas(alListenerf(AL_GAIN, 1.f));
 
   float vecs[6] {0.f, 0.f, 0.f, 0.f, 1.f, 0.f};
-  alas(alListener3f(AL_POSITION, vecs));
-  alas(alListener3f(AL_VELOCITY, vecs));
+  alas(alListenerfv(AL_POSITION, vecs));
+  alas(alListenerfv(AL_VELOCITY, vecs));
   alas(alListenerfv(AL_ORIENTATION, vecs));
 
   //
   // setup sources.
   //
   
-  alGenSources(SOUND_SOURCE_COUNT, sources.data());
-  if(alGetError() != AL_NO_ERROR){
-    log::log(log::ERROR, log::msg_sfx_fail_gen_sources);
-    log::log(log::INFO, log::msg_sfx_openal_error, alGetString(error));
-    shutdown();
-    return false;
-  }
+  alec(alGenSources(SOUND_SOURCE_COUNT, soundSources.data()), shutdown(); return false;);
 
-  for(auto source : sources){
+  for(auto source : soundSources){
     alas(alSourcef(source, AL_PITCH, 1.f));
     alas(alSourcef(source, AL_GAIN, 1.f));
     alas(alSource3f(source, AL_POSITION, 0.f, 0.f, 0.f));
@@ -188,12 +188,14 @@ bool initialize(int deviceid)
   }
 
   genErrorSound();
+
+  return true;
 }
 
 void shutdown()
 {
   for(auto source : soundSources)
-    if(alIsSource(source)
+    if(alIsSource(source))
       alas(alSourceStop(source));
 
   for(auto& [key, value] : soundBuffers){
@@ -228,7 +230,7 @@ ResourceKey_t loadSound(ResourceName_t soundName)
     return useErrorSound();
 
   ALuint buffer {0};
-  alas(alGenBuffer(1, &buffer));
+  alas(alGenBuffers(1, &buffer));
 
   int sampleBits = wav.getBitsPerSample();
   int nChannels = wav.getNumChannels();
@@ -253,21 +255,21 @@ void unloadSound(ResourceKey_t soundKey)
 {
   auto search = soundBuffers.find(soundKey);
   if(search != soundBuffers.end()){
-    alec(alDeleteBuffers(1, search->second), 0);
+    alec(alDeleteBuffers(1, &search->second), 0);
     soundBuffers.erase(search);
   }
 }
 
-void playSound(ResourceKey_t soundkey)
+void playSound(ResourceKey_t soundKey)
 {
   auto search = soundBuffers.find(soundKey);
   if(search == soundBuffers.end()){
-    log::log(log::WARN, log::msg_sfx_missing_sound, soundkey);
+    log::log(log::WARN, log::msg_sfx_missing_sound, std::to_string(soundKey));
     return;
   }
   ALuint buffer = search->second;
 
-  for(auto source : sources){
+  for(auto source : soundSources){
     ALint state;
     alas(alGetSourcei(source, AL_SOURCE_STATE, &state));
     if(state != AL_PLAYING){
