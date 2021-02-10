@@ -48,7 +48,7 @@ constexpr const char* msg_gfx_font_invalid_xml_bmp_mismatch = "invalid font : ch
 // sfx log strings.
 
 constexpr const char* msg_sfx_initializing = "initializing sfx module";
-constexpr const char* msg_sfx_listing_devices = "listing sound devices";
+constexpr const char* msg_sfx_listing_devices = "listing sound devices : [<device-id>] : <device-name>";
 constexpr const char* msg_sfx_device = "device";
 constexpr const char* msg_sfx_default_device = "default device";
 constexpr const char* msg_sfx_set_device_info = "modify enginerc to select an alternate sound device";
@@ -57,6 +57,7 @@ constexpr const char* msg_sfx_fail_create_device = "failed to create openAL soun
 constexpr const char* msg_sfx_fail_create_context = "failed to create openAL sound context";
 constexpr const char* msg_sfx_fail_gen_sources = "failed to generate openAL sound sources";
 constexpr const char* msg_sfx_openal_error = "openAL error";
+constexpr const char* msg_sfx_openal_call = "openAL call";
 constexpr const char* msg_sfx_missing_sound = "failed to play sound with key";
 constexpr const char* msg_sfx_using_error_sound = "substituting unloaded sound with error sound";
 constexpr const char* msg_sfx_fail_gen_buffer = "failed to generate a new openAL buffer for a loaded sound";
