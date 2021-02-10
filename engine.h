@@ -8,6 +8,7 @@
 #include "filerc.h"
 #include "app.h"
 #include "gfx.h"
+#include "sfx.h"
 #include "color.h"
 
 namespace pxr
@@ -34,7 +35,7 @@ private:
   static constexpr Duration_t oneMinute {60'000'000'000};
   static constexpr Duration_t minFramePeriod {1'000'000};
 
-  static constexpr float splashDurationSeconds {0.5f};
+  static constexpr float splashDurationSeconds {1.0f};
   static constexpr float splashWaitDurationSeconds {1.0f};
 
   static constexpr Vector2i statsScreenResolution {500, 200};
@@ -212,7 +213,8 @@ private:
   int _statsScreenId;
   int _pauseScreenId;
 
-  gfx::ResourceKey_t _splashKey;
+  gfx::ResourceKey_t _splashSpriteKey;
+  sfx::ResourceKey_t _splashSoundKey;
   Vector2i _splashPosition;
   Vector2i _splashSize;
   int _splashProgress;

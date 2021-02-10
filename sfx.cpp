@@ -267,6 +267,7 @@ ResourceKey_t loadSound(ResourceName_t soundName)
 
 void unloadSound(ResourceKey_t soundKey)
 {
+  stopSound(soundKey);
   auto search = soundBuffers.find(soundKey);
   if(search != soundBuffers.end()){
     alec(alDeleteBuffers(1, &search->second), 0);

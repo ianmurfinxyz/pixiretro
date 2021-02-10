@@ -114,9 +114,6 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
-  auto key = sfx::loadSound("laser");
-  sfx::playSound(key);
-
   _app = std::move(app);
 
   std::stringstream ss {};
@@ -154,13 +151,14 @@ void Engine::initialize(std::unique_ptr<App> app)
   _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 1, true};
   _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
 
-  _splashKey = gfx::loadSprite(splashName);
-  if(gfx::isErrorSprite(_splashKey)){
+  _splashSoundKey = sfx::loadSound(splashName);
+  _splashSpriteKey = gfx::loadSprite(splashName);
+  if(gfx::isErrorSprite(_splashSpriteKey)){
     log::log(log::ERROR, log::msg_eng_fail_load_splash);
     onSplashExit();
   }
   else{
-    _splashSize = gfx::getSpriteSize(_splashKey, 0);
+    _splashSize = gfx::getSpriteSize(_splashSpriteKey, 0);
     _splashPosition = Vector2i{
       ((pauseScreenResolution._x - _splashSize._x) / 2),
       ((pauseScreenResolution._y - _splashSize._y) / 2),
@@ -367,6 +365,7 @@ void Engine::onDrawTick(float tickPeriodSeconds)
 
 void Engine::onSplashUpdateTick(float tickPeriodSeconds)
 {
+  static bool playedSound {false};
   static int splashMode {0}; // 0=waiting, 1=splashing.
   static float clock {0.f};
   static float delay {splashDurationSeconds / _splashSize._x};
@@ -385,6 +384,10 @@ void Engine::onSplashUpdateTick(float tickPeriodSeconds)
   }
 
   else if(splashMode == 1){
+    if(!playedSound){
+      sfx::playSound(_splashSoundKey);  
+      playedSound = true;
+    }
     if(clock > delay){
       clock = 0.f;
       ++_splashProgress;
@@ -400,7 +403,7 @@ void Engine::onSplashDrawTick(float tickPeriodSeconds)
   gfx::clearScreenShade(1, _pauseScreenId);
   
   for(int col = 0; col < _splashProgress; ++col)
-    gfx::drawSpriteColumn(_splashPosition, _splashKey, 0, col, _pauseScreenId);
+    gfx::drawSpriteColumn(_splashPosition, _splashSpriteKey, 0, col, _pauseScreenId);
 
   if(_isDrawingEngineStats)
     drawEngineStats();
@@ -413,6 +416,7 @@ void Engine::onSplashExit()
   _isSplashDone = true;
   _updateTicker.setCallback(&Engine::onUpdateTick);
   _drawTicker.setCallback(&Engine::onDrawTick);
+  sfx::unloadSound(_splashSoundKey);
   gfx::disableScreen(_pauseScreenId);
   drawPauseDialog();
   gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);

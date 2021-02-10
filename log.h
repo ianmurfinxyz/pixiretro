@@ -67,7 +67,7 @@ constexpr const char* msg_sfx_no_free_sources = "cannot play sound as no free so
 
 // xml log strings.
 
-constexpr const char* msg_xml_parsing = "pasing xml asset file";
+constexpr const char* msg_xml_parsing = "parsing xml asset file";
 constexpr const char* msg_xml_fail_parse = "parsing error in xml file";
 constexpr const char* msg_xml_fail_read_attribute = "failed to read xml attribute";
 constexpr const char* msg_xml_fail_read_element = "failed to find xml element";
