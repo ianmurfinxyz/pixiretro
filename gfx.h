@@ -398,7 +398,12 @@ void drawRectangle(iRect rect, Color4u color, int screenid);
 //
 // Draw a line.
 //
-void drawLine(Vector2i p0,Vector2i p1, Color4u color, int screenid);
+void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid);
+
+//
+// Draws a single pixel to a screen.
+//
+void drawPoint(Vector2i position, Color4u color, int screenid);
 
 //
 // Issues opengl calls to render results of (software) draw calls and then swaps the buffers.

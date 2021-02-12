@@ -10,7 +10,6 @@
 #include <limits>
 #include <cassert>
 
-//#include <iostream>
 #include <chrono>
 
 #include "xmlutil.h"
@@ -27,6 +26,10 @@ namespace pxr
 {
 namespace gfx
 {
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// MODULE DATA
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 static constexpr int MIN_OPENGL_VERSION_MAJOR = 2;
 static constexpr int MIN_OPENGL_VERSION_MINOR = 1;
@@ -72,6 +75,10 @@ static constexpr const char* errorFontName {"error_font"};
 
 static SpriteResource errorSprite;
 static FontResource errorFont;
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// MODULE FUNCTIONS
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool operator<(const ColorBand& lhs, const ColorBand& rhs)
 {
@@ -767,6 +774,61 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, i
   }
 }
 
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  auto search = fonts.find(fontKey);
+  assert(search != fonts.end());
+  auto& font = search->second._font;
+  const Color4u* const* fontPxs = font._image.getPixels();
+
+  int baseLineY = position._y + font._baseLine;
+  for(char c : text){
+    if(c == '\n'){
+      //baseLineY -= font._lineHeight; TODO ignore for now.
+      continue;
+    }
+    assert(' ' <= c && c <= '~');
+    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
+    int screenRow{0}, screenCol{0}, screenRowBase{0}, screenRowOffset {0};
+    screenRowBase = baseLineY + glyph._yoffset;
+    for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
+      screenRow = screenRowBase + glyphRow;
+      if(screenRow < 0) continue;
+      if(screenRow >= screen._resolution._y) break;
+      screenRowOffset = screenRow * screen._resolution._x;
+      for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
+        screenCol = position._x + glyphCol + glyph._xoffset;
+        if(screenCol < 0) continue;
+        if(screenCol >= screen._resolution._x) return;
+        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(pxColor._a == ALPHA_KEY) continue;
+        if(screen._cmode == ColorMode::FULL_RGB){
+          screen._pxColors[screenCol + screenRowOffset] = pxColor;
+        }
+        else if(screen._cmode == ColorMode::YAXIS_BANDED){
+          int bandid{0};
+          while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+            ++bandid;
+          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+        }
+        else if(screen._cmode == ColorMode::XAXIS_BANDED){
+          int bandid{0};
+          while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
+            ++bandid;
+          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
+        }
+        else{
+          screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
+        }
+      }
+    }
+    position._x += glyph._xadvance + font._glyphSpace;
+  }
+}
+
 void drawRectangle(iRect rect, Color4u color, int screenid)
 {
 }
@@ -827,59 +889,18 @@ void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid)
   }
 }
 
-void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, int screenid)
+void drawPoint(Vector2i position, Color4u color, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  auto search = fonts.find(fontKey);
-  assert(search != fonts.end());
-  auto& font = search->second._font;
-  const Color4u* const* fontPxs = font._image.getPixels();
+  if(position._x < 0 || position._x >= screen._resolution._x)
+    return;
 
-  int baseLineY = position._y + font._baseLine;
-  for(char c : text){
-    if(c == '\n'){
-      //baseLineY -= font._lineHeight; TODO ignore for now.
-      continue;
-    }
-    assert(' ' <= c && c <= '~');
-    const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
-    int screenRow{0}, screenCol{0}, screenRowBase{0}, screenRowOffset {0};
-    screenRowBase = baseLineY + glyph._yoffset;
-    for(int glyphRow = 0; glyphRow < glyph._height; ++glyphRow){
-      screenRow = screenRowBase + glyphRow;
-      if(screenRow < 0) continue;
-      if(screenRow >= screen._resolution._y) break;
-      screenRowOffset = screenRow * screen._resolution._x;
-      for(int glyphCol = 0; glyphCol < glyph._width; ++glyphCol){
-        screenCol = position._x + glyphCol + glyph._xoffset;
-        if(screenCol < 0) continue;
-        if(screenCol >= screen._resolution._x) return;
-        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
-        if(pxColor._a == ALPHA_KEY) continue;
-        if(screen._cmode == ColorMode::FULL_RGB){
-          screen._pxColors[screenCol + screenRowOffset] = pxColor;
-        }
-        else if(screen._cmode == ColorMode::YAXIS_BANDED){
-          int bandid{0};
-          while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-            ++bandid;
-          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-        }
-        else if(screen._cmode == ColorMode::XAXIS_BANDED){
-          int bandid{0};
-          while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-            ++bandid;
-          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-        }
-        else{
-          screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
-        }
-      }
-    }
-    position._x += glyph._xadvance + font._glyphSpace;
-  }
+  if(position._y < 0 || position._y >= screen._resolution._y)
+    return;
+
+  screen._pxColors[position._x + (position._y * screen._resolution._x)] = color;
 }
 
 void present()

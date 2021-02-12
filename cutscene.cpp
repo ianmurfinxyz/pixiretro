@@ -5,19 +5,7 @@
 #include "gfx.h"
 #include "log.h"
 
-#include <iostream>
-
-//
-// TODO
-//
-// problem: if I only redraw the scene elements when they change then the cases when I am running
-// a cutscene along side the game, so the game is drawing some elements and the cutscene others
-// then the game will clear the screen each redraw but the cutscene wont redraw each time the
-// game does (only when scene elements change). Thus will have to do 1 of 2 things:
-//
-// - create a seperate screen for cutscenes
-// - or disable the redraw optimisation on the cutscenes when drawing them along side the game
-//
+//#include <iostream> // TODO remove this
 
 namespace pxr
 {
@@ -44,12 +32,10 @@ Animation::Animation(gfx::ResourceKey_t spriteKey, int startFrame, int layer, fl
     _mode = STATIC;
 }
 
-bool Animation::update(float dt)
+void Animation::update(float dt)
 {
   if(_mode == STATIC)
-    return false;
-
-  bool isChange{false};
+    return;
 
   _frameClock += dt;
   if(_frameClock > _framePeriod){
@@ -59,13 +45,10 @@ bool Animation::update(float dt)
       ++_frame;             // TODO: choose random frame
 
     _frameClock = 0.f;
-    isChange = true;
   }
 
   if(_frame > _frameCount) 
     _frame = 0;
-
-  return isChange;
 }
 
 void Animation::reset()
@@ -99,10 +82,10 @@ Transition::Transition(std::vector<TPoint> points, float duration) :
   }
 }
 
-bool Transition::update(float dt)
+void Transition::update(float dt)
 {
   if(_isDone)
-    return false;
+    return;
 
   float phase {0.f};
 
@@ -123,8 +106,6 @@ bool Transition::update(float dt)
   phase -= _points[_from]._phase;
   _position._x = lerp(_points[_from]._position._x, _points[_to]._position._x, phase);
   _position._y = lerp(_points[_from]._position._y, _points[_to]._position._y, phase);
-
-  return true;
 }
 
 void Transition::reset()
@@ -148,46 +129,42 @@ SceneGraphic::SceneGraphic(Animation animation, Transition transition, float sta
   _duration{duration},
   _clock{0.f}
 {
-  _state = _startTime == 0.f ? State::ACTIVE : State::PENDING;
+  _state = _startTime == 0.f ? ElementState::ACTIVE : ElementState::PENDING;
 }
 
-bool SceneGraphic::update(float dt)
+void SceneGraphic::update(float dt)
 {
   if(_clock < 0.f)
-    _state = State::DONE;
+    _state = ElementState::DONE;
 
-  if(_state == State::DONE)
-    return false;
+  if(_state == ElementState::DONE)
+    return;
 
-  if(_state == State::PENDING){
+  if(_state == ElementState::PENDING){
     _clock += dt;
     if(_clock >= _startTime){
-      _state = State::ACTIVE;
-      std::cout << "activated time=" << _clock << "s" << std::endl;
+      _state = ElementState::ACTIVE;
+      //std::cout << "activated time=" << _clock << "s" << std::endl;
       dt = _clock - _startTime;
       _clock = 0.f;
     }
   }
 
-  bool aChanged, tChanged;
-
-  if(_state == State::ACTIVE){
+  if(_state == ElementState::ACTIVE){
     _clock += dt;
     if(_clock >= _duration){
       dt = _clock - _duration;
-      std::cout << "deactivated time=" << _clock << "s" << std::endl;
+      //std::cout << "deactivated time=" << _clock << "s" << std::endl;
       _clock = -1.f;
     }
-    aChanged = _animation.update(dt);
-    tChanged = _transition.update(dt);
+    _animation.update(dt);
+    _transition.update(dt);
   }
-
-  return aChanged || tChanged;
 }
 
 void SceneGraphic::draw(int screenid)
 {
-  if(_state != State::ACTIVE)
+  if(_state != ElementState::ACTIVE)
     return;
 
   gfx::drawSprite(_transition.getPosition(), _animation.getSpriteKey(), _animation.getFrame(), screenid); 
@@ -198,12 +175,45 @@ void SceneGraphic::reset()
   _animation.reset();
   _transition.reset();
   _clock = 0.f;
-  _state = _startTime == 0.f ? State::ACTIVE : State::PENDING;
+  _state = _startTime == 0.f ? ElementState::ACTIVE : ElementState::PENDING;
+}
+
+SceneSound::SceneSound(sfx::ResourceKey_t soundKey, float startTime, float duration, bool loop) :
+  _soundKey{soundKey},
+  _startTime{startTime},
+  _duration{duration},
+  _clock{0.f},
+  _loop{loop},
+  _state{ElementState::PENDING}
+{}
+
+void SceneSound::update(float dt)
+{
+  if(_state == ElementState::DONE)
+    return;
+
+  _clock += dt;
+  if(_clock >= _startTime){
+    sfx::playSound(_soundKey);
+    _state = _loop ? ElementState::ACTIVE : ElementState::DONE;
+    return;
+  }
+
+  if(_clock >= _startTime + _duration){
+    sfx::stopSound(_soundKey);
+    _state = ElementState::DONE;
+  }
+}
+
+void SceneSound::reset()
+{
+  _state = ElementState::PENDING;
+  _clock = 0.f;
 }
 
 Cutscene::Cutscene() : 
-  _needsRedraw{true},
-  _graphics{}
+  _graphics{},
+  _sounds{}
 {}
 
 Cutscene::~Cutscene()
@@ -228,6 +238,12 @@ bool Cutscene::load(std::string name)
 
   if(!extractChildElement(&doc, &xmlscene, "scene")) return false;
 
+  //
+  // load graphics.
+  //
+
+  std::vector<SceneGraphic> graphics {};
+
   float timingStart;
   float timingDuration;
   float transitionDuration;
@@ -238,15 +254,15 @@ bool Cutscene::load(std::string name)
   int startFrame;
   int layer;
   int mode;
-  int spriteKey;
-  const char* spriteName {nullptr};
+  int assetKey;
+  const char* assetName {nullptr};
 
   XMLElement* xmltiming{nullptr};
   XMLElement* xmlanimation{nullptr};
   XMLElement* xmltransition{nullptr};
   XMLElement* xmlpoint{nullptr};
 
-  if(!extractChildElement(xmlscene, &xmlelement, "element")) return false;
+  if(!extractChildElement(xmlscene, &xmlelement, "graphic")) return false;
   do{
     if(!extractChildElement(xmlelement, &xmltiming, "timing")) return false;
     if(!extractFloatAttribute(xmltiming, "start", &timingStart)) return false;
@@ -254,8 +270,8 @@ bool Cutscene::load(std::string name)
 
     if(!extractChildElement(xmlelement, &xmlanimation, "animation")) return false;
 
-    if(!extractStringAttribute(xmlanimation, "sprite", &spriteName)) return false;
-    spriteKey = gfx::loadSprite(spriteName); 
+    if(!extractStringAttribute(xmlanimation, "sprite", &assetName)) return false;
+    assetKey = gfx::loadSprite(assetName); 
 
     if(!extractIntAttribute(xmlanimation, "startframe", &startFrame)) return false;
     if(!extractIntAttribute(xmlanimation, "layer", &layer)) return false;
@@ -276,17 +292,44 @@ bool Cutscene::load(std::string name)
     }
     while(xmlpoint != 0);
 
-    Animation animation{spriteKey, startFrame, layer, frequency, static_cast<Animation::Mode>(mode)}; 
+    Animation animation{assetKey, startFrame, layer, frequency, static_cast<Animation::Mode>(mode)}; 
     Transition transition{std::move(_tpoints), transitionDuration};
-    _graphics.push_back({animation, std::move(transition), timingStart, timingDuration});
+    graphics.push_back({animation, std::move(transition), timingStart, timingDuration});
      
-    xmlelement = xmlelement->NextSiblingElement("element");
+    xmlelement = xmlelement->NextSiblingElement("graphic");
   }
   while(xmlelement != 0);
 
-  std::sort(_graphics.begin(), _graphics.end(), [](const SceneGraphic& e0, const SceneGraphic& e1){
+  std::sort(graphics.begin(), graphics.end(), [](const SceneGraphic& e0, const SceneGraphic& e1){
     return e0.getAnimation().getLayer() < e1.getAnimation().getLayer();
   });
+
+  //
+  // load sounds.
+  //
+
+  std::vector<SceneSound> sounds {};
+
+  int loop {0};
+
+  if(!extractChildElement(xmlscene, &xmlelement, "sound")) return false;
+  do{
+    if(!extractIntAttribute(xmlelement, "loop", &loop)) return false;
+    if(!extractStringAttribute(xmlelement, "name", &assetName)) return false;
+    assetKey = sfx::loadSound(assetName); 
+
+    if(!extractChildElement(xmlelement, &xmltiming, "timing")) return false;
+    if(!extractFloatAttribute(xmltiming, "start", &timingStart)) return false;
+    if(!extractFloatAttribute(xmltiming, "duration", &timingDuration)) return false;
+
+    sounds.push_back(SceneSound{assetKey, timingStart, timingDuration, static_cast<bool>(loop)});
+
+    xmlelement = xmlelement->NextSiblingElement("sound");
+  }
+  while(xmlelement != 0);
+
+  _graphics = std::move(graphics);
+  _sounds = std::move(sounds);
 
   return true;
 }
@@ -298,37 +341,34 @@ void Cutscene::unload()
 
   _graphics.clear();
 
-  //for(auto& sound : _sounds)
-  //  gfx::unload(sound.getSoundKey());
+  for(auto& sound : _sounds)
+    sfx::unloadSound(sound.getSoundKey());
 
-  //_sounds.clear();
+  _sounds.clear();
 }
 
 void Cutscene::update(float dt)
 {
-  int changes{0};
-  for(auto& element : _graphics)
-    changes += static_cast<int>(element.update(dt));
-  if(changes)
-    _needsRedraw = true;
+  for(auto& graphic : _graphics)
+    graphic.update(dt);
+
+  for(auto& sound : _sounds)
+    sound.update(dt);
 }
 
 void Cutscene::draw(int screenid)
 {
-  //if(!_needsRedraw)
-   // return;
-
   for(auto& element : _graphics)
     element.draw(screenid);
-
-  _needsRedraw = false;
 }
 
 void Cutscene::reset()
 {
-  for(auto& element : _graphics)
-    element.reset();
-  _needsRedraw = true;
+  for(auto& graphic : _graphics)
+    graphic.reset();
+
+  for(auto& sound : _sounds)
+    sound.reset();
 }
 
 } // namespace cut

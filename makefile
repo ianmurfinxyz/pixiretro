@@ -1,8 +1,8 @@
 
 LDLIBS = -lSDL2 -lm -lGLX_mesa -lopenal
 CXXFLAGS = -g -Wall -std=c++17 -fno-exceptions -DTINYXML2_DEBUG
-CXXSRC = engine.cpp input.cpp bmpimage.cpp gfx.cpp filerc.cpp log.cpp example.cpp tinyxml2.cpp xmlutil.cpp cutscene.cpp wavesound.cpp sfx.cpp
-CXXINC = engine.h input.h bmpimage.h gfx.h filerc.h log.h app.h utility.h color.h math.h tinyxml2.h xmlutil.h cutscene.h wavesound.h sfx.h
+CXXSRC = engine.cpp input.cpp bmpimage.cpp gfx.cpp filerc.cpp log.cpp example.cpp tinyxml2.cpp xmlutil.cpp cutscene.cpp wavesound.cpp sfx.cpp particles.cpp
+CXXINC = engine.h input.h bmpimage.h gfx.h filerc.h log.h app.h utility.h color.h math.h tinyxml2.h xmlutil.h cutscene.h wavesound.h sfx.h particles.h
 
 example : $(CXXSRC) $(CXXINC)
 	$(CXX) $(CXXSRC) $(CXXFLAGS) -o $@  -L ./libs/openal $(LDLIBS)
