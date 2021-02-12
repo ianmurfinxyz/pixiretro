@@ -8,21 +8,42 @@
 
 #include <iostream>
 
-enum SpriteKey
+enum SpriteID
 {
-  SPKEY_BLUE_DOUBLE_LADDER           = 0,
-  SPKEY_BLUE_SINGLE_LADDER           = 1,
-  SPKEY_RED_GIRDER_LONG_FLAT         = 2, 
-  SPKEY_RED_GIRDER_LONG_RIGHT_SLOPE  = 3,
-  SPKEY_RED_GIRDER_LONG_LEFT_SLOPE   = 4,
-  SPKEY_RED_GIRDER_TOP_SLOPE         = 5,
-  SPKEY_RED_GIRDER_BOTTOM_SLOPE      = 6,
-  SPKEY_RED_GIRDER_BOTTOM_FLAT       = 7,
-  SPKEY_RED_GIRDER_SHORT             = 8,
-  SPKEY_KONG_CLIMB_PAULINE           = 9,
-  SPKEY_OIL_BARREL                   = 10,
-  SPKEY_OIL_FLAMES                   = 11,
+  SID_BLUE_DOUBLE_LADDER,
+  SID_BLUE_SINGLE_LADDER,
+  SID_RED_GIRDER_LONG_FLAT,
+  SID_RED_GIRDER_LONG_RIGHT_SLOPE,
+  SID_RED_GIRDER_LONG_LEFT_SLOPE,
+  SID_RED_GIRDER_TOP_SLOPE,
+  SID_RED_GIRDER_BOTTOM_SLOPE,
+  SID_RED_GIRDER_BOTTOM_FLAT,
+  SID_RED_GIRDER_SHORT,
+  SID_KONG_CLIMB_PAULINE,
+  SID_OIL_BARREL,
+  SID_OIL_FLAMES,
+  SID_COUNT
 };
+
+//
+// The set of all sprite asset names required by the app.
+//
+//static std::array<pxr::gfx::ResourceName_t, SID_COUNT> spriteNames {
+//  "blue_double_ladder",
+//  "blue_single_ladder",
+//  "red_girder_long_flat",
+//  "red_girder_long_right_slope",
+//  "red_girder_long_left_slope",
+//  "red_girder_top_slope",
+//  "red_girder_bottom_slope",
+//  "red_girder_bottom_flat",
+//  "red_girder_short",
+//  "kong_climb_pauline",
+//  "oil_barrel",
+//  "oil_flames"
+//};
+//
+//static std::array<pxr::gfx::ResourceKey_t, SID_COUNT> spriteKeys;
 
 enum CutsceneKey
 {
@@ -100,36 +121,12 @@ public:
     int screenid = pxr::gfx::createScreen(WORLD_SIZE);
     assert(screenid == STAGE_SCREEN_ID);
 
-    pxr::gfx::ResourceKey_t rkey; 
-    rkey = pxr::gfx::loadSprite("blue_double_ladder");
-    assert(rkey == SPKEY_BLUE_DOUBLE_LADDER);
-    rkey = pxr::gfx::loadSprite("blue_single_ladder");
-    assert(rkey == SPKEY_BLUE_SINGLE_LADDER);
-    rkey = pxr::gfx::loadSprite("red_girder_long_flat");
-    assert(rkey == SPKEY_RED_GIRDER_LONG_FLAT);
-    rkey = pxr::gfx::loadSprite("red_girder_long_right_slope");
-    assert(rkey == SPKEY_RED_GIRDER_LONG_RIGHT_SLOPE);
-    rkey = pxr::gfx::loadSprite("red_girder_long_left_slope");
-    assert(rkey == SPKEY_RED_GIRDER_LONG_LEFT_SLOPE);
-    rkey = pxr::gfx::loadSprite("red_girder_top_slope");
-    assert(rkey == SPKEY_RED_GIRDER_TOP_SLOPE);
-    rkey = pxr::gfx::loadSprite("red_girder_bottom_slope");
-    assert(rkey == SPKEY_RED_GIRDER_BOTTOM_SLOPE);
-    rkey = pxr::gfx::loadSprite("red_girder_bottom_flat");
-    assert(rkey == SPKEY_RED_GIRDER_BOTTOM_FLAT);
-    rkey = pxr::gfx::loadSprite("red_girder_short");
-    assert(rkey == SPKEY_RED_GIRDER_SHORT);
-    rkey = pxr::gfx::loadSprite("kong_climb_pauline");
-    assert(rkey == SPKEY_KONG_CLIMB_PAULINE);
-    rkey = pxr::gfx::loadSprite("oil_barrel");
-    assert(rkey == SPKEY_OIL_BARREL);
-    rkey = pxr::gfx::loadSprite("oil_flames");
-    assert(rkey == SPKEY_OIL_FLAMES);
+    //for(int sid = 0; sid < SID_COUNT; ++sid)
+    //  spriteKeys[sid] = gfx::loadSprite(spriteNames[sid]);
 
-    pxr::cut::Cutscene cutscene{};
-    bool result = cutscene.load("intro");
+    cutscenes.push_back(pxr::cut::Cutscene{});
+    bool result = cutscenes.back().load("intro");
     assert(result == true);
-    cutscenes.push_back(std::move(cutscene));
   }
 
   virtual std::string getName() const {return std::string{name};}

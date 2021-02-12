@@ -117,7 +117,6 @@ struct Sprite
 {
   BmpImage _image;
   std::vector<SpriteFrame> _frames;
-  bool _isErrorSprite;
 };
 
 //
@@ -305,11 +304,19 @@ void onWindowResize(Vector2i windowSize);
 //
 // see XML_RESOURCE_EXTENSION_SPRITES and BmpImage::FILE_EXTENSION for the extensions.
 //
+//
 // Returns the resource key the loaded sprite was mapped to which is needed for the drawing
-// routines. Internally sprites are stored in an array thus returned ids start at 0 and 
-// increase by 1 with each new sprite loaded.
+// routines. Internally sprites are reference counted and thus can be loaded multiple times
+// without duplication, each time returning the same key. To actually remove a sprite from
+// memory it is necessary to unload a sprite an equal number of times to which it was loaded.
 //
 ResourceKey_t loadSprite(ResourceName_t name);
+
+//
+// Unloads a sprite. The sprite will only be removed from memory if the reference count drops
+// to zero.
+//
+void unloadSprite(ResourceKey_t spriteKey);
 
 //
 // Loads a font from RESOURCE_PATH_FONTS directory in the file system.
@@ -323,10 +330,17 @@ ResourceKey_t loadSprite(ResourceName_t name);
 // see XML_RESOURCE_EXTENSION_FONTS and BmpImage::FILE_EXTENSION for the extensions.
 //
 // Returns the resource key the loaded font was mapped to which is needed for the drawing
-// routines. Internally fonts are stored in an array thus returned ids start at 0 and 
-// increase by 1 with each new font loaded.
+// routines. Internally fonts are reference counted and thus can be loaded multiple times
+// without duplication, each time returning the same key. To actually remove a fonts from
+// memory it is necessary to unload a fonts an equal number of times to which it was loaded.
 //
 ResourceKey_t loadFont(ResourceName_t name);
+
+//
+// Unloads a font. The font will only be removed from memory if the reference count drops 
+// to zero.
+//
+void unloadFont(ResourceKey_t fontKey);
 
 //
 // Provides access to the frame count of sprites.

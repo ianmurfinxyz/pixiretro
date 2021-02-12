@@ -4,7 +4,7 @@
   <!-- FLAT - 1ST GIRDER - LONG BOTTOM GIRDER -->
   <element>
     <timing start="0" duration="11"/>
-    <animation spritekey="7" startframe="0" frequency="0" layer="2" mode="0"/>
+    <animation sprite="red_girder_bottom_flat" startframe="0" frequency="0" layer="2" mode="0"/>
     <transition duration="0">
       <point x="0" y="7" phase="0"/>
     </transition>
@@ -13,7 +13,7 @@
   <!-- FLAT - 2ND GIRDER -->
   <element>
     <timing start="0" duration="10"/>
-    <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_flat" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="40" phase="0"/>
     </transition>
@@ -22,7 +22,7 @@
   <!-- FLAT - 3RD GIRDER -->
   <element>
     <timing start="0" duration="9"/>
-    <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_flat" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="16" y="73" phase="0"/>
     </transition>
@@ -31,7 +31,7 @@
   <!-- FLAT - 4TH GIRDER -->
   <element>
     <timing start="0" duration="8"/>
-    <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_flat" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="106" phase="0"/>
     </transition>
@@ -40,7 +40,7 @@
   <!-- FLAT - 5TH GIRDER -->
   <element>
     <timing start="0" duration="7"/>
-    <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_flat" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="16" y="139" phase="0"/>
     </transition>
@@ -49,7 +49,7 @@
   <!-- FLAT - 6TH GIRDER -->
   <element>
     <timing start="0" duration="6"/>
-    <animation spritekey="2" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_flat" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="164" phase="0"/>
     </transition>
@@ -58,21 +58,21 @@
   <!-- FLAT - 7th GIRDER - PAULINE PLATFORM -->
   <element>
     <timing start="0" duration="15"/>
-    <animation spritekey="8" startframe="0" frequency="0" layer="2" mode="0"/>
+    <animation sprite="red_girder_short" startframe="0" frequency="0" layer="2" mode="0"/>
     <transition duration="0">
       <point x="88" y="192" phase="0"/>
     </transition>
   </element>
   <element>
     <timing start="0" duration="15"/>
-    <animation spritekey="8" startframe="0" frequency="0" layer="2" mode="0"/>
+    <animation sprite="red_girder_short" startframe="0" frequency="0" layer="2" mode="0"/>
     <transition duration="0">
       <point x="104" y="192" phase="0"/>
     </transition>
   </element>
   <element>
     <timing start="0" duration="15"/>
-    <animation spritekey="8" startframe="0" frequency="0" layer="2" mode="0"/>
+    <animation sprite="red_girder_short" startframe="0" frequency="0" layer="2" mode="0"/>
     <transition duration="0">
       <point x="120" y="192" phase="0"/>
     </transition>
@@ -81,7 +81,7 @@
   <!-- SLOPED - 1ST GIRDER - LONG BOTTOM GIRDER -->
   <element>
     <timing start="11" duration="4"/>
-    <animation spritekey="6" startframe="0" frequency="0" layer="2" mode="0"/>
+    <animation sprite="red_girder_bottom_slope" startframe="0" frequency="0" layer="2" mode="0"/>
     <transition duration="0">
       <point x="0" y="0" phase="0"/>
     </transition>
@@ -90,7 +90,7 @@
   <!-- SLOPED - 2ND GIRDER -->
   <element>
     <timing start="10" duration="5"/>
-    <animation spritekey="3" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_right_slope" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="28" phase="0"/>
     </transition>
@@ -99,7 +99,7 @@
   <!-- SLOPED - 3RD GIRDER -->
   <element>
     <timing start="9" duration="6"/>
-    <animation spritekey="4" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_left_slope" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="16" y="61" phase="0"/>
     </transition>
@@ -108,7 +108,7 @@
   <!-- SLOPED - 4TH GIRDER -->
   <element>
     <timing start="8" duration="7"/>
-    <animation spritekey="3" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_right_slope" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="93" phase="0"/>
     </transition>
@@ -117,7 +117,7 @@
   <!-- SLOPED - 5TH GIRDER -->
   <element>
     <timing start="7" duration="8"/>
-    <animation spritekey="4" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_long_left_slope" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="16" y="127" phase="0"/>
     </transition>
@@ -126,7 +126,7 @@
   <!-- SLOPED - 6TH GIRDER -->
   <element>
     <timing start="6" duration="9"/>
-    <animation spritekey="5" startframe="0" frequency="0" layer="0" mode="0"/>
+    <animation sprite="red_girder_top_slope" startframe="0" frequency="0" layer="0" mode="0"/>
     <transition duration="0">
       <point x="0" y="160" phase="0"/>
     </transition>

@@ -132,8 +132,7 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
-  gfx::ResourceKey_t fontKey = gfx::loadFont(engineFontName);
-  assert(fontKey == engineFontKey);
+  _engineFontKey = gfx::loadFont(engineFontName);
   
   _app->onInit();
 
@@ -304,7 +303,7 @@ void Engine::drawEngineStats()
   ss << "update FPS: " << updateHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
      << "render FPS: " << drawHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
      << "frame FPS: " << _measuredFrameFrequency << "hz";
-  gfx::drawText({10, 20}, ss.str(), engineFontKey, _statsScreenId);
+  gfx::drawText({10, 20}, ss.str(), _engineFontKey, _statsScreenId);
 
   std::stringstream().swap(ss);
 
@@ -315,7 +314,7 @@ void Engine::drawEngineStats()
   ss << std::setprecision(3);
   ss << "time [h:m:s] -- game=" << gameHours << ":" << gameMins << ":" << gameSecs
                  << " -- real=" << realHours << ":" << realMins << ":" << realSecs;
-  gfx::drawText({10, 10}, ss.str(), engineFontKey, _statsScreenId);
+  gfx::drawText({10, 10}, ss.str(), _engineFontKey, _statsScreenId);
 
   _needRedrawEngineStats = false;
 }
@@ -335,11 +334,11 @@ void Engine::drawPauseDialog()
   gfx::drawLine(Vector2i{xmax, 0}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
 
   Vector2i pausedTxtPos{};
-  Vector2i pausedTxtBox = gfx::calculateTextSize(dialogTxt, engineFontKey);
+  Vector2i pausedTxtBox = gfx::calculateTextSize(dialogTxt, _engineFontKey);
   pausedTxtPos._x = (xmax / 2) - (pausedTxtBox._x / 2); 
   pausedTxtPos._y = (ymax / 2) - (pausedTxtBox._y / 2);
 
-  gfx::drawText(pausedTxtPos, dialogTxt, engineFontKey, _pauseScreenId);
+  gfx::drawText(pausedTxtPos, dialogTxt, _engineFontKey, _pauseScreenId);
 }
 
 void Engine::onUpdateTick(float tickPeriodSeconds)

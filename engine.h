@@ -42,7 +42,6 @@ private:
   static constexpr Vector2i pauseScreenResolution {100, 60};
 
   // Engine reserves this resource key for the font it uses to output engine stats.
-  static constexpr gfx::ResourceKey_t engineFontKey {0};
   static constexpr gfx::ResourceName_t engineFontName {"dogica8"};
 
   // Keys used by the engine for user controlled engine features. If these keys
@@ -212,6 +211,8 @@ private:
 
   int _statsScreenId;
   int _pauseScreenId;
+
+  gfx::ResourceKey_t _engineFontKey;
 
   gfx::ResourceKey_t _splashSpriteKey;
   sfx::ResourceKey_t _splashSoundKey;

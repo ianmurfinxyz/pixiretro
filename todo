@@ -274,4 +274,10 @@ test and debug -- DONE
 - add the ability to start and stop sounds - and ability to have sound loop - to stop sounds may
 need to track which sounds (resource keys) are playing in which sources so can stop the source
 playing. - note: when implementing donkey kong will not need to stream music into a queued source
-as the music tracks are very short repetitive sounds that can just be looped.
+as the music tracks are very short repetitive sounds that can just be looped. - DONE
+
+- add sound support to the cutscene system so can play sounds at particular times.
+
+- setup the build system - organising libraries into seperate dirs etc.
+
+- also implement the performance graphs for the engine stats

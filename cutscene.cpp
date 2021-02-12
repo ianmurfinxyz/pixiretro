@@ -141,7 +141,7 @@ void Transition::reset()
   }
 }
 
-SceneElement::SceneElement(Animation animation, Transition transition, float startTime, float duration) :
+SceneGraphic::SceneGraphic(Animation animation, Transition transition, float startTime, float duration) :
   _animation{animation},
   _transition{std::move(transition)},
   _startTime{startTime},
@@ -151,7 +151,7 @@ SceneElement::SceneElement(Animation animation, Transition transition, float sta
   _state = _startTime == 0.f ? State::ACTIVE : State::PENDING;
 }
 
-bool SceneElement::update(float dt)
+bool SceneGraphic::update(float dt)
 {
   if(_clock < 0.f)
     _state = State::DONE;
@@ -185,7 +185,7 @@ bool SceneElement::update(float dt)
   return aChanged || tChanged;
 }
 
-void SceneElement::draw(int screenid)
+void SceneGraphic::draw(int screenid)
 {
   if(_state != State::ACTIVE)
     return;
@@ -193,7 +193,7 @@ void SceneElement::draw(int screenid)
   gfx::drawSprite(_transition.getPosition(), _animation.getSpriteKey(), _animation.getFrame(), screenid); 
 }
 
-void SceneElement::reset()
+void SceneGraphic::reset()
 {
   _animation.reset();
   _transition.reset();
@@ -203,8 +203,13 @@ void SceneElement::reset()
 
 Cutscene::Cutscene() : 
   _needsRedraw{true},
-  _elements{}
+  _graphics{}
 {}
+
+Cutscene::~Cutscene()
+{
+  unload();
+}
 
 bool Cutscene::load(std::string name)
 {
@@ -234,6 +239,7 @@ bool Cutscene::load(std::string name)
   int layer;
   int mode;
   int spriteKey;
+  const char* spriteName {nullptr};
 
   XMLElement* xmltiming{nullptr};
   XMLElement* xmlanimation{nullptr};
@@ -247,7 +253,10 @@ bool Cutscene::load(std::string name)
     if(!extractFloatAttribute(xmltiming, "duration", &timingDuration)) return false;
 
     if(!extractChildElement(xmlelement, &xmlanimation, "animation")) return false;
-    if(!extractIntAttribute(xmlanimation, "spritekey", &spriteKey)) return false;
+
+    if(!extractStringAttribute(xmlanimation, "sprite", &spriteName)) return false;
+    spriteKey = gfx::loadSprite(spriteName); 
+
     if(!extractIntAttribute(xmlanimation, "startframe", &startFrame)) return false;
     if(!extractIntAttribute(xmlanimation, "layer", &layer)) return false;
     if(!extractIntAttribute(xmlanimation, "mode", &mode)) return false;
@@ -269,23 +278,36 @@ bool Cutscene::load(std::string name)
 
     Animation animation{spriteKey, startFrame, layer, frequency, static_cast<Animation::Mode>(mode)}; 
     Transition transition{std::move(_tpoints), transitionDuration};
-    _elements.push_back({animation, std::move(transition), timingStart, timingDuration});
+    _graphics.push_back({animation, std::move(transition), timingStart, timingDuration});
      
     xmlelement = xmlelement->NextSiblingElement("element");
   }
   while(xmlelement != 0);
 
-  std::sort(_elements.begin(), _elements.end(), [](const SceneElement& e0, const SceneElement& e1){
+  std::sort(_graphics.begin(), _graphics.end(), [](const SceneGraphic& e0, const SceneGraphic& e1){
     return e0.getAnimation().getLayer() < e1.getAnimation().getLayer();
   });
 
   return true;
 }
 
+void Cutscene::unload()
+{
+  for(auto& graphic : _graphics)
+    gfx::unloadSprite(graphic.getAnimation().getSpriteKey());
+
+  _graphics.clear();
+
+  //for(auto& sound : _sounds)
+  //  gfx::unload(sound.getSoundKey());
+
+  //_sounds.clear();
+}
+
 void Cutscene::update(float dt)
 {
   int changes{0};
-  for(auto& element : _elements)
+  for(auto& element : _graphics)
     changes += static_cast<int>(element.update(dt));
   if(changes)
     _needsRedraw = true;
@@ -296,7 +318,7 @@ void Cutscene::draw(int screenid)
   //if(!_needsRedraw)
    // return;
 
-  for(auto& element : _elements)
+  for(auto& element : _graphics)
     element.draw(screenid);
 
   _needsRedraw = false;
@@ -304,7 +326,7 @@ void Cutscene::draw(int screenid)
 
 void Cutscene::reset()
 {
-  for(auto& element : _elements)
+  for(auto& element : _graphics)
     element.reset();
   _needsRedraw = true;
 }

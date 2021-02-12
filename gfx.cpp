@@ -2,6 +2,7 @@
 #include <SDL2/SDL_opengl.h>
 #include <vector>
 #include <array>
+#include <map>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -43,10 +44,34 @@ static SDL_Window* window;
 static SDL_GLContext glContext;
 static iRect viewport;
 static std::vector<Screen> screens;
-static std::vector<Sprite> sprites;
-static std::vector<Font> fonts;
-static Sprite errorSprite;
-static Font errorFont;
+
+struct SpriteResource
+{
+  Sprite _sprite;
+  std::string _name;
+  int _referenceCount;
+};
+
+struct FontResource
+{
+  Font _font;
+  std::string _name;
+  int _referenceCount;
+};
+
+static ResourceKey_t nextResourceKey {0};
+
+static std::map<ResourceKey_t, SpriteResource> sprites;
+static std::map<ResourceKey_t, FontResource> fonts;
+
+//static std::vector<Sprite> sprites;
+//static std::vector<Font> fonts;
+
+static constexpr const char* errorSpriteName {"error_sprite"};
+static constexpr const char* errorFontName {"error_font"};
+
+static SpriteResource errorSprite;
+static FontResource errorFont;
 
 static bool operator<(const ColorBand& lhs, const ColorBand& rhs)
 {
@@ -76,14 +101,20 @@ static void genErrorSprite()
 {
   static constexpr int squareSize = 8;
 
+  SpriteResource resource {};
+
   SpriteFrame frame{};
   frame._position = Vector2i{0, 0};
   frame._size = Vector2i{squareSize, squareSize};
   frame._origin = Vector2i{0, 0};
 
-  errorSprite._image.create(frame._size, colors::red);
-  errorSprite._frames.push_back(frame);
-  errorSprite._isErrorSprite = true;
+  resource._sprite._image.create(frame._size, colors::red);
+  resource._sprite._frames.push_back(frame);
+
+  resource._name = errorSpriteName;
+  resource._referenceCount = 0;
+
+  sprites.emplace(std::make_pair(nextResourceKey++, resource));
 }
 
 //
@@ -92,11 +123,13 @@ static void genErrorSprite()
 //
 static void genErrorFont()
 {
-  errorFont._lineHeight = 8;
-  errorFont._baseLine = 1;
-  errorFont._glyphSpace = 0;
-  errorFont._image.create(Vector2i{256, 24}, colors::red);
-  for(auto& glyph : errorFont._glyphs){
+  FontResource resource {};
+
+  resource._font._lineHeight = 8;
+  resource._font._baseLine = 1;
+  resource._font._glyphSpace = 0;
+  resource._font._image.create(Vector2i{8, 8}, colors::red);
+  for(auto& glyph : resource._font._glyphs){
     glyph._x = 0;
     glyph._y = 0;
     glyph._width = 6;
@@ -105,6 +138,11 @@ static void genErrorFont()
     glyph._yoffset = 0;
     glyph._xadvance = 8;
   }
+
+  resource._name = errorFontName;
+  resource._referenceCount = 0;
+
+  fonts.emplace(std::make_pair(nextResourceKey++, resource));
 }
 
 bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_)
@@ -311,23 +349,51 @@ int createScreen(Vector2i resolution)
 
 static ResourceKey_t useErrorSprite()
 {
-  log::log(log::INFO, log::msg_gfx_using_error_sprite);
-  sprites.push_back(errorSprite);
-  return sprites.size() - 1;
+  for(auto& resource : sprites){
+    if(resource.second._name == errorSpriteName){
+      resource.second._referenceCount++;
+      std::string addendum = "ref count=" + std::to_string(resource.second._referenceCount);
+      log::log(log::INFO, log::msg_gfx_using_error_sprite, addendum);
+      return resource.first;
+    }
+  }
+  
+  assert(0);   // This would mean the error sprite has not been generated.
 }
 
 static ResourceKey_t useErrorFont()
 {
-  log::log(log::INFO, log::msg_gfx_using_error_font);
-  fonts.push_back(errorFont);
-  return fonts.size() - 1;
+  for(auto& resource : fonts){
+    if(resource.second._name == errorFontName){
+      resource.second._referenceCount++;
+      std::string addendum = "ref count=" + std::to_string(resource.second._referenceCount);
+      log::log(log::INFO, log::msg_gfx_using_error_font, addendum);
+      return resource.first;
+    }
+  }
+
+  assert(0);  // This would mean the error font has not been generated.
 }
 
 ResourceKey_t loadSprite(ResourceName_t name)
 {
   log::log(log::INFO, log::msg_gfx_loading_sprite, name);
 
-  Sprite sprite{};
+  for(auto& pair : sprites){
+    if(pair.second._name == name){
+      pair.second._referenceCount++;
+      std::string addendum {"ref count="};
+      addendum += std::to_string(pair.second._referenceCount);
+      log::log(log::INFO, log::msg_gfx_sprite_already_loaded, addendum);
+      return pair.first;
+    }
+  }
+
+  SpriteResource resource{};
+  Sprite& sprite = resource._sprite;
+
+  resource._name = name;
+  resource._referenceCount = 1;
 
   std::string bmppath{};
   bmppath += RESOURCE_PATH_SPRITES;
@@ -385,24 +451,60 @@ ResourceKey_t loadSprite(ResourceName_t name)
     return useErrorSprite();
   }
 
-  sprite._isErrorSprite = false;
-  log::log(log::INFO, log::msg_gfx_loading_sprite_success);
+  ResourceKey_t newKey = nextResourceKey;
+  ++nextResourceKey;
 
-  sprites.push_back(std::move(sprite));
-  return sprites.size() - 1;
+  std::string addendum{};
+  addendum += "[name:key]=[";
+  addendum += name; 
+  addendum += ":"; 
+  addendum += std::to_string(newKey);
+  addendum += "]";
+  log::log(log::INFO, log::msg_gfx_loading_sprite_success, addendum);
+
+  sprites.emplace(std::make_pair(newKey, std::move(resource)));
+
+  return newKey;
+}
+
+void unloadSprite(ResourceKey_t spriteKey)
+{
+  auto search = sprites.find(spriteKey);
+  if(search == sprites.end()){
+    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "sprite" + std::to_string(spriteKey));
+    return;
+  }
+
+  SpriteResource& resource = search->second;
+  resource._referenceCount--;
+  if(resource._referenceCount <= 0 && resource._name != errorSpriteName){
+    sprites.erase(search);
+  }
 }
 
 ResourceKey_t loadFont(ResourceName_t name)
 {
   log::log(log::INFO, log::msg_gfx_loading_font, name);
 
-  Font font{};
+  for(auto& resource : fonts){
+    if(resource.second._name == name){
+      log::log(log::INFO, log::msg_gfx_loading_font_success);
+      resource.second._referenceCount++;
+      return resource.first;
+    }
+  }
+
+  FontResource resource {};
+  Font& font = resource._font;
+
+  resource._name = name;
+  resource._referenceCount = 1;
 
   std::string bmppath{};
   bmppath += RESOURCE_PATH_FONTS;
   bmppath += name;
   bmppath += BmpImage::FILE_EXTENSION;
-  if(!font._image.load(bmppath)){
+  if(!resource._font._image.load(bmppath)){
     log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
     return useErrorFont();
   }
@@ -495,14 +597,34 @@ ResourceKey_t loadFont(ResourceName_t name)
 
   log::log(log::INFO, log::msg_gfx_loading_font_success);
 
-  fonts.push_back(std::move(font));
-  return fonts.size() - 1;
+  ResourceKey_t newKey = nextResourceKey;
+  ++nextResourceKey;
+
+  fonts.emplace(std::make_pair(newKey, std::move(resource)));
+
+  return newKey;
+}
+
+void unloadFont(ResourceKey_t fontKey)
+{
+  auto search = fonts.find(fontKey);
+  if(search == fonts.end()){
+    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
+    return;
+  }
+
+  FontResource& resource = search->second;
+  resource._referenceCount--;
+  if(resource._referenceCount <= 0 && resource._name != errorFontName){
+    fonts.erase(search);
+  }
 }
 
 int getSpriteFrameCount(ResourceKey_t spriteKey)
 {
-  assert(0 <= spriteKey && spriteKey < sprites.size());
-  return sprites[spriteKey]._frames.size();
+  auto search = sprites.find(spriteKey);
+  assert(search != sprites.end());
+  return search->second._sprite._frames.size();
 }
 
 void onWindowResize(Vector2i windowSize)
@@ -544,8 +666,11 @@ void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int scr
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  assert(0 <= spriteKey && spriteKey < sprites.size());
-  auto& sprite = sprites[spriteKey];
+  auto search = sprites.find(spriteKey);
+  if(search == sprites.end()){
+    assert(0);
+  }
+  const auto& sprite = search->second._sprite;
   const Color4u* const * spritePxs = sprite._image.getPixels();
 
   assert(0 <= frameid);
@@ -593,8 +718,9 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, i
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  assert(0 <= spriteKey && spriteKey < sprites.size());
-  auto& sprite = sprites[spriteKey];
+  auto search = sprites.find(spriteKey);
+  assert(search != sprites.end());
+  const auto& sprite = search->second._sprite;
   const Color4u* const * spritePxs = sprite._image.getPixels();
 
   assert(0 <= frameid);
@@ -704,8 +830,9 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  assert(0 <= fontKey && fontKey < fonts.size());
-  auto& font = fonts[fontKey];
+  auto search = fonts.find(fontKey);
+  assert(search != fonts.end());
+  auto& font = search->second._font;
   const Color4u* const* fontPxs = font._image.getPixels();
 
   int baseLineY = position._y + font._baseLine;
@@ -864,8 +991,9 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey)
 {
   Vector2i size{0, 0};
 
-  assert(0 <= fontKey && fontKey < fonts.size());
-  auto& font = fonts[fontKey];
+  auto search = fonts.find(fontKey);
+  assert(search != fonts.end());
+  auto& font = search->second._font;
 
   for(char c : text){
     if(c == '\n') continue;
@@ -879,14 +1007,16 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey)
 
 bool isErrorSprite(ResourceKey_t spriteKey)
 {
-  assert(0 <= spriteKey && spriteKey < sprites.size());
-  return sprites[spriteKey]._isErrorSprite;
+  auto search = sprites.find(spriteKey);
+  assert(search != sprites.end());
+  return search->second._name == errorSpriteName;
 }
 
 Vector2i getSpriteSize(ResourceKey_t spriteKey, int frameid)
 {
-  assert(0 <= spriteKey && spriteKey < sprites.size());
-  return sprites[spriteKey]._image.getSize();
+  auto search = sprites.find(spriteKey);
+  assert(search != sprites.end());
+  return search->second._sprite._image.getSize();
 }
 
 } // namespace gfx

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include "gfx.h"
+#include "sfx.h"
 
 namespace pxr
 {
@@ -72,12 +73,12 @@ private:
   bool _isDone;
 };
 
-class SceneElement
+class SceneGraphic
 {
 public:
   enum class State { PENDING, ACTIVE, DONE };
 
-  SceneElement(Animation animation, Transition transition, float startTime, float duration);
+  SceneGraphic(Animation animation, Transition transition, float startTime, float duration);
 
   bool update(float dt);
   void draw(int screenid);
@@ -95,12 +96,31 @@ private:
   State _state;
 };
 
+//class SceneSound
+//{
+//public:
+//  enum class State { PENDING, PLAYING, LOOPING, DONE };
+//
+//  bool update(float dt);
+//  void reset();
+//
+//  State getState() const {return _state;}
+//
+//private:
+//  sfx::ResourceKey_t _soundKey;
+//  float _startTime;
+//  float _stopTime;
+//  bool _loop;
+//  State _state;
+//};
+
 class Cutscene
 {
 private:
 
 public:
   Cutscene();
+  ~Cutscene();
 
   //
   // Load a cutscene from a xml cutscene file. Arg 'name' must be the name of file exluding
@@ -108,12 +128,18 @@ public:
   //
   bool load(std::string name);
 
+  //
+  // Unload a cutscene releasing all its gfx and sfx resources.
+  //
+  void unload();
+
   void update(float dt);
   void draw(int screenid);
   void reset();
 
 private:
-  std::vector<SceneElement> _elements;
+  std::vector<SceneGraphic> _graphics;
+  //std::vector<SceneSound> _sounds;
   bool _needsRedraw;
 };
 

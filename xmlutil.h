@@ -13,6 +13,7 @@ bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath);
 bool extractChildElement(XMLNode* parent, XMLElement** child, const char* childname);
 bool extractIntAttribute(XMLElement* element, const char* attribute, int* value);
 bool extractFloatAttribute(XMLElement* element, const char* attribute, float* value);
+bool extractStringAttribute(XMLElement* element, const char* attribute, const char** value);
 
 } // namespace pxr
 

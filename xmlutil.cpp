@@ -47,4 +47,14 @@ bool extractFloatAttribute(XMLElement* element, const char* attribute, float* va
   return true;
 }
 
+bool extractStringAttribute(XMLElement* element, const char* attribute, const char** value)
+{
+  XMLError xmlerror = element->QueryStringAttribute(attribute, value);
+  if(xmlerror != XML_SUCCESS){
+    log::log(log::ERROR, log::msg_xml_fail_read_attribute, attribute);
+    return false;
+  }
+  return true;
+}
+
 } // namespace pxr
