@@ -40,6 +40,11 @@ public:
   // add all their app states, as well as setting their initial state.
   virtual bool onInit() = 0;
 
+  //
+  // Invoked by the engine on shutdown.
+  //
+  virtual void onShutdown() = 0;
+
   void onUpdate(double now, float dt)
   {
     _active->onUpdate(now, dt);

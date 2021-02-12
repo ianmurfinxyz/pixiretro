@@ -36,10 +36,15 @@ void shutdown();
 //
 // Returns the resouce key the sound is mapped to which is needed to later play the sound.
 //
+// Internally sounds are reference counted and so can be loaded multiple times without 
+// duplication, each time returning the same key. To actually remove sounds from memory it is
+// necessary to unload a sound an equal number of times to which it was loaded.
+//
 ResourceKey_t loadSound(ResourceName_t soundName);
 
 //
-// Unload a sound. Frees the memory used by the sound data and frees the resource key.
+// Unload a sound, freeing the memory used by the sound data. The sound will only be removed
+// from memory if the reference count drops to zero.
 //
 void unloadSound(ResourceKey_t soundKey);
 

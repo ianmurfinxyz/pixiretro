@@ -47,6 +47,8 @@ constexpr const char* msg_gfx_font_fail_checksum = "loaded font failed the check
 constexpr const char* msg_gfx_sprite_invalid_xml_bmp_mismatch = "invalid sprite : xml data implies a different bitmap size";
 constexpr const char* msg_gfx_font_invalid_xml_bmp_mismatch = "invalid font : char xml meta extends font bmp bounds";
 constexpr const char* msg_gfx_unloading_nonexistent_resource = "trying to unload nonexistent resource";
+constexpr const char* msg_gfx_unload_sprite_success = "successfully unloaded sprite";
+constexpr const char* msg_gfx_unload_font_success = "successfully unloaded font";
 
 // sfx log strings.
 
@@ -62,9 +64,14 @@ constexpr const char* msg_sfx_fail_create_device = "failed to create openAL soun
 constexpr const char* msg_sfx_fail_create_context = "failed to create openAL sound context";
 constexpr const char* msg_sfx_openal_error = "openAL error";
 constexpr const char* msg_sfx_openal_call = "openAL call";
-constexpr const char* msg_sfx_missing_sound = "failed to play sound with key";
+constexpr const char* msg_sfx_playing_nonexistent_sound = "trying to play nonexistent sound";
 constexpr const char* msg_sfx_using_error_sound = "substituting unloaded sound with error sound";
 constexpr const char* msg_sfx_no_free_sources = "cannot play sound as no free sources";
+constexpr const char* msg_sfx_loading_sound = "loading sound";
+constexpr const char* msg_sfx_sound_already_loaded = "sound already loaded";
+constexpr const char* msg_sfx_unloading_nonexistent_sound = "trying to unload nonexistent sound";
+constexpr const char* msg_sfx_load_sound_success = "successfully loaded sound";
+constexpr const char* msg_sfx_unload_sound_success = "successfully unloaded sound";
 
 
 // xml log strings.

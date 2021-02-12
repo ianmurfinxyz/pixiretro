@@ -129,6 +129,12 @@ public:
     assert(result == true);
   }
 
+  void onShutdown()
+  {
+    for(auto& scene : cutscenes)
+      scene.unload();
+  }
+
   virtual std::string getName() const {return std::string{name};}
   virtual int getVersionMajor() const {return versionMajor;}
   virtual int getVersionMinor() const {return versionMinor;}

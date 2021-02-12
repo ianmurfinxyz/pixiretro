@@ -187,7 +187,9 @@ void Engine::initialize(std::unique_ptr<App> app)
 
 void Engine::shutdown()
 {
+  _app->onShutdown();
   gfx::shutdown();
+  sfx::shutdown();
   log::shutdown();
 }
 

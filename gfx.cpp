@@ -349,12 +349,12 @@ int createScreen(Vector2i resolution)
 
 static ResourceKey_t useErrorSprite()
 {
-  for(auto& resource : sprites){
-    if(resource.second._name == errorSpriteName){
-      resource.second._referenceCount++;
-      std::string addendum = "ref count=" + std::to_string(resource.second._referenceCount);
+  for(auto& pair : sprites){
+    if(pair.second._name == errorSpriteName){
+      pair.second._referenceCount++;
+      std::string addendum = "ref count=" + std::to_string(pair.second._referenceCount);
       log::log(log::INFO, log::msg_gfx_using_error_sprite, addendum);
-      return resource.first;
+      return pair.first;
     }
   }
   
@@ -454,6 +454,8 @@ ResourceKey_t loadSprite(ResourceName_t name)
   ResourceKey_t newKey = nextResourceKey;
   ++nextResourceKey;
 
+  sprites.emplace(std::make_pair(newKey, std::move(resource)));
+
   std::string addendum{};
   addendum += "[name:key]=[";
   addendum += name; 
@@ -462,8 +464,6 @@ ResourceKey_t loadSprite(ResourceName_t name)
   addendum += "]";
   log::log(log::INFO, log::msg_gfx_loading_sprite_success, addendum);
 
-  sprites.emplace(std::make_pair(newKey, std::move(resource)));
-
   return newKey;
 }
 
@@ -471,13 +471,14 @@ void unloadSprite(ResourceKey_t spriteKey)
 {
   auto search = sprites.find(spriteKey);
   if(search == sprites.end()){
-    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "sprite" + std::to_string(spriteKey));
+    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "key=" + std::to_string(spriteKey));
     return;
   }
 
   SpriteResource& resource = search->second;
   resource._referenceCount--;
   if(resource._referenceCount <= 0 && resource._name != errorSpriteName){
+    log::log(log::INFO, log::msg_gfx_unload_sprite_success, "key=" + std::to_string(spriteKey));
     sprites.erase(search);
   }
 }
@@ -616,6 +617,7 @@ void unloadFont(ResourceKey_t fontKey)
   FontResource& resource = search->second;
   resource._referenceCount--;
   if(resource._referenceCount <= 0 && resource._name != errorFontName){
+    log::log(log::INFO, log::msg_gfx_unload_font_success, "key=" + std::to_string(fontKey));
     fonts.erase(search);
   }
 }

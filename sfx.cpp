@@ -64,9 +64,17 @@ static ALCcontext* sfxContext {nullptr};
 static constexpr int SOUND_SOURCE_COUNT {16};
 static std::array<std::pair<SoundSourceKey_t, ResourceKey_t>, SOUND_SOURCE_COUNT> soundSources;
 
-ResourceKey_t nextSoundKey {0};
-static std::map<ResourceKey_t, SoundBufferKey_t> soundBuffers;
-SoundBufferKey_t errorSoundBuffer;
+struct SoundResource
+{
+  SoundBufferKey_t _bufferKey;
+  std::string _name;
+  int _referenceCount;
+};
+
+static ResourceName_t errorSoundName {"error_sound"};
+
+ResourceKey_t nextResourceKey {0};
+static std::map<ResourceKey_t, SoundResource> sounds;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // MODULE FUNCTIONS
@@ -107,8 +115,17 @@ static void genErrorSound()
     pcm[s] = static_cast<unsigned char>(sf);
   }
 
-  alas(alGenBuffers(1, &errorSoundBuffer));
-  alas(alBufferData(errorSoundBuffer, AL_FORMAT_MONO8, reinterpret_cast<void*>(pcm), sampleCount, sampleFreqHz));
+  SoundResource resource {};
+  resource._name = errorSoundName;
+  resource._referenceCount = 0;
+
+  alas(alGenBuffers(1, &resource._bufferKey));
+  alas(alBufferData(resource._bufferKey, AL_FORMAT_MONO8, reinterpret_cast<void*>(pcm), sampleCount, sampleFreqHz));
+
+  ResourceKey_t newKey = nextResourceKey;
+  ++nextResourceKey;
+  sounds.emplace(std::make_pair(newKey, resource));
+
   delete[] pcm;
 }
 
@@ -212,11 +229,13 @@ void shutdown()
     if(alIsSource(source.first))
       alas(alSourceStop(source.first));
 
-  for(auto& [key, value] : soundBuffers){
-    if(alIsBuffer(value)){
-      alas(alDeleteBuffers(1, &value));
+  for(auto& [key, resource] : sounds){
+    if(alIsBuffer(resource._bufferKey)){
+      alas(alDeleteBuffers(1, &resource._bufferKey));
     }
   }
+
+  sounds.clear();
 
   alcMakeContextCurrent(nullptr);
   alcDestroyContext(sfxContext); 
@@ -225,15 +244,32 @@ void shutdown()
 
 static ResourceKey_t useErrorSound()
 {
-  ResourceKey_t newKey {0};
-  log::log(log::INFO, log::msg_sfx_using_error_sound);
-  newKey = nextSoundKey++;
-  soundBuffers.emplace(std::make_pair(newKey, errorSoundBuffer));
-  return newKey; 
+  for(auto& pair : sounds){
+    if(pair.second._name == errorSoundName){
+      pair.second._referenceCount++;
+      std::string addendum = "ref count=" + std::to_string(pair.second._referenceCount);
+      log::log(log::INFO, log::msg_sfx_using_error_sound, addendum);
+      return pair.first;
+    }
+  }
+
+  assert(0); // This would mean the error sprite has not been generated.
 }
 
 ResourceKey_t loadSound(ResourceName_t soundName)
 {
+  log::log(log::INFO, log::msg_sfx_loading_sound, soundName);
+
+  for(auto& pair : sounds){
+    if(pair.second._name == soundName){
+      pair.second._referenceCount++;
+      std::string addendum {"ref count="};
+      addendum += std::to_string(pair.second._referenceCount);
+      log::log(log::INFO, log::msg_sfx_sound_already_loaded, addendum);
+      return pair.first;
+    }
+  }
+
   WaveSound wav {};
 
   std::string wavpath {};
@@ -260,29 +296,53 @@ ResourceKey_t loadSound(ResourceName_t soundName)
        return useErrorSound()
   );
 
-  ResourceKey_t newKey = nextSoundKey++;
-  soundBuffers.emplace(std::make_pair(newKey, buffer));
+  SoundResource resource {};
+  resource._bufferKey = buffer;
+  resource._name = soundName;
+  resource._referenceCount = 1;
+
+  ResourceKey_t newKey = nextResourceKey;
+  ++nextResourceKey;
+  sounds.emplace(std::make_pair(newKey, resource));
+
+  std::string addendum{};
+  addendum += "[name:key]=[";
+  addendum += soundName;
+  addendum += ":";
+  addendum += std::to_string(newKey);
+  addendum += "]";
+  log::log(log::INFO, log::msg_sfx_load_sound_success, addendum);
+
   return newKey;
 }
 
 void unloadSound(ResourceKey_t soundKey)
 {
-  stopSound(soundKey);
-  auto search = soundBuffers.find(soundKey);
-  if(search != soundBuffers.end()){
-    alec(alDeleteBuffers(1, &search->second), 0);
-    soundBuffers.erase(search);
+  auto search = sounds.find(soundKey);
+  if(search == sounds.end()){
+    log::log(log::WARN, log::msg_sfx_unloading_nonexistent_sound, std::to_string(soundKey));
+    return;
+  }
+
+  SoundResource& resource = search->second;
+  resource._referenceCount--;
+  if(resource._referenceCount <= 0 && resource._name != errorSoundName){
+    stopSound(soundKey);
+    if(alIsBuffer(resource._bufferKey))
+      alec(alDeleteBuffers(1, &resource._bufferKey), 0);
+    sounds.erase(search);
+    log::log(log::INFO, log::msg_sfx_unload_sound_success, "key=" + std::to_string(soundKey));
   }
 }
 
 void playSound(ResourceKey_t soundKey, bool loop)
 {
-  auto search = soundBuffers.find(soundKey);
-  if(search == soundBuffers.end()){
-    log::log(log::WARN, log::msg_sfx_missing_sound, std::to_string(soundKey));
+  auto search = sounds.find(soundKey);
+  if(search == sounds.end()){
+    log::log(log::WARN, log::msg_sfx_playing_nonexistent_sound, "key=" + std::to_string(soundKey));
     return;
   }
-  SoundBufferKey_t buffer = search->second;
+  SoundBufferKey_t buffer = search->second._bufferKey;
 
   for(auto source : soundSources){
     ALint state;
