@@ -3,5 +3,5 @@ gmon.out
 callgrind.out.*
 output*
 temp
-bin
-bin/*
+build/*
+build
