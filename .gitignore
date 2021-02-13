@@ -1,6 +1,7 @@
 log
-example
 gmon.out
 callgrind.out.*
 output*
 temp
+bin
+bin/*
