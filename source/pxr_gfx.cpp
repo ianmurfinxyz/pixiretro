@@ -28,7 +28,9 @@ namespace gfx
 {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // MODULE DATA
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 static constexpr int MIN_OPENGL_VERSION_MAJOR = 2;
@@ -67,9 +69,6 @@ static ResourceKey_t nextResourceKey {0};
 static std::map<ResourceKey_t, SpritesheetResource> spritesheets;
 static std::map<ResourceKey_t, FontResource> fonts;
 
-//static std::vector<Sprite> sprites;
-//static std::vector<Font> fonts;
-
 static constexpr const char* errorSpritesheetName {"error_spritesheet"};
 static constexpr const char* errorFontName {"error_font"};
 
@@ -77,18 +76,10 @@ static SpritesheetResource errorSpritesheet;
 static FontResource errorFont;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // MODULE FUNCTIONS
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
-static bool operator<(const ColorBand& lhs, const ColorBand& rhs)
-{
-  return lhs._hi < rhs._hi;
-}
-
-static bool operator==(const ColorBand& lhs, const ColorBand& rhs)
-{
-  return lhs._hi == rhs._hi;
-}
 
 static void setViewport(iRect viewport)
 {
@@ -461,7 +452,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   ResourceKey_t newKey = nextResourceKey;
   ++nextResourceKey;
 
-  sprites.emplace(std::make_pair(newKey, std::move(resource)));
+  spritesheets.emplace(std::make_pair(newKey, std::move(resource)));
 
   std::string addendum{};
   addendum += "[name:key]=[";
@@ -474,19 +465,19 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   return newKey;
 }
 
-void unloadSprite(ResourceKey_t spriteKey)
+void unloadSpritesheet(ResourceKey_t sheetKey)
 {
-  auto search = sprites.find(spriteKey);
-  if(search == sprites.end()){
-    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "key=" + std::to_string(spriteKey));
+  auto search = spritesheets.find(sheetKey);
+  if(search == spritesheets.end()){
+    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "key=" + std::to_string(sheetKey));
     return;
   }
 
   SpriteResource& resource = search->second;
   resource._referenceCount--;
-  if(resource._referenceCount <= 0 && resource._name != errorSpriteName){
-    log::log(log::INFO, log::msg_gfx_unload_sprite_success, "key=" + std::to_string(spriteKey));
-    sprites.erase(search);
+  if(resource._referenceCount <= 0 && resource._name != errorSpritesheetName){
+    log::log(log::INFO, log::msg_gfx_unload_sprite_success, "key=" + std::to_string(sheetKey));
+    spritesheets.erase(search);
   }
 }
 
@@ -629,10 +620,10 @@ void unloadFont(ResourceKey_t fontKey)
   }
 }
 
-int getSpriteFrameCount(ResourceKey_t spriteKey)
+int getSpriteCount(ResourceKey_t sheetKey)
 {
-  auto search = sprites.find(spriteKey);
-  assert(search != sprites.end());
+  auto search = spritesheets.find(sheetKey);
+  assert(search != spritesheets.end());
   return search->second._sprite._frames.size();
 }
 
@@ -670,54 +661,39 @@ void clearScreenColor(Color4u color, int screenid)
     screen._pxColors[px] = color;
 }
 
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int screenid)
+void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  auto search = sprites.find(spriteKey);
-  if(search == sprites.end()){
+  auto search = spritesheets.find(sheetKey);
+  if(search == spritesheets.end()){
     assert(0);
   }
-  const auto& sprite = search->second._sprite;
-  const Color4u* const * spritePxs = sprite._image.getPixels();
+  const auto& sheet = search->second._sheet;
+  const Color4u* const * sheetPxs = sheet._image.getPixels();
 
-  assert(0 <= frameid);
-  frameid = frameid < sprite._frames.size() ? frameid : 0; // may be an error sprite with 1 frame.
-  auto& frame = sprite._frames[frameid];
+  assert(0 <= spriteid);
+  spriteid = (spriteid < sheet._sprites.size()) ? spriteid : 0; // may be an error sheet with 1 sprite.
+  auto& sprite = sheet._sprites[spriteid];
 
   int screenRow {0}, screenCol{0}, screenRowOffset{0}, screenRowBase{0}, screenColBase{0};
-  screenRowBase = position._y + frame._origin._y;
-  screenColBase = position._x + frame._origin._x;
-  for(int frameRow = 0; frameRow < frame._size._y; ++frameRow){
-    screenRow = screenRowBase + frameRow;
+  screenRowBase = position._y + sprite._origin._y;
+  screenColBase = position._x + sprite._origin._x;
+  for(int spriteRow = 0; spriteRow < sprite._size._y; ++spriteRow){
+    screenRow = screenRowBase + spriteRow;
     if(screenRow < 0) continue;
     if(screenRow >= screen._resolution._y) break;
     screenRowOffset = screenRow * screen._resolution._x;
-    for(int frameCol = 0; frameCol < frame._size._x; ++frameCol){
-      screenCol = screenColBase + frameCol;
+    for(int spriteCol = 0; spriteCol < sprite._size._x; ++spriteCol){
+      screenCol = screenColBase + spriteCol;
       if(screenCol < 0) continue;
       if(screenCol >= screen._resolution._x) break;
-      const Color4u& pxColor = spritePxs[frame._position._y + frameRow][frame._position._x + frameCol];
+      const Color4u& pxColor = sheetPxs[sprite._position._y + spriteRow][sprite._position._x + spriteCol];
       if(pxColor._a == ALPHA_KEY) continue;
-      if(screen._cmode == ColorMode::FULL_RGB){
-        screen._pxColors[screenCol + screenRowOffset] = pxColor;
-      }
-      else if(screen._cmode == ColorMode::YAXIS_BANDED){
-        int bandid{0};
-        while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-          ++bandid;
-        screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-      }
-      else if(screen._cmode == ColorMode::XAXIS_BANDED){
-        int bandid{0};
-        while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-          ++bandid;
-        screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-      }
-      else{
-        screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
-      }
+      pxColor = (screen._xmode == PixelMode::SHADER) ? 
+                screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
+      screen._pxColors[screenCol + screenRowOffset] = pxColor;
     }
   }
 }
@@ -727,8 +703,8 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, i
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  auto search = sprites.find(spriteKey);
-  assert(search != sprites.end());
+  auto search = spritesheets.find(spriteKey);
+  assert(search != spritesheets.end());
   const auto& sprite = search->second._sprite;
   const Color4u* const * spritePxs = sprite._image.getPixels();
 
@@ -753,24 +729,9 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, i
     screenRowOffset = screenRow * screen._resolution._x;
     const Color4u& pxColor = spritePxs[frame._position._y + frameRow][spriteCol];
     if(pxColor._a == ALPHA_KEY) continue;
-    if(screen._cmode == ColorMode::FULL_RGB){
-      screen._pxColors[screenCol + screenRowOffset] = pxColor;
-    }
-    else if(screen._cmode == ColorMode::YAXIS_BANDED){
-      int bandid{0};
-      while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-        ++bandid;
-      screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-    }
-    else if(screen._cmode == ColorMode::XAXIS_BANDED){
-      int bandid{0};
-      while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-        ++bandid;
-      screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-    }
-    else{
-      screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
-    }
+    pxColor = (screen._xmode == PixelMode::SHADER) ? 
+              screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
+    screen._pxColors[screenCol + screenRowOffset] = pxColor;
   }
 }
 
@@ -786,10 +747,7 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
 
   int baseLineY = position._y + font._baseLine;
   for(char c : text){
-    if(c == '\n'){
-      //baseLineY -= font._lineHeight; TODO ignore for now.
-      continue;
-    }
+    if(c == '\n') continue;
     assert(' ' <= c && c <= '~');
     const Glyph& glyph = font._glyphs[static_cast<int>(c - ' ')];
     int screenRow{0}, screenCol{0}, screenRowBase{0}, screenRowOffset {0};
@@ -805,24 +763,9 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
         if(screenCol >= screen._resolution._x) return;
         const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
         if(pxColor._a == ALPHA_KEY) continue;
-        if(screen._cmode == ColorMode::FULL_RGB){
-          screen._pxColors[screenCol + screenRowOffset] = pxColor;
-        }
-        else if(screen._cmode == ColorMode::YAXIS_BANDED){
-          int bandid{0};
-          while(screenRow > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-            ++bandid;
-          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-        }
-        else if(screen._cmode == ColorMode::XAXIS_BANDED){
-          int bandid{0};
-          while(screenCol > screen._bands[bandid]._hi && bandid < SCREEN_BAND_COUNT)
-            ++bandid;
-          screen._pxColors[screenCol + screenRowOffset] = screen._bands[bandid]._color;
-        }
-        else{
-          screen._pxColors[screenCol + screenRowOffset] = screen._bitmapColor;
-        }
+        pxColor = (screen._xmode == PixelMode::SHADER) ? 
+                  screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
+        screen._pxColors[screenCol + screenRowOffset] = pxColor;
       }
     }
     position._x += glyph._xadvance + font._glyphSpace;
@@ -905,18 +848,10 @@ void drawPoint(Vector2i position, Color4u color, int screenid)
 
 void present()
 {
-  //--------------------------------------------------------------------------------
-  //
-  // TODO TEMP
-  //
-  //
-  //auto now0 = std::chrono::high_resolution_clock::now();
-  //
-  //
-  //--------------------------------------------------------------------------------
-
   for(auto& screen : screens){
-    if(!screen._isEnabled) continue;
+    if(!screen._isEnabled) 
+      continue;
+
     glVertexPointer(2, GL_INT, 0, screen._pxPositions);
     glColorPointer(4, GL_UNSIGNED_BYTE, 0, screen._pxColors);
     glPointSize(screen._pxSize);
@@ -924,18 +859,6 @@ void present()
   }
 
   SDL_GL_SwapWindow(window);
-
-  //--------------------------------------------------------------------------------
-  //
-  // TODO TEMP
-  //
-  //
-  //auto now1 = std::chrono::high_resolution_clock::now();
-  //auto dt = std::chrono::duration_cast<std::chrono::microseconds>(now1 - now0);
-  //std::cout << "present time: " << dt.count() << "us" << std::endl;
-  //
-  //
-  //--------------------------------------------------------------------------------
 }
 
 void setScreenColorMode(ColorMode mode, int screenid)
@@ -978,10 +901,8 @@ void setScreenManualPixelSize(int pxSize, int screenid)
     autoAdjustScreen(windowSize, screen);
 }
 
-void setScreenColorBand(Color4u color, int hi, int bandid, int screenid)
+void setPixelShader(PixelShader_t shader, int screenid)
 {
-  assert(0 <= screenid && screenid < screens.size());
-  auto& screen = screens[screenid];
 
   assert(0 <= bandid && bandid < SCREEN_BAND_COUNT);
   auto& band = screen._bands[bandid];
@@ -1028,18 +949,26 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey)
   return size;
 }
 
-bool isErrorSprite(ResourceKey_t spriteKey)
+bool isErrorSpritesheet(ResourceKey_t sheetKey)
 {
-  auto search = sprites.find(spriteKey);
-  assert(search != sprites.end());
-  return search->second._name == errorSpriteName;
+  auto search = spritesheets.find(sheetKey);
+  assert(search != spritesheets.end());
+  return search->second._name == errorSpritesheetName;
 }
 
-Vector2i getSpriteSize(ResourceKey_t spriteKey, int frameid)
+Vector2i getSpritesheetSize(ResourceKey_t sheetKey)
 {
-  auto search = sprites.find(spriteKey);
-  assert(search != sprites.end());
-  return search->second._sprite._image.getSize();
+  auto search = spritesheets.find(sheetKey);
+  assert(search != spritesheets.end());
+  return search->second._sheet._image.getSize();
+}
+
+Vector2i getSpriteSize(ResourceKey_t sheetKey, int spriteid)
+{
+  auto search = spritesheets.find(sheetKey);
+  assert(search != spritesheets.end());
+  assert(0 <= spriteid && spriteid < search->second._sheet._sprites.size());
+  return search->second._sheet._sprites[spriteid]._size;
 }
 
 } // namespace gfx

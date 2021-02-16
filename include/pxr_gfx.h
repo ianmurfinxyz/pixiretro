@@ -121,29 +121,20 @@ struct Spritesheet
 };
 
 //
-// The color mode controls the final color of pixels that result from all draw calls.
+// The pixel mode sets whether to use a pixel shader in draw calls.
 //
 // The modes apply as follows:
 //
-//      FULL_RGB     - unrestricted colors; colors taken from arguments in draw call (a gfx 
-//                     resource argument or a direct color argument).
+//      NO_SHADER - the default. Pixels colors are taken direct from draw call args (either
+//                  an explicit color arg or the gfx resource).
 //
-//      YAXIS_BANDED - restricted colors; the color of a pixel is determined by its y-axis
-//                     position on the screen being drawn to. The bands set the colors mapped
-//                     to each position. Color arguments in draw calls are ignored.
+//      SHADER    - Pixel colors are fed into a user provided shader function along with the
+//                  pixel coordinate. The output color is then drawn to the screen.
 //
-//      XAXIS_BANDED - restricted colors; the color of a pixel is determined by its x-axis
-//                     position on the screen being drawn to. The bands set the colors mapped
-//                     to each position. Color arguments in draw calls are ignored.
-//
-//      BITMAPS      - all pixels drawn adopt the bitmap color of the screen being drawn to.
-//
-enum class ColorMode
+enum class PixelMode
 {
-  FULL_RGB,
-  YAXIS_BANDED,
-  XAXIS_BANDED,
-  BITMAPS
+  NO_SHADER,
+  SHADER
 };
 
 //
@@ -199,22 +190,9 @@ enum class PositionMode
 };
 
 //
-// Color bands apply to a single axis (x or y). All pixels with x/y position greater than
-// the 'hi' of a band 'i' and less than the 'hi' of the next band 'i+1' will adopt the color
-// of the band 'i+1' (if drawing in a banded color mode).
+// The signiture of pixel shader functions to be set by the user if using PixelMode::SHADER.
 //
-struct ColorBand
-{
-  ColorBand() : _color{0, 0, 0, 0}, _hi{0}{}
-  ColorBand(Color4u color, int hi) : _color{color}, _hi{hi}{}
-  Color4u _color;
-  int _hi;
-};
-
-//
-// The max number of different color bands a screen can use.
-//
-constexpr int SCREEN_BAND_COUNT = 5;
+using PixelShader_t = Color4u (*)(Color4u inColor, int pxx int pxy);
 
 //
 // A virtual screen of virtual pixels used to create a layer of abstraction from the display
@@ -229,7 +207,7 @@ constexpr int SCREEN_BAND_COUNT = 5;
 //          |
 //  origin  o---> x
 //
-// All screens have 3 modes of operation: position mode, size mode and color mode. For details
+// All screens have 3 modes of operation: position mode, size mode and pixel mode. For details
 // of the modes see the modes enumerations above.
 //
 // Screens do not support any color blending however they do support a color key of sorts to 
@@ -242,27 +220,21 @@ constexpr int SCREEN_BAND_COUNT = 5;
 // transparent pixels in a screen will allow the corresponding pixel of any screens lower in the 
 // stacking order to show through.
 //
-// devnote: All drawing routines are effectively software routines thus read/write access to 
-// the virtual pixels needs to be optimal, thus pixel data is stored via raw pointer arrays.
-//
-// devnote: The pixel arrays are flattened 1D arrays so they can be passed direct to opengl.
-//
 struct Screen
 {
-  std::array<ColorBand, SCREEN_BAND_COUNT> _bands;
+  PXShader_t   _pxShader;
   PositionMode _pmode;
-  SizeMode _smode;
-  ColorMode _cmode;
-  Vector2i _position;                // position w.r.t the window.
-  Vector2i _manualPosition;          // position w.r.t the window when in manual position mode.
-  Vector2i _resolution;
-  Color4u _bitmapColor;
-  int _pxSize;                       // size of virtual pixels (unit: real pixels).
-  int _pxManualSize;                 // size of virtual pixels when in manual size mode.
-  int _pxCount;                      // total number of virtual pixels on the screen.
-  Color4u* _pxColors;                // accessed [col + (row * width)]
-  Vector2i* _pxPositions;            // accessed [col + (row * width)]
-  bool _isEnabled;
+  SizeMode     _smode;
+  PixelMode    _xmode;
+  Vector2i     _position;        // position w.r.t window space.
+  Vector2i     _manualPosition;  // position w.r.t window space when in manual position mode.
+  Vector2i     _resolution;      // size/dimensions of the virtual screen.
+  int          _pxSize;          // size of virtual pixels (unit: real pixels).
+  int          _pxManualSize;    // size of virtual pixels when in manual size mode.
+  int          _pxCount;         // total number of virtual pixels on the screen.
+  Color4u*     _pxColors;        // accessed [col + (row * width)]
+  Vector2i*    _pxPositions;     // accessed [col + (row * width)]
+  bool         _isEnabled;       // enable/disable drawing this screen to the window.
 };
 
 //
@@ -412,9 +384,9 @@ void drawPoint(Vector2i position, Color4u color, int screenid);
 void present();
 
 //
-// Changes the color mode of a screen for all future draw calls.
+// Changes the pixel mode of a screen for all future draw calls.
 //
-void setScreenColorMode(ColorMode mode, int screenid);
+void setScreenPixelMode(PixelMode mode, int screenid);
 
 //
 // Changes the size mode of a screen with immediate effect.
@@ -437,13 +409,10 @@ void setScreenManualPosition(Vector2i position, int screenid);
 void setScreenManualPixelSize(int pxSize, int screenid);
 
 //
-// Configures one of the color bands of a screen.
+// Sets the pixel shader function to use for a particular screen. This function will only be 
+// used if the screen is in PixelMode::SHADER.
 //
-// note: setting hi to 0 disables the band.
-//
-// note: asserts 0 <= bandid < SCREEN_BAND_COUNT.
-//
-void setScreenColorBand(Color4u color, int hi, int bandid, int screenid);
+void setPixelShader(PixelShader_t shader, int screenid);
 
 //
 // Sets the bitmap color of a screen.
@@ -471,6 +440,12 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey);
 // testing if a spritesheet load failed.
 //
 bool isErrorSprite(ResourceKey_t sheetKey);
+
+//
+// Utility to access the size of a spritesheet.
+//
+Vector2i getSpritesheetSize(ResourceKey_t sheetKey);
+
 
 //
 // Utility to access the size of a sprite within a spritesheet.
