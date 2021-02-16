@@ -1,5 +1,5 @@
-#ifndef _FILERC_H_
-#define _FILERC_H_
+#ifndef _PIXIRETRO_IO_RC_H_
+#define _PIXIRETRO_IO_RC_H_
 
 #include <unordered_map>
 #include <initializer_list>
@@ -8,7 +8,16 @@
 
 namespace pxr
 {
+namespace io
+{
 
+//
+// The directory on the filesystem where rc files are expected to be found w.r.t the app
+// root directory.
+//
+static constexpr const char* RESOURCSE_PATH_RC {"assets/rc/"};
+
+//
 // Represents a generic resource/config file which contains name=value property pairs. Property
 // values can be of either int, float or bool type.
 //
@@ -27,18 +36,21 @@ namespace pxr
 // write can also be used to generate an rc file of this type in the file system if one does not
 // exist. The generated file will contain name=value entries for all properties with value equal
 // to the default value for the properties (if changes to the properties have not been made).
-class FileRC
+//
+class RC
 {
 public:
+
   static constexpr char comment {'#'};     // prefix for comment lines in an rc file.
   static constexpr char seperator {'='};   // seperator used in name=value pairs.
 
   using Key_t = int;
   using Value_t = std::variant<int, float, bool>;
 
-  // When creating a new property the 'default', 'min' and 'max' values MUST be of 
-  // the same type.
-
+  //
+  // When creating a new property it is a precondition that the 'default', 'min' and 'max' 
+  // values be of the same type; this precondition is asserted true.
+  //
   struct Property
   {
     Property() = default;
@@ -53,10 +65,17 @@ public:
   };
 
 public:
+
+  //
+  // Load and rc file from the filesystem. Expects to find the file in the RESOURCE_PATH_RC 
+  // directory.
+  //
   int load(const std::string& filename);
 
+  //
   // Writes name=value pairs to a file for all properties. If genComments=true a comment
   // is generated for each property which informs of the default, min and max values.
+  //
   bool write(const std::string& filepath, bool genComments = true);
 
   int getIntValue(Key_t key) const;
@@ -67,25 +86,30 @@ public:
   void setFloatValue(Key_t key, float value);
   void setBoolValue(Key_t key, bool value);
 
-  // resets all properties to their default values.
+  //
+  // Resets all properties to their default values.
+  //
   void applyDefaults();
 
 protected:
+
+  //
   // Call this base constructor in the default constructor of the derived class to
-  // add/enumerate the properties in the new rc file type.
-  FileRC(std::initializer_list<Property> properties);
+  // add/enumerate the properties in the new rc file type being derived.
+  //
+  RC(std::initializer_list<Property> properties);
 
 private:
   bool parseInt(const std::string& value, int& result);
   bool parseFloat(const std::string& value, float& result);
   bool parseBool(const std::string& value, bool& result);
-
   void printValue(const Value_t& value, std::ostream& os);
   
 private:
   std::unordered_map<Key_t, Property> _properties;
 };
 
+} // namespace io
 } // namespace pxr
 
 #endif

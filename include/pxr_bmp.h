@@ -1,33 +1,31 @@
-#ifndef _PIXIRETRO_BMPIMAGE_H_
-#define _PIXIRETRO_BMPIMAGE_H_
-
-//----------------------------------------------------------------------------------------------//
-// FILE: bmpimage.h                                                                             //
-// AUTHOR: Ian Murfin - github.com/ianmurfinxyz                                                 //
-//----------------------------------------------------------------------------------------------//
+#ifndef _PIXIRETRO_IO_BMPIMAGE_H_
+#define _PIXIRETRO_IO_BMPIMAGE_H_
 
 #include <fstream>
 #include "color.h"
-#include "math.h"
+#include "math/vec.h"
 
 namespace pxr
 {
-namespace gfx
+namespace io
 {
 
-class BmpImage
+//
+// Represents a bitmap (.bmp) image file.
+//
+class Bmp
 {
 public:
   static constexpr const char* FILE_EXTENSION {".bmp"};
 
 public:
-  BmpImage();
-  ~BmpImage();
+  Bmp();
+  ~Bmp();
 
-  BmpImage(const BmpImage& other);
-  BmpImage(BmpImage&& other);
-  BmpImage& operator=(const BmpImage& other);
-  BmpImage& operator=(BmpImage&& other);
+  Bmp(const Bmp& other);
+  Bmp(Bmp&& other);
+  Bmp& operator=(const Bmp& other);
+  Bmp& operator=(Bmp&& other);
 
   bool load(std::string filepath);
   void create(Vector2i size, Color4u fill);
@@ -53,9 +51,11 @@ private:
   static constexpr int V4INFOHEADER_SIZE_BYTES {108};
   static constexpr int V5INFOHEADER_SIZE_BYTES {124};
 
+  //
   // This is a somewhat arbitrary choice made to avoid allocating excessive memory
   // and to aid checking bmp image integrity. It is very game dependent so feel free
   // to adjust these limits to suit your needs.
+  //
   static constexpr int BMP_MAX_WIDTH {256};
   static constexpr int BMP_MAX_HEIGHT {128};
 
@@ -109,11 +109,19 @@ private:
   void extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead);
 
 private:
-  Color4u** _pixels;    // _pixels = ptr to rows, thus accessed _pixels[row][col]
-  Vector2i _size;       // x=width/numCols, y=height/numRows
+  //
+  // Raw pixel data accessed by [row][col], i.e. _pixels is a pointer to an array of pixel
+  // rows.
+  //
+  Color4u** _pixels;
+
+  //
+  // Size/dimensions of the bmp image: x=width (num cols) and y=height (num rows).
+  //
+  Vector2i _size;
 };
 
-} // namespace gfx
+} // namespace io
 } // namespace pxr
 
 #endif

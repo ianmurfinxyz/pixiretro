@@ -16,13 +16,13 @@ namespace gfx
 //
 // The relative paths to resource files on disk; save your assets to these directories.
 //
-constexpr const char* RESOURCE_PATH_SPRITES = "assets/sprites/";
+constexpr const char* RESOURCE_PATH_SPRITESHEETS = "assets/spritesheets/";
 constexpr const char* RESOURCE_PATH_FONTS = "assets/fonts/";
 
 //
 // The file extensions for the resource's xml meta files.
 //
-constexpr const char* XML_RESOURCE_EXTENSION_SPRITES = ".sprite";
+constexpr const char* XML_RESOURCE_EXTENSION_SPRITESHEETS = ".spritesheet";
 constexpr const char* XML_RESOURCE_EXTENSION_FONTS = ".font";
 
 //
@@ -73,37 +73,38 @@ struct Font
 };
 
 //
-// A sprite frame is a sub-region of a sprite specified w.r.t a cartesian coordinate space local 
-// to the sprite. The sprite space is the same as that of the bmp image.
+// A sprite is a sub-region of a spritesheet specified w.r.t a cartesian coordinate space local 
+// to the spritesheet. The spritesheet space is the same as that of the bmp image where the
+// origin is in the bottom-left corner.
 //
-// Each frame within a sprite also has its own cartesian coordinate space which the frame's
-// origin is specified relative to. The frame space is thus a subspace of the sprite space and
+// Each sprite within a spritesheet also has its own cartesian coordinate space which the sprites's
+// origin is specified relative to. The sprite space is thus a subspace of the sprite space and
 // is axis aligned and of equal scale to its parent space.
 //
-//    sy                                 KEY:
-//    ^                                  sx = sprite's x axis
-//    |      fy                          sy = sprite's y axis
-//    |      ^. . . . . .                fx = frame's x axis
-//    |      |   ████   .                fy = frame's y axis
+//    ssy                                KEY:
+//    ^                                  ssx = spritesheet's x axis
+//    |      sy                          ssy = spritesheet's y axis
+//    |      ^. . . . . .                sx = sprite's x axis
+//    |      |   ████   .                sy = sprite's y axis
 //    |      |  ███X██  .
-//    |      | ██ ██ ██ .                fxp, fyp = position of frame space w.r.t sprite space.
+//    |      | ██ ██ ██ .                sxp, syp = position of sprite space w.r.t spritesheet space.
 //    |      |  ██████  .
-//    |      o------------> fx           X = position of the frame origin w.r.t frame space.
-//    |  (fxp, fyp) 
-//    o----------------------> sx
+//    |      o------------> sx           X = position of the sprite origin w.r.t sprite space.
+//    |  (sxp, syp) 
+//    o----------------------> ssx
 //
-// The frame position should be the pixel coordinate of the frame's bottom-left most pixel
-// w.r.t to the sprite space (the bmp image).
+// The sprite position should be the pixel coordinate of the sprite's bottom-left most pixel
+// w.r.t to the spritesheet space (the bmp image).
 //
-// The frame size is the dimensions of the frame w.r.t either space since both spaces have the
+// The sprite size is the dimensions of the sprite w.r.t either space since both spaces have the
 // same scale.
 //
-// The origin should be a pixel coordinate w.r.t the frame space not the sprite. When drawing a
-// frame, the position argument to the draw call is taken as the position of the frame origin.
-// Thus if the origin is in the center of the frame then the frame will be drawn centered on the
+// The origin should be a pixel coordinate w.r.t the sprite space not the spritesheet. When drawing a
+// sprite, the position argument to the draw call is taken as the position of the sprite origin.
+// Thus if the origin is in the center of the sprite then the sprite will be drawn centered on the
 // position argument.
 //
-struct SpriteFrame
+struct Sprite
 {
   Vector2i _position;
   Vector2i _size;
@@ -111,12 +112,12 @@ struct SpriteFrame
 };
 
 //
-// A sprite organises a bitmap image into frames.
+// A spritesheet organises a bitmap image into sprites.
 //
-struct Sprite
+struct Spritesheet
 {
   BmpImage _image;
-  std::vector<SpriteFrame> _frames;
+  std::vector<Sprite> _sprites;
 };
 
 //
@@ -294,29 +295,29 @@ int createScreen(Vector2i resolution);
 void onWindowResize(Vector2i windowSize);
 
 //
-// Loads a sprite from RESOURCE_PATH_SPRITES directory in the file system.
+// Loads a spritesheet from RESOURCE_PATH_SPRITESHEET directory in the file system.
 //
-// The 'name' arg must be the name of the asset files for the sprite. All sprites have 2
-// asset files: an xml meta file and a bmp image file. 
+// The 'name' arg must be the name of the asset files for the spritesheet. All spritesheets have 
+// 2 asset files: an xml meta file and a bmp image file. 
 //
 // The naming format for the asset files is:
 //    <name>.<extension>
 //
-// see XML_RESOURCE_EXTENSION_SPRITES and BmpImage::FILE_EXTENSION for the extensions.
+// see XML_RESOURCE_EXTENSION_SPRITESHEET and BmpImage::FILE_EXTENSION for the extensions.
 //
 //
-// Returns the resource key the loaded sprite was mapped to which is needed for the drawing
-// routines. Internally sprites are reference counted and thus can be loaded multiple times
-// without duplication, each time returning the same key. To actually remove a sprite from
-// memory it is necessary to unload a sprite an equal number of times to which it was loaded.
+// Returns the resource key the loaded spritesheet was mapped to which is needed for the drawing
+// routines. Internally spritesheets are reference counted and thus can be loaded multiple times
+// without duplication, each time returning the same key. To actually remove a spritesheet from
+// memory it is necessary to unload a spritesheet an equal number of times to which it was loaded.
 //
-ResourceKey_t loadSprite(ResourceName_t name);
+ResourceKey_t loadSpritesheet(ResourceName_t name);
 
 //
-// Unloads a sprite. The sprite will only be removed from memory if the reference count drops
-// to zero.
+// Unloads a spritesheet. The spritesheet will only be removed from memory if the reference 
+// count drops to zero.
 //
-void unloadSprite(ResourceKey_t spriteKey);
+void unloadSpritesheet(ResourceKey_t sheetKey);
 
 //
 // Loads a font from RESOURCE_PATH_FONTS directory in the file system.
@@ -343,9 +344,9 @@ ResourceKey_t loadFont(ResourceName_t name);
 void unloadFont(ResourceKey_t fontKey);
 
 //
-// Provides access to the frame count of sprites.
+// Provides access to the sprite count of a spritesheet.
 //
-int getSpriteFrameCount(ResourceKey_t spriteKey);
+int getSpriteCount(ResourceKey_t sheetKey);
 
 //
 // Clears the entire window to a solid color.
@@ -375,15 +376,15 @@ void clearScreenShade(int shade, int screenid);
 void clearScreenColor(Color4u color, int screenid);
 
 //
-// Draw a sprite.
+// Draw a sprite of a spritesheet.
 //
-void drawSprite(Vector2i position, ResourceKey_t spriteKey, int frameid, int screenid);
+void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int screenid);
 
 //
-// Takes a column of pixels from a specific frame of a sprite and draws it with the bottom
+// Takes a column of pixels from a specific sprite of a spritesheet and draws it with the bottom
 // most pixel in the column at position.
 //
-void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, int colid, int screenid);
+void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, int spriteid, int colid, int screenid);
 
 // 
 // Draw a text string.
@@ -466,15 +467,15 @@ void disableScreen(int screenid);
 Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey);
 
 //
-// Utility to test if a sprite resource key is associated with the error sprite. Allows testing
-// if a sprite load failed.
+// Utility to test if a spritesheet resource key is associated with the error spritesheet. Allows 
+// testing if a spritesheet load failed.
 //
-bool isErrorSprite(ResourceKey_t spriteKey);
+bool isErrorSprite(ResourceKey_t sheetKey);
 
 //
-// Utility to access the size of sprite frames.
+// Utility to access the size of a sprite within a spritesheet.
 //
-Vector2i getSpriteSize(ResourceKey_t spriteKey, int frameid);
+Vector2i getSpriteSize(ResourceKey_t sheetKey, int spriteid);
 
 } // namespace gfx
 } // namespace pxr

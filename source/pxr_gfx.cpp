@@ -48,9 +48,9 @@ static SDL_GLContext glContext;
 static iRect viewport;
 static std::vector<Screen> screens;
 
-struct SpriteResource
+struct SpritesheetResource
 {
-  Sprite _sprite;
+  Spritesheet _sheet;
   std::string _name;
   int _referenceCount;
 };
@@ -64,16 +64,16 @@ struct FontResource
 
 static ResourceKey_t nextResourceKey {0};
 
-static std::map<ResourceKey_t, SpriteResource> sprites;
+static std::map<ResourceKey_t, SpritesheetResource> spritesheets;
 static std::map<ResourceKey_t, FontResource> fonts;
 
 //static std::vector<Sprite> sprites;
 //static std::vector<Font> fonts;
 
-static constexpr const char* errorSpriteName {"error_sprite"};
+static constexpr const char* errorSpritesheetName {"error_spritesheet"};
 static constexpr const char* errorFontName {"error_font"};
 
-static SpriteResource errorSprite;
+static SpritesheetResource errorSpritesheet;
 static FontResource errorFont;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,26 +102,26 @@ static void setViewport(iRect viewport)
 }
 
 // 
-// Generates a red sqaure sprite with the (single) frame's origin in the bottom-left.
+// Generates a red sqaure spritesheet with the (single) sprite's origin in the bottom-left.
 //
-static void genErrorSprite()
+static void genErrorSpritesheet()
 {
   static constexpr int squareSize = 8;
 
-  SpriteResource resource {};
+  SpritesheetResource resource {};
 
-  SpriteFrame frame{};
-  frame._position = Vector2i{0, 0};
-  frame._size = Vector2i{squareSize, squareSize};
-  frame._origin = Vector2i{0, 0};
+  Sprite sprite{};
+  sprite._position = Vector2i{0, 0};
+  sprite._size = Vector2i{squareSize, squareSize};
+  sprite._origin = Vector2i{0, 0};
 
-  resource._sprite._image.create(frame._size, colors::red);
-  resource._sprite._frames.push_back(frame);
+  resource._sheet._image.create(sprite._size, colors::red);
+  resource._sheet._sprites.push_back(sprite);
 
-  resource._name = errorSpriteName;
+  resource._name = errorSpritesheetName;
   resource._referenceCount = 0;
 
-  sprites.emplace(std::make_pair(nextResourceKey++, resource));
+  spritesheets.emplace(std::make_pair(nextResourceKey++, resource));
 }
 
 //
@@ -231,7 +231,7 @@ bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_
   glEnable(GL_ALPHA_TEST);
   glAlphaFunc(GL_GREATER, 0.f);
 
-  genErrorSprite();
+  genErrorSpritesheet();
   genErrorFont();
 
   return true;
@@ -354,13 +354,13 @@ int createScreen(Vector2i resolution)
   return screenid;
 }
 
-static ResourceKey_t useErrorSprite()
+static ResourceKey_t useErrorSpritesheet()
 {
-  for(auto& pair : sprites){
-    if(pair.second._name == errorSpriteName){
+  for(auto& pair : spritesheets){
+    if(pair.second._name == errorSpritesheetName){
       pair.second._referenceCount++;
       std::string addendum = "ref count=" + std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_gfx_using_error_sprite, addendum);
+      log::log(log::INFO, log::msg_gfx_using_error_spritesheet, addendum);
       return pair.first;
     }
   }
@@ -382,44 +382,44 @@ static ResourceKey_t useErrorFont()
   assert(0);  // This would mean the error font has not been generated.
 }
 
-ResourceKey_t loadSprite(ResourceName_t name)
+ResourceKey_t loadSpritesheet(ResourceName_t name)
 {
   log::log(log::INFO, log::msg_gfx_loading_sprite, name);
 
-  for(auto& pair : sprites){
+  for(auto& pair : spritesheets){
     if(pair.second._name == name){
       pair.second._referenceCount++;
       std::string addendum {"ref count="};
       addendum += std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_gfx_sprite_already_loaded, addendum);
+      log::log(log::INFO, log::msg_gfx_spritesheet_already_loaded, addendum);
       return pair.first;
     }
   }
 
-  SpriteResource resource{};
-  Sprite& sprite = resource._sprite;
+  SpritesheetResource resource{};
+  Spritesheet& sheet = resource._sheet;
 
   resource._name = name;
   resource._referenceCount = 1;
 
   std::string bmppath{};
-  bmppath += RESOURCE_PATH_SPRITES;
+  bmppath += RESOURCE_PATH_SPRITESHEETS;
   bmppath += name;
   bmppath += BmpImage::FILE_EXTENSION;
-  if(!sprite._image.load(bmppath)){
+  if(!sheet._image.load(bmppath)){
     log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
-    return useErrorSprite();
+    return useErrorSpritesheet();
   }
 
   std::string xmlpath {};
-  xmlpath += RESOURCE_PATH_SPRITES;
+  xmlpath += RESOURCE_PATH_SPRITESHEETS;
   xmlpath += name;
-  xmlpath += XML_RESOURCE_EXTENSION_SPRITES;
+  xmlpath += XML_RESOURCE_EXTENSION_SPRITESHEETS;
   XMLDocument doc{};
   if(!parseXmlDocument(&doc, xmlpath)) 
-    return useErrorSprite();
+    return useErrorSpritesheet();
 
-  XMLElement* xmlsprite{nullptr};
+  XMLElement* xmlspritesheet{nullptr};
   XMLElement* xmlframe{nullptr};
 
   int err{0};

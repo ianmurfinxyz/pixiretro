@@ -3,59 +3,95 @@
 
 #include <memory>
 #include <chrono>
-#include <SDL2/SDL_events.h>
 
-#include "filerc.h"
+#include "io/rc.h"
 #include "app.h"
+#include "color.h"
 #include "gfx.h"
 #include "sfx.h"
-#include "color.h"
 
 namespace pxr
 {
 
+//
+// The core engine class which manages the main loop, initialisation and shutdown.
+//
 class Engine final
 {
 public:
   Engine() = default;
   ~Engine() = default;
 
+  //
+  // Call prior to all other methods to setup the engine. Takes an app instance to manage.
+  //
+  // The engine will initialize the app so it only requires a new instance, not an initialized
+  // app instance.
+  //
   void initialize(std::unique_ptr<App> app);
+
+  //
+  // Call to after run() has returned.
+  //
   void shutdown();
+
+  //
+  // Runs the game loop.
+  //
   void run();
 
 private:
+  //
+  // The system clock and resolution used to record time.
+  //
   using Clock_t = std::chrono::steady_clock;
   using TimePoint_t = std::chrono::time_point<Clock_t>;
   using Duration_t = std::chrono::nanoseconds;
 
-  static constexpr Duration_t oneMillisecond {1'000'000};
-  static constexpr Duration_t oneSecond {1'000'000'000};
-  static constexpr Duration_t oneHalfSecond {500'000'000};
-  static constexpr Duration_t oneMinute {60'000'000'000};
-  static constexpr Duration_t minFramePeriod {1'000'000};
+  static constexpr Duration_t oneMillisecond {1'000'000     };
+  static constexpr Duration_t oneSecond      {1'000'000'000 };
+  static constexpr Duration_t oneHalfSecond  {500'000'000   };
+  static constexpr Duration_t oneMinute      {60'000'000'000};
+  static constexpr Duration_t minFramePeriod {1'000'000     };
 
-  static constexpr float splashDurationSeconds {1.0f};
+  static constexpr float splashDurationSeconds     {1.0f};
   static constexpr float splashWaitDurationSeconds {1.0f};
 
   static constexpr Vector2i statsScreenResolution {500, 200};
   static constexpr Vector2i pauseScreenResolution {100, 60};
 
-  // Engine reserves this resource key for the font it uses to output engine stats.
+  //
+  // Engine reserves this resource name for the font it uses to output engine stats.
+  //
   static constexpr gfx::ResourceName_t engineFontName {"dogica8"};
 
+  //
   // Keys used by the engine for user controlled engine features. If these keys
   // clash with your application controls they can be changed here.
-  static constexpr int decrementGameClockScaleKey {SDLK_LEFTBRACKET};
+  //
+  static constexpr int decrementGameClockScaleKey {SDLK_LEFTBRACKET };
   static constexpr int incrementGameClockScaleKey {SDLK_RIGHTBRACKET};
-  static constexpr int resetGameClockScaleKey {SDLK_KP_HASH};
-  static constexpr int pauseGameClockKey {SDLK_p};
-  static constexpr int toggleDrawEngineStatsKey {SDLK_BACKQUOTE};
-  static constexpr int skipSplashKey {SDLK_ESCAPE};
+  static constexpr int resetGameClockScaleKey     {SDLK_KP_HASH     };
+  static constexpr int pauseGameClockKey          {SDLK_p           };
+  static constexpr int toggleDrawEngineStatsKey   {SDLK_BACKQUOTE   };
+  static constexpr int skipSplashKey              {SDLK_ESCAPE      };
 
+  //
+  // The name of the splash screen assets used by the engine. The engine will attempt 
+  // to load the following files:
+  //
+  //      <gfx::RESOURCE_PATH_SPRITESHEETS>/<splashName>.bmp
+  //      <gfx::RESOURCE_PATH_SPRITESHEETS>/<splashName>.spritesheet
+  //
+  //      <sfx::RESOURCE_PATH_SOUNDS>/<splashName>.wav
+  //
+  // Failure to load such files will result in the engine skipping the splash screen.
+  //
   static constexpr const char* splashName {"pixiretro_splash"};
 
-  // Clock to record the real passage of time since the app booted.
+  //
+  // A clock to record the real passage of time.
+  //
   class RealClock
   {
   public:
@@ -63,14 +99,15 @@ private:
     void reset(){_now = _start = Clock_t::now();}
     Duration_t update();
     Duration_t getNow() {return _now - _start;}
-
   private:
     TimePoint_t _start;
     TimePoint_t _now;
   };
 
-  // Clock independent of real time. Can be paused and scaled. Used as the
-  // timeline for game systems.
+  //
+  // A clock independent of real time which can be paused and scaled; used as the timeline for 
+  // the update tick allowing game time to be slowed and sped up.
+  //
   class GameClock
   {
   public:
@@ -85,13 +122,13 @@ private:
     void unpause(){_isPaused = false;}
     void togglePause(){_isPaused = !_isPaused;}
     bool isPaused() const {return _isPaused;}
-
   private:
     Duration_t _now;
     float _scale;
     bool _isPaused;
   };
 
+  //
   // A class responsible for invoking a callback at regular (tick) intervals. Used in the
   // gameloop to manage when systems are updated; e.g. game logic and drawing. Results in
   // constant time updates.
@@ -103,12 +140,22 @@ private:
   //
   // This class also measures performance statistics regarding the frequency of invocation of
   // its callback. Note that there is a difference between the target frequency and real measured
-  // frequency of inocation.
+  // frequency of callback invocation. Further the measured frequency is actually an average 
+  // value over the last half second of game time.
+  //
   class Ticker
   {
   public:
+    //
+    // The required signiture of the callback.
+    //
     using Callback_t = void (Engine::*)(float);
 
+    //
+    // The history is used to plot the performance graph for the ticker thus the size of
+    // the history determines the time span the graph covers where each sample is the 
+    // average FPS over the last half second. Thus 10 samples = 5 seconds worth of FPS values.
+    //
     static constexpr int FPS_HISTORY_SIZE {10};
 
   public:
@@ -137,16 +184,20 @@ private:
     int _ticksAccumulated;             // backlog of ticks that need to be done.
     bool _isChasingGameNow;            // ticker either 'chases' the real clock or the game clock.
 
+    //
     // Recorded history of samples for ticks per second (analagous to FPS but for ticks). Only 
     // storing the last FPS_HISTORY_SIZE samples with earlier samples being discarded.
+    //
     std::array<double, FPS_HISTORY_SIZE> _measuredTickFrequencyHistory; 
 
+    //
     // Flag cleared every frame, thus informs of a new sample only within those frames in which 
     // a call to 'doTicks' generated a new sample.
+    //
     bool _isNewTickFrequencySample;
   };
 
-  class EngineRC final : public FileRC
+  class EngineRC final : public RC
   {
   public:
     static constexpr const char* filename = "enginerc";
@@ -162,7 +213,7 @@ private:
       KEY_FPS_LOCK
     };
 
-    EngineRC() : FileRC({
+    EngineRC() : RC({
       //    key               name        default   min      max
       {KEY_WINDOW_WIDTH,  "windowWidth",  {500},   {300},   {1000}},
       {KEY_WINDOW_HEIGHT, "windowHeight", {500},   {300},   {1000}},

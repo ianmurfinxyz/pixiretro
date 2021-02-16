@@ -1,7 +1,8 @@
 #ifndef _PIXIRETRO_INPUT_H_
 #define _PIXIRETRO_INPUT_H_
 
-#include <SDL2/SDL_events.h>
+//#include <SDL2/SDL_events.h>
+struct SDL_Event;
 
 namespace pxr
 {
@@ -21,30 +22,42 @@ struct KeyLog
   bool _isReleased;     // was key released between last update tick and the current?
 };
 
+//
 // Must be called prior to any other function in this module. Results of calls prior to
 // initialization are undefined.
+//
 void initialize();
 
+//
 // Records a key event. Called by the engine in response to key events.
+//
 void onKeyEvent(const SDL_Event& event);
 
+//
 // Updates the key logs and clears the key history. Called by the engine during the update tick.
+//
 void onUpdate();
 
+//
 // Accessors for key state for each key. For use by applications to get user input.
+//
 bool isKeyDown(KeyCode key);
 bool isKeyPressed(KeyCode key);
 bool isKeyReleased(KeyCode key);
 
+//
 // Accessor to get key press history. The history is simply an ordered list of the keys
 // pressed by the user in ascending order of the time pressed. The history is wiped at the
 // end of every update tick thus the history is includes only those keys pressed since the
 // last update.
+//
 const std::vector<KeyCode>& getHistory();
 
+//
 // Simple helper to convert a key code to the ascii value of the character associated with
 // the key. Only valid for key codes which have an associated ascii value, i.e. for alpha
 // numeric keys and the space key. All other key codes return -1.
+//
 int keyToAsciiCode(KeyCode key);
 
 } // namespace input

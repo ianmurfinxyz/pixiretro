@@ -4,6 +4,7 @@
 namespace pxr
 {
 
+//
 // COLLISION RESULTS
 //
 // The following is an explanation of the data returned from a collision test between two bitmaps,

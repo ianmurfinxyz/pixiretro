@@ -6,23 +6,27 @@
 
 namespace pxr
 {
+namespace io
+{
 
 //
-// note: Only supports wave sounds with:
+// Represent a wave (.wav) sound file.
+//
+// This class only supports wave sounds with:
 //      
-//      sample depths == 8 || 16
-//      num channels  == 1 || 2
+//      sample depths == 8 or 16
+//      num channels  == 1 or 2
 //
-// i.e. mono8 || mono16 || stereo8 || stereo16.
+// i.e. mono8, mono16, stereo8 or stereo16.
 //
-class WaveSound
+class Wav
 {
 public:
   static constexpr const char* FILE_EXTENSION {".wav"};
 
 public:
-  WaveSound();
-  ~WaveSound();
+  Wav();
+  ~Wav();
 
   bool load(std::string filepath);
 
@@ -37,10 +41,10 @@ private:
   //
   // These magics are in little endian format.
   //
-  static constexpr int32_t RIFFMAGIC {0x46464952};
-  static constexpr int32_t WAVEMAGIC {0x45564157};
+  static constexpr int32_t RIFFMAGIC   {0x46464952};
+  static constexpr int32_t WAVEMAGIC   {0x45564157};
   static constexpr int32_t FORMATMAGIC {0x20746d66};
-  static constexpr int32_t DATAMAGIC {0x61746164};
+  static constexpr int32_t DATAMAGIC   {0x61746164};
 
   //
   // Used to guard against excessive file sizes.
@@ -91,6 +95,7 @@ private:
   int _numChannels;
 };
 
+} // namespace io
 } // namespace pxr
 
 #endif

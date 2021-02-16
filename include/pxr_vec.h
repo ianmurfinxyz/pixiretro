@@ -1,8 +1,7 @@
-#ifndef _PIXIRETRO_MATH_H_
-#define _PIXIRETRO_MATH_H_
+#ifndef _PIXIRETRO_MATH_VEC_H_
+#define _PIXIRETRO_MATH_VEC_H_
 
 #include <cmath>
-#include <random>
 
 namespace pxr
 {
@@ -118,47 +117,6 @@ void Vector2f::normalize()
   }
 }
 
-template<typename T>
-struct Rect
-{
-  T _x;
-  T _y;
-  T _w;
-  T _h;
-};
-
-using iRect = Rect<int32_t>;
-using fRect = Rect<float>;
-
-template<typename T, typename Dist>
-class RandBasic
-{
-public:
-  RandBasic(T lo, T hi) : d{lo, hi}
-  {
-    std::random_device r;
-    e.seed(r());
-  }
-
-  RandBasic(const RandBasic&) = delete;
-  RandBasic(RandBasic&&) = delete;
-  RandBasic& operator=(const RandBasic&) = delete;
-  RandBasic& operator=(RandBasic&&) = delete;
-
-  T operator()() {return d(e);}
-
-private:
-    std::default_random_engine e;
-    Dist d;
-};
-
-using RandInt = RandBasic<int32_t, std::uniform_int_distribution<int32_t>>;
-using RandReal = RandBasic<double, std::uniform_real_distribution<double>>;
-
 } // namespace pxr
-
-inline float lerp(float v0, float v1, float t){
-  return (1 - t) * v0 + t * v1;
-}
 
 #endif

@@ -1,7 +1,9 @@
-#include "xmlutil.h"
+#include "io/xml.h"
 #include "log.h"
 
 namespace pxr
+{
+namespace io
 {
 
 bool parseXmlDocument(XMLDocument* doc, const std::string& xmlpath)
@@ -57,4 +59,5 @@ bool extractStringAttribute(XMLElement* element, const char* attribute, const ch
   return true;
 }
 
+} // namespace io
 } // namespace pxr
