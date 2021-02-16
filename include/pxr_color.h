@@ -72,7 +72,7 @@ struct Color4f
 namespace colors
 {
   //
-  // Purse shades.
+  // Pure shades.
   //
   constexpr Color4u white   {255, 255, 255, 255};
   constexpr Color4u black   {0  , 0  , 0  , 255};

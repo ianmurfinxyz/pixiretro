@@ -20,6 +20,12 @@ class ParticleEngine
 public:
 
   //
+  // Defines an upper limit on the number of particles any particle engine is allowed to spawn.
+  // Used to avoid excessive memory usage by particle engines.
+  //
+  static constexpr int HARD_MAX_PARTICLES {1000};
+
+  //
   // Configuration struct used to construct a particle engine.
   //
   // PROPERTY                   ROLE
@@ -98,7 +104,7 @@ public:
   //
   // Takes effect for future integrations.
   //
-  void setDamping(float damping) {_damping = std::clamp(damping, 0.f, 1.f);}
+  void setDamping(float damping);
 
   const gfx::Color4u& getParticleColor() const {return _color;}
   float getDamping() const {return _damping;}
@@ -107,12 +113,12 @@ private:
 
   struct Particle
   {
-    Vector2f _position;
-    Vector2f _velocity;
-    Vector2f _acceleration;
-    float _lifetime;
-    float _clock;
-    bool _isAlive;
+    Vector2f _position      = Vector2f{0.f, 0.f};
+    Vector2f _velocity      = Vector2f{0.f, 0.f};
+    Vector2f _acceleration  = Vector2f{0.f, 0.f};
+    float _lifetime         = 0.f;
+    float _clock            = 0.f;
+    bool _isAlive           = false;
   };
 
 private:

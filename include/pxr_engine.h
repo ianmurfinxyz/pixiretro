@@ -31,7 +31,7 @@ public:
   void initialize(std::unique_ptr<App> app);
 
   //
-  // Call to after run() has returned.
+  // Call after run() has returned.
   //
   void shutdown();
 
