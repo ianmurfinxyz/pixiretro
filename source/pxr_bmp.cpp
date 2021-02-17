@@ -10,38 +10,38 @@
 #include <cstring>
 #include <cassert>
 #include <sstream>
-#include "color.h"
-#include "bmpimage.h"
-#include "log.h"
+#include "pxr_color.h"
+#include "pxr_bmp.h"
+#include "pxr_log.h"
 
 namespace pxr
 {
-namespace gfx
+namespace io
 {
 
-BmpImage::BmpImage() :
+Bmp::Bmp() :
   _pixels{nullptr},
   _size{0,0}
 {}
 
-BmpImage::~BmpImage()
+Bmp::~Bmp()
 {
   freePixels();
 }
 
-BmpImage::BmpImage(const BmpImage& other) :
+Bmp::Bmp(const Bmp& other) :
   _pixels{nullptr},
   _size{0, 0}
 {
   _size = other._size;
-  _pixels = new Color4u*[_size._y];
+  _pixels = new gfx::Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row){
-    _pixels[row] = new Color4u[_size._x];
-    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
+    _pixels[row] = new gfx::Color4u[_size._x];
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(gfx::Color4u));
   }
 }
 
-BmpImage::BmpImage(BmpImage&& other)
+Bmp::Bmp(Bmp&& other)
 {
   _pixels = other._pixels;
   other._pixels = nullptr;
@@ -49,26 +49,26 @@ BmpImage::BmpImage(BmpImage&& other)
   other._size.zero();
 }
 
-BmpImage& BmpImage::operator=(const BmpImage& other)
+Bmp& Bmp::operator=(const Bmp& other)
 {
   if(_pixels != nullptr && _size == other._size){ 
     for(int row = 0; row < _size._y; ++row){
-      memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
+      memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(gfx::Color4u));
     }
     return *this;
   }
 
   freePixels();
   _size = other._size;
-  _pixels = new Color4u*[_size._y];
+  _pixels = new gfx::Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row){
-    _pixels[row] = new Color4u[_size._x];
-    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(Color4u));
+    _pixels[row] = new gfx::Color4u[_size._x];
+    memcpy(static_cast<void*>(_pixels[row]), static_cast<void*>(other._pixels[row]), _size._x * sizeof(gfx::Color4u));
   }
   return *this;
 }
 
-BmpImage& BmpImage::operator=(BmpImage&& other)
+Bmp& Bmp::operator=(Bmp&& other)
 {
   freePixels();   
   _pixels = other._pixels;
@@ -78,20 +78,20 @@ BmpImage& BmpImage::operator=(BmpImage&& other)
   return *this;
 }
 
-const Color4u BmpImage::getPixel(int row, int col)
+const gfx::Color4u Bmp::getPixel(int row, int col)
 {
   assert(0 <= row && row < _size._y);
   assert(0 <= col && col <= _size._x);
   return _pixels[row][col];
 }
 
-const Color4u* BmpImage::getRow(int row)
+const gfx::Color4u* Bmp::getRow(int row)
 {
   assert(0 <= row && row < _size._y);
   return _pixels[row];
 }
 
-bool BmpImage::load(std::string filepath)
+bool Bmp::load(std::string filepath)
 {
   std::ifstream file {filepath, std::ios_base::binary};
   if(!file){
@@ -209,14 +209,14 @@ bool BmpImage::load(std::string filepath)
   return true;
 }
 
-void BmpImage::create(Vector2i size, Color4u clearColor)
+void Bmp::create(Vector2i size, gfx::Color4u clearColor)
 {
   _size = size;
   reallocatePixels(); 
   clear(clearColor);
 }
 
-void BmpImage::clear(Color4u color)
+void Bmp::clear(gfx::Color4u color)
 {
   if(_pixels == nullptr)
     return;
@@ -226,7 +226,7 @@ void BmpImage::clear(Color4u color)
       _pixels[row][col] = color;
 }
 
-void BmpImage::freePixels()
+void Bmp::freePixels()
 {
   if(_pixels != nullptr){
     for(int row = 0; row < _size._y; ++row)
@@ -236,18 +236,18 @@ void BmpImage::freePixels()
   _pixels = nullptr;
 }
 
-void BmpImage::reallocatePixels()
+void Bmp::reallocatePixels()
 {
   freePixels();
-  _pixels = new Color4u*[_size._y];
+  _pixels = new gfx::Color4u*[_size._y];
   for(int row = 0; row < _size._y; ++row)
-    _pixels[row] = new Color4u[_size._x];
+    _pixels[row] = new gfx::Color4u[_size._x];
 }
 
-void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)
+void Bmp::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)
 {
   // extract the color palette.
-  std::vector<Color4u> palette {};
+  std::vector<gfx::Color4u> palette {};
   file.seekg(FILEHEADER_SIZE_BYTES + infoHead._headerSize_bytes, std::ios::beg);
   for(uint8_t i = 0; i < infoHead._numPaletteColors; ++i){
     char bytes[4];
@@ -259,7 +259,7 @@ void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, I
     uint8_t blue = static_cast<uint8_t>(bytes[0]);
     uint8_t alpha = static_cast<uint8_t>(bytes[3]);
 
-    palette.push_back(Color4u{red, green, blue, alpha});
+    palette.push_back(gfx::Color4u{red, green, blue, alpha});
   }
 
   int rowSize_bytes = std::ceil((infoHead._bitsPerPixel * infoHead._bmpWidth_px) / 32.f) * 4.f;  
@@ -307,7 +307,7 @@ void BmpImage::extractIndexedPixels(std::ifstream& file, FileHeader& fileHead, I
   delete[] buffer;
 }
 
-void BmpImage::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)
+void Bmp::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& infoHead)
 {
   // note: this function handles 16-bit, 24-bit and 32-bit pixels.
 
@@ -367,12 +367,12 @@ void BmpImage::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHead
       uint8_t blue = (rawPixelBytes & infoHead._blueMask) >> blueShift;
       uint8_t alpha = (rawPixelBytes & infoHead._alphaMask) >> alphaShift;
 
-      _pixels[row][col] = Color4u{red, green, blue, alpha};
+      _pixels[row][col] = gfx::Color4u{red, green, blue, alpha};
     }
     seekPos += rowOffset_bytes;
   }
   delete[] buffer;
 }
 
-} // namespace gfx
+} // namespace io
 } // namespace pxr

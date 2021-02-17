@@ -4,11 +4,11 @@
 #include <memory>
 #include <chrono>
 
-#include "io/rc.h"
-#include "app.h"
-#include "color.h"
-#include "gfx.h"
-#include "sfx.h"
+#include "pxr_rc.h"
+#include "pxr_app.h"
+#include "pxr_color.h"
+#include "pxr_gfx.h"
+#include "pxr_sfx.h"
 
 namespace pxr
 {
@@ -197,10 +197,10 @@ private:
     bool _isNewTickFrequencySample;
   };
 
-  class EngineRC final : public RC
+  class EngineRC final : public io::RC
   {
   public:
-    static constexpr const char* filename = "enginerc";
+    static constexpr const char* filename = "engine";
     
     enum Key
     {

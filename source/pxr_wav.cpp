@@ -1,11 +1,13 @@
 #include <fstream>
-#include "wavesound.h"
-#include "log.h"
+#include "pxr_wav.h"
+#include "pxr_log.h"
 
 namespace pxr
 {
+namespace io
+{
 
-WaveSound::WaveSound() :
+Wav::Wav() :
   _waveData{nullptr},
   _waveSizeBytes{0},
   _sampleRate{0},
@@ -13,7 +15,7 @@ WaveSound::WaveSound() :
   _numChannels{0}
 {}
 
-WaveSound::~WaveSound()
+Wav::~Wav()
 {
   if(_waveData != nullptr){
     delete[] _waveData;
@@ -21,7 +23,7 @@ WaveSound::~WaveSound()
   }
 }
 
-bool WaveSound::load(std::string filepath)
+bool Wav::load(std::string filepath)
 {
   unload();
 
@@ -154,7 +156,7 @@ bool WaveSound::load(std::string filepath)
   return true;
 }
 
-void WaveSound::unload()
+void Wav::unload()
 {
   if(_waveData != nullptr)
     delete[] _waveData;
@@ -166,4 +168,5 @@ void WaveSound::unload()
   _numChannels = 0;
 }
 
+} // namespace io
 } // namespace pxr

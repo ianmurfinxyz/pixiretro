@@ -2,8 +2,8 @@
 #define _PIXIRETRO_IO_BMPIMAGE_H_
 
 #include <fstream>
-#include "color.h"
-#include "math/vec.h"
+#include "pxr_color.h"
+#include "pxr_vec.h"
 
 namespace pxr
 {
@@ -28,13 +28,13 @@ public:
   Bmp& operator=(Bmp&& other);
 
   bool load(std::string filepath);
-  void create(Vector2i size, Color4u fill);
+  void create(Vector2i size, gfx::Color4u fill);
 
-  void clear(Color4u color);
+  void clear(gfx::Color4u color);
 
-  const Color4u getPixel(int row, int col);
-  const Color4u* getRow(int row);
-  const Color4u* const* getPixels() const {return _pixels;}
+  const gfx::Color4u getPixel(int row, int col);
+  const gfx::Color4u* getRow(int row);
+  const gfx::Color4u* const* getPixels() const {return _pixels;}
 
   int getWidth() const {return _size._x;}
   int getHeight() const {return _size._y;}
@@ -113,7 +113,7 @@ private:
   // Raw pixel data accessed by [row][col], i.e. _pixels is a pointer to an array of pixel
   // rows.
   //
-  Color4u** _pixels;
+  gfx::Color4u** _pixels;
 
   //
   // Size/dimensions of the bmp image: x=width (num cols) and y=height (num rows).

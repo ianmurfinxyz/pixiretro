@@ -5,3 +5,7 @@ output*
 temp
 build/*
 build
+debug
+debug/*
+release
+release/*

@@ -16,10 +16,10 @@ public:
     e.seed(r());
   }
 
-  Rand(const RandBasic&) = delete;
-  Rand(RandBasic&&) = delete;
-  Rand& operator=(const RandBasic&) = delete;
-  Rand& operator=(RandBasic&&) = delete;
+  Rand(const Rand&) = delete;
+  Rand(Rand&&) = delete;
+  Rand& operator=(const Rand&) = delete;
+  Rand& operator=(Rand&&) = delete;
 
   T operator()() {return d(e);}
 
@@ -28,9 +28,9 @@ private:
     Dist d;
 };
 
-using iRand = RandBasic<int, std::uniform_int_distribution<int>>;
-using fRand = RandBasic<float, std::uniform_real_distribution<float>>;
-using dRand = RandBasic<double, std::uniform_real_distribution<double>>;
+using iRand = Rand<int, std::uniform_int_distribution<int>>;
+using fRand = Rand<float, std::uniform_real_distribution<float>>;
+using dRand = Rand<double, std::uniform_real_distribution<double>>;
 
 } // namespace pxr
 

@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <array>
-#include "log.h"
+#include "pxr_log.h"
 
 namespace pxr
 {

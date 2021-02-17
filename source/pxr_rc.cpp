@@ -4,15 +4,17 @@
 #include <fstream>
 #include <sstream>
 
-#include "filerc.h"
-#include "log.h"
+#include "pxr_rc.h"
+#include "pxr_log.h"
 
 namespace pxr
 {
+namespace io
+{
 
-constexpr static FileRC::Value_t unsetValue {std::numeric_limits<int>::min()};
+constexpr static RC::Value_t unsetValue {std::numeric_limits<int>::min()};
 
-FileRC::Property::Property(Key_t key, std::string name, Value_t default_, Value_t min, Value_t max) :
+RC::Property::Property(Key_t key, std::string name, Value_t default_, Value_t min, Value_t max) :
   _key{key}, 
   _name{name}, 
   _value{unsetValue},
@@ -23,15 +25,19 @@ FileRC::Property::Property(Key_t key, std::string name, Value_t default_, Value_
   assert(_default.index() == _min.index() && _default.index() == _max.index());
 }
 
-FileRC::FileRC(std::initializer_list<Property> properties)
+RC::RC(std::initializer_list<Property> properties)
 {
   for(const auto& property : properties)
     _properties.emplace(std::make_pair(property._key, property));
 }
 
-int FileRC::load(const std::string& filename)
+int RC::load(const std::string& filename)
 {
-  std::ifstream file {filename};
+  std::string path{};
+  path += RESOURCE_PATH_RC;
+  path += filename;
+  path += RC::FILE_EXTENSION;
+  std::ifstream file {path};
   if(!file){
     log::log(log::ERROR, log::msg_rcfile_fail_open, filename);
     log::log(log::INFO, log::msg_rcfile_using_default);
@@ -164,7 +170,7 @@ int FileRC::load(const std::string& filename)
   return nErrors;
 }
 
-bool FileRC::write(const std::string& filename, bool genComments)
+bool RC::write(const std::string& filename, bool genComments)
 {
   std::ofstream file {filename, std::ios_base::out | std::ios_base::trunc};
   if(!file){
@@ -200,50 +206,50 @@ bool FileRC::write(const std::string& filename, bool genComments)
   return true;
 }
 
-int FileRC::getIntValue(Key_t key) const
+int RC::getIntValue(Key_t key) const
 {
   assert(_properties.at(key)._default.index() == 0);
   return std::get<int>(_properties.at(key)._value);
 }
 
-float FileRC::getFloatValue(Key_t key) const
+float RC::getFloatValue(Key_t key) const
 {
   assert(_properties.at(key)._default.index() == 1);
   return std::get<float>(_properties.at(key)._value);
 }
 
-bool FileRC::getBoolValue(Key_t key) const
+bool RC::getBoolValue(Key_t key) const
 {
   assert(_properties.at(key)._default.index() == 2);
   return std::get<bool>(_properties.at(key)._value);
 }
 
-void FileRC::setIntValue(Key_t key, int value)
+void RC::setIntValue(Key_t key, int value)
 {
   assert(_properties.at(key)._default.index() == 0);
   _properties[key]._value = value;
 }
 
-void FileRC::setFloatValue(int key, float value)
+void RC::setFloatValue(int key, float value)
 {
   assert(_properties.at(key)._default.index() == 1);
   _properties[key]._value = value;
 }
 
-void FileRC::setBoolValue(int key, bool value)
+void RC::setBoolValue(int key, bool value)
 {
   assert(_properties.at(key)._default.index() == 2);
   _properties[key]._value = value;
 }
 
-void FileRC::applyDefaults()
+void RC::applyDefaults()
 {
   for(auto& pair : _properties){
     pair.second._value = pair.second._default;
   }
 }
 
-bool FileRC::parseInt(const std::string& value, int& result)
+bool RC::parseInt(const std::string& value, int& result)
 {
   auto isDigit = [](unsigned char c){return std::isdigit(c);};
   auto isSign = [](unsigned char c){return c == '+' || c == '-';};
@@ -265,7 +271,7 @@ bool FileRC::parseInt(const std::string& value, int& result)
   return true;
 }
 
-bool FileRC::parseFloat(const std::string& value, float& result)
+bool RC::parseFloat(const std::string& value, float& result)
 {
   auto isDigit = [](unsigned char c){return std::isdigit(c);};
   auto isSign = [](unsigned char c){return c == '+' || c == '-';};
@@ -290,7 +296,7 @@ bool FileRC::parseFloat(const std::string& value, float& result)
   return true;
 }
 
-bool FileRC::parseBool(const std::string& value, bool& result)
+bool RC::parseBool(const std::string& value, bool& result)
 {
   if(value == "true"){
     result = true;
@@ -304,7 +310,7 @@ bool FileRC::parseBool(const std::string& value, bool& result)
   return false;
 }
 
-void FileRC::printValue(const Value_t& value, std::ostream& os)
+void RC::printValue(const Value_t& value, std::ostream& os)
 {
   switch(value.index()){
     case 0:
@@ -319,4 +325,5 @@ void FileRC::printValue(const Value_t& value, std::ostream& os)
   }
 }
 
+} // namespace io
 } // namespace pxr

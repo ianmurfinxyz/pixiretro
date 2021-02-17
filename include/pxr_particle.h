@@ -2,8 +2,9 @@
 #define _PIXIRETRO_PARTICLE_ENGINE_H_
 
 #include <array>
-#include "math.h"
-#include "color.h"
+#include "pxr_vec.h"
+#include "pxr_rand.h"
+#include "pxr_color.h"
 
 namespace pxr
 {
@@ -68,7 +69,7 @@ public:
     float   _loLifetime              = 0.5f;
     float   _hiLifetime              = 1.5f;
     float   _damping                 = 0.99f;
-    Color4u _Color                   = gfx::colors::barbiepink;
+    gfx::Color4u _color              = gfx::colors::barbiepink;
   };
 
   ParticleEngine(Configuration config);
@@ -99,15 +100,15 @@ public:
   // Takes effect upon the next draw call and will change the color of all spawned particles,
   // past and future.
   //
-  void setColor(gfx::Color4u color) {_color = color;}
+  void setColor(gfx::Color4u color) {_config._color = color;}
 
   //
   // Takes effect for future integrations.
   //
   void setDamping(float damping);
 
-  const gfx::Color4u& getParticleColor() const {return _color;}
-  float getDamping() const {return _damping;}
+  const gfx::Color4u& getParticleColor() const {return _config._color;}
+  float getDamping() const {return _config._damping;}
 
 private:
 

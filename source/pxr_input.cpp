@@ -3,7 +3,7 @@
 #include <cassert>
 #include <SDL2/SDL_events.h>
 
-#include "input.h"
+#include "pxr_input.h"
 
 namespace pxr
 {

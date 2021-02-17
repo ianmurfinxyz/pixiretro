@@ -15,7 +15,7 @@ namespace io
 // The directory on the filesystem where rc files are expected to be found w.r.t the app
 // root directory.
 //
-static constexpr const char* RESOURCSE_PATH_RC {"assets/rc/"};
+static constexpr const char* RESOURCE_PATH_RC {"assets/rc/"};
 
 //
 // Represents a generic resource/config file which contains name=value property pairs. Property
@@ -40,6 +40,10 @@ static constexpr const char* RESOURCSE_PATH_RC {"assets/rc/"};
 class RC
 {
 public:
+  //
+  // The expected rc file extension.
+  //
+  static constexpr const char* FILE_EXTENSION {".rc"};
 
   static constexpr char comment {'#'};     // prefix for comment lines in an rc file.
   static constexpr char seperator {'='};   // seperator used in name=value pairs.

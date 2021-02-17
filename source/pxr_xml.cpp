@@ -1,5 +1,5 @@
-#include "io/xml.h"
-#include "log.h"
+#include "pxr_xml.h"
+#include "pxr_log.h"
 
 namespace pxr
 {

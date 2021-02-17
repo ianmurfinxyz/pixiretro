@@ -12,15 +12,16 @@
 
 #include <chrono>
 
-#include "xmlutil.h"
-
-#include "gfx.h"
-#include "math.h"
-#include "color.h"
-#include "bmpimage.h"
-#include "log.h"
+#include "pxr_xml.h"
+#include "pxr_gfx.h"
+#include "pxr_vec.h"
+#include "pxr_rect.h"
+#include "pxr_color.h"
+#include "pxr_bmp.h"
+#include "pxr_log.h"
 
 using namespace tinyxml2;
+using namespace pxr::io;
 
 namespace pxr
 {
@@ -80,6 +81,11 @@ static FontResource errorFont;
 // MODULE FUNCTIONS
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Color4u pxShaderDefault(Color4u color, int pxx, int pxy)
+{
+  return color;
+}
 
 static void setViewport(iRect viewport)
 {
@@ -315,18 +321,13 @@ int createScreen(Vector2i resolution)
 
   auto& screen = screens.back();
 
-  for(auto& band : screen._bands){
-    band._color = colors::white;
-    band._hi = std::numeric_limits<int>::max();
-  }
-
+  screen._pxShader = pxShaderDefault;
   screen._pmode = PositionMode::CENTER;
   screen._smode = SizeMode::AUTO_MAX;
-  screen._cmode = ColorMode::FULL_RGB;
+  screen._xmode = PixelMode::NO_SHADER;
   screen._position = Vector2i{0, 0};
   screen._manualPosition = Vector2i{0, 0};
   screen._resolution = resolution;
-  screen._bitmapColor = colors::white;
   screen._pxManualSize = 1;
   screen._pxCount = screen._resolution._x * screen._resolution._y;
   screen._pxColors = new Color4u[screen._pxCount];
@@ -375,7 +376,7 @@ static ResourceKey_t useErrorFont()
 
 ResourceKey_t loadSpritesheet(ResourceName_t name)
 {
-  log::log(log::INFO, log::msg_gfx_loading_sprite, name);
+  log::log(log::INFO, log::msg_gfx_loading_spritesheet, name);
 
   for(auto& pair : spritesheets){
     if(pair.second._name == name){
@@ -396,7 +397,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   std::string bmppath{};
   bmppath += RESOURCE_PATH_SPRITESHEETS;
   bmppath += name;
-  bmppath += BmpImage::FILE_EXTENSION;
+  bmppath += Bmp::FILE_EXTENSION;
   if(!sheet._image.load(bmppath)){
     log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
     return useErrorSpritesheet();
@@ -410,43 +411,43 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   if(!parseXmlDocument(&doc, xmlpath)) 
     return useErrorSpritesheet();
 
-  XMLElement* xmlspritesheet{nullptr};
-  XMLElement* xmlframe{nullptr};
+  XMLElement* xmlsheet{nullptr};
+  XMLElement* xmlsprite{nullptr};
 
   int err{0};
-  if(!extractChildElement(&doc, &xmlsprite, "sprite")) return useErrorSprite();
-  if(!extractChildElement(xmlsprite, &xmlframe, "frame")) return useErrorSprite();
+  if(!extractChildElement(&doc, &xmlsheet, "spritesheet")) return useErrorSpritesheet();
+  if(!extractChildElement(xmlsheet, &xmlsprite, "sprite")) return useErrorSpritesheet();
   do{
-    SpriteFrame frame{};
-    if(!extractIntAttribute(xmlframe, "x", &frame._position._x)){++err; break;}
-    if(!extractIntAttribute(xmlframe, "y", &frame._position._y)){++err; break;}
-    if(!extractIntAttribute(xmlframe, "w", &frame._size._x)){++err; break;}
-    if(!extractIntAttribute(xmlframe, "h", &frame._size._y)){++err; break;}
-    if(!extractIntAttribute(xmlframe, "ox", &frame._origin._x)){++err; break;}
-    if(!extractIntAttribute(xmlframe, "oy", &frame._origin._y)){++err; break;}
-    sprite._frames.push_back(frame);
-    xmlframe = xmlframe->NextSiblingElement("frame");
+    Sprite sprite{};
+    if(!extractIntAttribute(xmlsprite, "x", &sprite._position._x)){++err; break;}
+    if(!extractIntAttribute(xmlsprite, "y", &sprite._position._y)){++err; break;}
+    if(!extractIntAttribute(xmlsprite, "w", &sprite._size._x)){++err; break;}
+    if(!extractIntAttribute(xmlsprite, "h", &sprite._size._y)){++err; break;}
+    if(!extractIntAttribute(xmlsprite, "ox", &sprite._origin._x)){++err; break;}
+    if(!extractIntAttribute(xmlsprite, "oy", &sprite._origin._y)){++err; break;}
+    sheet._sprites.push_back(sprite);
+    xmlsprite = xmlsprite->NextSiblingElement("sprite");
   }
-  while(xmlframe != 0);
-  if(err) return useErrorSprite();
+  while(xmlsprite != 0);
+  if(err) return useErrorSpritesheet();
 
   // 
-  // Validate all frames to avoid segfaults.
+  // Validate all sprites to avoid segfaults.
   //
   err = 0;
-  Vector2i bmpSize = sprite._image.getSize();
-  for(auto& frame : sprite._frames){
-    if(frame._position._x < 0 || frame._position._y < 0){++err; break;}
-    if(frame._size._x < 0 || frame._size._y < 0){++err; break;}
-    if(frame._origin._x < 0 || frame._origin._y < 0){++err; break;}
-    if(frame._origin._x >= frame._size._x || frame._origin._y >= frame._size._y){++err; break;}
-    if(frame._position._x + frame._size._x > bmpSize._x){++err; break;}
-    if(frame._position._y + frame._size._y > bmpSize._y){++err; break;}
+  Vector2i bmpSize = sheet._image.getSize();
+  for(auto& sprite : sheet._sprites){
+    if(sprite._position._x < 0 || sprite._position._y < 0){++err; break;}
+    if(sprite._size._x < 0 || sprite._size._y < 0){++err; break;}
+    if(sprite._origin._x < 0 || sprite._origin._y < 0){++err; break;}
+    if(sprite._origin._x >= sprite._size._x || sprite._origin._y >= sprite._size._y){++err; break;}
+    if(sprite._position._x + sprite._size._x > bmpSize._x){++err; break;}
+    if(sprite._position._y + sprite._size._y > bmpSize._y){++err; break;}
   }
 
   if(err){
-    log::log(log::ERROR, log::msg_gfx_sprite_invalid_xml_bmp_mismatch, name);
-    return useErrorSprite();
+    log::log(log::ERROR, log::msg_gfx_spritesheet_invalid_xml_bmp_mismatch, name);
+    return useErrorSpritesheet();
   }
 
   ResourceKey_t newKey = nextResourceKey;
@@ -460,7 +461,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   addendum += ":"; 
   addendum += std::to_string(newKey);
   addendum += "]";
-  log::log(log::INFO, log::msg_gfx_loading_sprite_success, addendum);
+  log::log(log::INFO, log::msg_gfx_loading_spritesheet_success, addendum);
 
   return newKey;
 }
@@ -473,10 +474,10 @@ void unloadSpritesheet(ResourceKey_t sheetKey)
     return;
   }
 
-  SpriteResource& resource = search->second;
+  SpritesheetResource& resource = search->second;
   resource._referenceCount--;
   if(resource._referenceCount <= 0 && resource._name != errorSpritesheetName){
-    log::log(log::INFO, log::msg_gfx_unload_sprite_success, "key=" + std::to_string(sheetKey));
+    log::log(log::INFO, log::msg_gfx_unload_spritesheet_success, "key=" + std::to_string(sheetKey));
     spritesheets.erase(search);
   }
 }
@@ -502,7 +503,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   std::string bmppath{};
   bmppath += RESOURCE_PATH_FONTS;
   bmppath += name;
-  bmppath += BmpImage::FILE_EXTENSION;
+  bmppath += Bmp::FILE_EXTENSION;
   if(!resource._font._image.load(bmppath)){
     log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
     return useErrorFont();
@@ -624,7 +625,7 @@ int getSpriteCount(ResourceKey_t sheetKey)
 {
   auto search = spritesheets.find(sheetKey);
   assert(search != spritesheets.end());
-  return search->second._sprite._frames.size();
+  return search->second._sheet._sprites.size();
 }
 
 void onWindowResize(Vector2i windowSize)
@@ -689,49 +690,47 @@ void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int scr
       screenCol = screenColBase + spriteCol;
       if(screenCol < 0) continue;
       if(screenCol >= screen._resolution._x) break;
-      const Color4u& pxColor = sheetPxs[sprite._position._y + spriteRow][sprite._position._x + spriteCol];
-      if(pxColor._a == ALPHA_KEY) continue;
-      pxColor = (screen._xmode == PixelMode::SHADER) ? 
-                screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
-      screen._pxColors[screenCol + screenRowOffset] = pxColor;
+      const Color4u& color = sheetPxs[sprite._position._y + spriteRow][sprite._position._x + spriteCol];
+      if(color._a == ALPHA_KEY) continue;
+      screen._pxColors[screenCol + screenRowOffset] =
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, screenCol, screenRow) : color;
     }
   }
 }
 
-void drawSpriteColumn(Vector2i position, ResourceKey_t spriteKey, int frameid, int colid, int screenid)
+void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, int spriteid, int colid, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  auto search = spritesheets.find(spriteKey);
+  auto search = spritesheets.find(sheetKey);
   assert(search != spritesheets.end());
-  const auto& sprite = search->second._sprite;
-  const Color4u* const * spritePxs = sprite._image.getPixels();
+  const auto& sheet = search->second._sheet;
+  const Color4u* const * sheetPxs = sheet._image.getPixels();
 
-  assert(0 <= frameid);
-  frameid = frameid < sprite._frames.size() ? frameid : 0; // may be an error sprite with 1 frame.
-  auto& frame = sprite._frames[frameid];
+  assert(0 <= spriteid);
+  spriteid = spriteid < sheet._sprites.size() ? spriteid : 0; // may be an error sheet with 1 sprite.
+  auto& sprite = sheet._sprites[spriteid];
 
-  colid = colid < frame._size._x ? colid : 0;
+  colid = std::clamp(colid, 0, sprite._size._x);
 
-  int screenRow {0}, screenCol{0}, screenRowOffset{0}, spriteCol{0};
+  int screenRow {0}, screenCol{0}, screenRowOffset{0}, sheetCol{0};
 
   screenCol = position._x + colid;
-  spriteCol = frame._position._x + colid;
+  sheetCol = sprite._position._x + colid;
 
   if(screenCol < 0 || screenCol >= screen._resolution._x) 
     return;
 
-  for(int frameRow = 0; frameRow < frame._size._y; ++frameRow){
-    screenRow = position._y + frameRow;
+  for(int spriteRow = 0; spriteRow < sprite._size._y; ++spriteRow){
+    screenRow = position._y + spriteRow;
     if(screenRow < 0) continue;
     if(screenRow >= screen._resolution._y) break;
     screenRowOffset = screenRow * screen._resolution._x;
-    const Color4u& pxColor = spritePxs[frame._position._y + frameRow][spriteCol];
-    if(pxColor._a == ALPHA_KEY) continue;
-    pxColor = (screen._xmode == PixelMode::SHADER) ? 
-              screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
-    screen._pxColors[screenCol + screenRowOffset] = pxColor;
+    const Color4u& color = sheetPxs[sprite._position._y + spriteRow][sheetCol];
+    if(color._a == ALPHA_KEY) continue;
+    screen._pxColors[screenCol + screenRowOffset] =
+      (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, screenCol, screenRow) : color;
   }
 }
 
@@ -761,11 +760,10 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
         screenCol = position._x + glyphCol + glyph._xoffset;
         if(screenCol < 0) continue;
         if(screenCol >= screen._resolution._x) return;
-        const Color4u& pxColor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
-        if(pxColor._a == ALPHA_KEY) continue;
-        pxColor = (screen._xmode == PixelMode::SHADER) ? 
-                  screen._pxShader(pxColor, screenCol, screenRow) : pxColor;
-        screen._pxColors[screenCol + screenRowOffset] = pxColor;
+        const Color4u& color = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(color._a == ALPHA_KEY) continue;
+        screen._pxColors[screenCol + screenRowOffset] =
+          (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, screenCol, screenRow) : color;
       }
     }
     position._x += glyph._xadvance + font._glyphSpace;
@@ -817,17 +815,20 @@ void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid)
 
   if(dx == 0)
     for(int y = ymin; y < ymax; ++y)
-      screen._pxColors[xmin + (y * screen._resolution._x)] = color;
+      screen._pxColors[xmin + (y * screen._resolution._x)] = 
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, xmin, y) : color;
 
   else if(dy == 0)
     for(int x = xmin; x < xmax; ++x)
-      screen._pxColors[x + (ymin * screen._resolution._x)] = color;
+      screen._pxColors[x + (ymin * screen._resolution._x)] = 
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, ymin) : color;
 
   else{
     float m = static_cast<float>(dy) / dx;
     for(int x = xmin; x <= xmax; ++x){
       int y = (m * x) + ymin;
-      screen._pxColors[x + (y * screen._resolution._x)] = color;
+      screen._pxColors[x + (y * screen._resolution._x)] = 
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, y) : color;
     }
   }
 }
@@ -837,13 +838,16 @@ void drawPoint(Vector2i position, Color4u color, int screenid)
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
 
-  if(position._x < 0 || position._x >= screen._resolution._x)
+  int x{position._x}, y{position._y};
+
+  if(x < 0 || x >= screen._resolution._x)
     return;
 
-  if(position._y < 0 || position._y >= screen._resolution._y)
+  if(y < 0 || y >= screen._resolution._y)
     return;
 
-  screen._pxColors[position._x + (position._y * screen._resolution._x)] = color;
+  screen._pxColors[x + (y * screen._resolution._x)] =
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, y) : color;
 }
 
 void present()
@@ -861,10 +865,10 @@ void present()
   SDL_GL_SwapWindow(window);
 }
 
-void setScreenColorMode(ColorMode mode, int screenid)
+void setScreenPixelMode(PixelMode mode, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
-  screens[screenid]._cmode = mode;
+  screens[screenid]._xmode = mode;
 }
 
 void setScreenSizeMode(SizeMode mode, int screenid)
@@ -901,22 +905,12 @@ void setScreenManualPixelSize(int pxSize, int screenid)
     autoAdjustScreen(windowSize, screen);
 }
 
-void setPixelShader(PixelShader_t shader, int screenid)
+void setPixelShader(PXShader_t shader, int screenid)
 {
-
-  assert(0 <= bandid && bandid < SCREEN_BAND_COUNT);
-  auto& band = screen._bands[bandid];
-
-  band._color = color;
-  band._hi = hi != 0 ? hi : std::numeric_limits<int>::max();
-
-  std::sort(screen._bands.begin(), screen._bands.end());
-}
-
-void setBitmapColor(Color4u color, int screenid)
-{
+  assert(shader != nullptr);
   assert(0 <= screenid && screenid < screens.size());
-  screens[screenid]._bitmapColor = color;
+  auto& screen = screens[screenid];
+  screen._pxShader = shader;
 }
 
 void enableScreen(int screenid)

@@ -6,11 +6,13 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include "sfx.h"
-#include "log.h"
-#include "al.h"
-#include "alc.h"
-#include "wavesound.h"
+#include "lib/openal/al.h"
+#include "lib/openal/alc.h"
+#include "pxr_sfx.h"
+#include "pxr_log.h"
+#include "pxr_wav.h"
+
+using namespace pxr::io;
 
 namespace pxr
 {
@@ -270,12 +272,12 @@ ResourceKey_t loadSound(ResourceName_t soundName)
     }
   }
 
-  WaveSound wav {};
+  Wav wav {};
 
   std::string wavpath {};
   wavpath += RESOURCE_PATH_SOUNDS;
   wavpath += soundName;
-  wavpath += WaveSound::FILE_EXTENSION;
+  wavpath += Wav::FILE_EXTENSION;
   if(!wav.load(wavpath))
     return useErrorSound();
 

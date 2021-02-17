@@ -3,13 +3,13 @@
 #include <sstream>
 #include <iomanip>
 #include <cassert>
-#include "engine.h"
-#include "log.h"
-#include "app.h"
-#include "input.h"
-#include "gfx.h"
-#include "sfx.h"
-#include "color.h"
+#include "pxr_engine.h"
+#include "pxr_log.h"
+#include "pxr_app.h"
+#include "pxr_input.h"
+#include "pxr_gfx.h"
+#include "pxr_sfx.h"
+#include "pxr_color.h"
 
 #include <iostream>
 
@@ -151,8 +151,8 @@ void Engine::initialize(std::unique_ptr<App> app)
   _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
 
   _splashSoundKey = sfx::loadSound(splashName);
-  _splashSpriteKey = gfx::loadSprite(splashName);
-  if(gfx::isErrorSprite(_splashSpriteKey)){
+  _splashSpriteKey = gfx::loadSpritesheet(splashName);
+  if(gfx::isErrorSpritesheet(_splashSpriteKey)){
     log::log(log::ERROR, log::msg_eng_fail_load_splash);
     onSplashExit();
   }

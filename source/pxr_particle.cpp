@@ -1,6 +1,7 @@
 #include <algorithm>
-#include "particles.h"
-#include "gfx.h"
+#include <cassert>
+#include "pxr_particle.h"
+#include "pxr_gfx.h"
 
 namespace pxr
 {
@@ -40,7 +41,7 @@ void ParticleEngine::update(float dt)
     }
 
     particle._velocity += particle._acceleration * dt;
-    particle._velocity *= _damping;
+    particle._velocity *= _config._damping;
     particle._position += particle._velocity * dt; 
 
     ++numUpdates;
@@ -51,8 +52,11 @@ void ParticleEngine::update(float dt)
 void ParticleEngine::draw(int screenid)
 {
   assert(_particles != nullptr);
-  for(auto& particle : _particles)
-    gfx::drawPoint(particle._position, _color, screenid);
+  for(int i = 0; i < _config._maxParticles; ++i){
+    auto& particle = _particles[i];
+    if(particle._isAlive)
+      gfx::drawPoint(particle._position, _config._color, screenid);
+  }
 }
 
 void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity, Vector2f acceleration)
@@ -79,24 +83,18 @@ void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity, Vector2
 void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity)
 {
   assert(_particles != nullptr);
-
-  Vector2f acceleration = _randAcceleration();
-  spawnParticle(position, velocity, acceleration);
+  spawnParticle(position, velocity, {_randAcceleration(), _randAcceleration()});
 }
 
 void ParticleEngine::spawnParticle(Vector2f position)
 {
   assert(_particles != nullptr);
-
-  Vector2f velocity = _randVelocity();
-  Vector2f acceleration = _randAcceleration();
-  spawnParticle(position, velocity, acceleration);
-
+  spawnParticle(position, {_randVelocity(), _randVelocity()});
 }
 
 void ParticleEngine::setDamping(float damping)
 {
-  _damping = std::clamp(damping, 0.f, 1.f);
+  _config._damping = std::clamp(damping, 0.f, 1.f);
 }
 
 } // namespace pxr

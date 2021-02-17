@@ -4,9 +4,10 @@
 #include <string>
 #include <cmath>
 
-#include "color.h"
-#include "math.h"
-#include "bmpimage.h"
+#include "pxr_color.h"
+#include "pxr_vec.h"
+#include "pxr_rect.h"
+#include "pxr_bmp.h"
 
 namespace pxr
 {
@@ -66,7 +67,7 @@ struct Glyph
 struct Font
 {
   std::array<Glyph, ASCII_CHAR_COUNT> _glyphs;
-  BmpImage _image;
+  io::Bmp _image;
   int _lineHeight;
   int _baseLine;
   int _glyphSpace;
@@ -116,7 +117,7 @@ struct Sprite
 //
 struct Spritesheet
 {
-  BmpImage _image;
+  io::Bmp _image;
   std::vector<Sprite> _sprites;
 };
 
@@ -192,7 +193,21 @@ enum class PositionMode
 //
 // The signiture of pixel shader functions to be set by the user if using PixelMode::SHADER.
 //
-using PixelShader_t = Color4u (*)(Color4u inColor, int pxx int pxy);
+// The arguments to the shader are:
+//
+//    inColor - the color sampled from the gfx resource or taken the color argument to the
+//              draw call.
+//
+//    pxx     - the x-axis position of the current pixel being drawn w.r.t the virtual screen 
+//              coordinate space.
+//
+//    pxy     - the y-axis position of the current pixel being drawn w.r.t the virtual screen 
+//              coordinate space.
+//
+// The shader returns a color value it has calculated. The returned color value will replace
+// the input color for the pixel being drawn to the screen at position [pxx, pxy].
+//
+using PXShader_t = Color4u (*)(Color4u inColor, int pxx, int pxy);
 
 //
 // A virtual screen of virtual pixels used to create a layer of abstraction from the display
@@ -275,7 +290,7 @@ void onWindowResize(Vector2i windowSize);
 // The naming format for the asset files is:
 //    <name>.<extension>
 //
-// see XML_RESOURCE_EXTENSION_SPRITESHEET and BmpImage::FILE_EXTENSION for the extensions.
+// see XML_RESOURCE_EXTENSION_SPRITESHEET and Bmp::FILE_EXTENSION for the extensions.
 //
 //
 // Returns the resource key the loaded spritesheet was mapped to which is needed for the drawing
@@ -300,7 +315,7 @@ void unloadSpritesheet(ResourceKey_t sheetKey);
 // The naming format for the asset files is:
 //    <name>.<extension>
 //
-// see XML_RESOURCE_EXTENSION_FONTS and BmpImage::FILE_EXTENSION for the extensions.
+// see XML_RESOURCE_EXTENSION_FONTS and Bmp::FILE_EXTENSION for the extensions.
 //
 // Returns the resource key the loaded font was mapped to which is needed for the drawing
 // routines. Internally fonts are reference counted and thus can be loaded multiple times
@@ -412,12 +427,7 @@ void setScreenManualPixelSize(int pxSize, int screenid);
 // Sets the pixel shader function to use for a particular screen. This function will only be 
 // used if the screen is in PixelMode::SHADER.
 //
-void setPixelShader(PixelShader_t shader, int screenid);
-
-//
-// Sets the bitmap color of a screen.
-//
-void setScreenBitmapColor(Color4u color, int screenid);
+void setPixelShader(PXShader_t shader, int screenid);
 
 //
 // Enables a screen so it will be rendered to the window.
@@ -439,7 +449,7 @@ Vector2i calculateTextSize(const std::string& text, ResourceKey_t fontKey);
 // Utility to test if a spritesheet resource key is associated with the error spritesheet. Allows 
 // testing if a spritesheet load failed.
 //
-bool isErrorSprite(ResourceKey_t sheetKey);
+bool isErrorSpritesheet(ResourceKey_t sheetKey);
 
 //
 // Utility to access the size of a spritesheet.
