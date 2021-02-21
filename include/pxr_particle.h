@@ -131,13 +131,6 @@ private:
   //
   Particle* _particles;
   int _numParticles;
-
-  //
-  // Random number generators.
-  //
-  fRand _randVelocity;
-  fRand _randAcceleration;
-  fRand _randLifetime;
 };
 
 } // namespace pxr 

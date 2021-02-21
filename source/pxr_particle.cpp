@@ -8,9 +8,6 @@ namespace pxr
 
 ParticleEngine::ParticleEngine(Configuration config) : 
   _config{config},
-  _randVelocity{_config._loVelocityComponent, _config._hiVelocityComponent},
-  _randAcceleration{_config._loAccelerationComponent, _config._hiAccelerationComponent},
-  _randLifetime{_config._loLifetime, _config._hiLifetime},
   _numParticles{0}
 {
   assert(0 < _config._maxParticles && _config._maxParticles <= HARD_MAX_PARTICLES);
@@ -72,7 +69,7 @@ void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity, Vector2
     particle._position = position;
     particle._velocity = velocity;
     particle._acceleration = acceleration;
-    particle._lifetime = _randLifetime();
+    particle._lifetime = rand::uniformReal(_config._loLifetime, _config._hiLifetime);
     particle._clock = 0.f;
     particle._isAlive = true;
 
@@ -83,13 +80,21 @@ void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity, Vector2
 void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity)
 {
   assert(_particles != nullptr);
-  spawnParticle(position, velocity, {_randAcceleration(), _randAcceleration()});
+  Vector2f a {
+    rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent),
+    rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent)
+  };
+  spawnParticle(position, velocity, a);
 }
 
 void ParticleEngine::spawnParticle(Vector2f position)
 {
   assert(_particles != nullptr);
-  spawnParticle(position, {_randVelocity(), _randVelocity()});
+  Vector2f v {
+    rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent),
+    rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent)
+  };
+  spawnParticle(position, v);
 }
 
 void ParticleEngine::setDamping(float damping)
