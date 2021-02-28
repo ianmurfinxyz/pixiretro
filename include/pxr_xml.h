@@ -11,6 +11,8 @@ namespace io
 
 using namespace tinyxml2;
 
+static constexpr const char* XML_FILE_EXTENSION {".xml"};
+
 //
 // Helper which wraps parsing an xml file via the tinyxml2 library. The wrapper handles
 // errors and returns true/false to indicate parsing status. Errors are logged to the 

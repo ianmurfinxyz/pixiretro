@@ -24,6 +24,7 @@ LOGSTR msg_log_to_stderr = "logging to standard error";
 LOGSTR msg_eng_fail_sdl_init = "failed to initialize SDL";
 LOGSTR msg_eng_locking_fps = "locking fps to";
 LOGSTR msg_eng_fail_load_splash = "failed to splash sprite : skipping splash screen";
+LOGSTR msg_eng_fail_init_app = "failed to initialize the app";
 
 //
 // gfx log strings.

@@ -662,7 +662,8 @@ void clearScreenColor(Color4u color, int screenid)
     screen._pxColors[px] = color;
 }
 
-void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int screenid)
+void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int screenid, 
+                bool mirrorX, bool mirrorY)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
@@ -678,19 +679,24 @@ void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int scr
   spriteid = (spriteid < sheet._sprites.size()) ? spriteid : 0; // may be an error sheet with 1 sprite.
   auto& sprite = sheet._sprites[spriteid];
 
-  int screenRow {0}, screenCol{0}, screenRowOffset{0}, screenRowBase{0}, screenColBase{0};
-  screenRowBase = position._y + sprite._origin._y;
-  screenColBase = position._x + sprite._origin._x;
-  for(int spriteRow = 0; spriteRow < sprite._size._y; ++spriteRow){
+  int screenRow {0}, screenCol{0}, screenRowOffset{0}, screenRowBase{0}, screenColBase{0},
+      spriteRowOffset{0}, spriteColOffset{0}, spriteRowMax{0}, spriteColMax{0};
+  screenRowBase = position._y - sprite._origin._y;
+  screenColBase = position._x - sprite._origin._x;
+  spriteRowMax = sprite._size._y - 1;
+  spriteColMax = sprite._size._x - 1;
+  for(int spriteRow = 0; spriteRow <= spriteRowMax; ++spriteRow){
     screenRow = screenRowBase + spriteRow;
     if(screenRow < 0) continue;
     if(screenRow >= screen._resolution._y) break;
     screenRowOffset = screenRow * screen._resolution._x;
-    for(int spriteCol = 0; spriteCol < sprite._size._x; ++spriteCol){
+    spriteRowOffset = sprite._position._y + (mirrorY ? spriteRowMax - spriteRow : spriteRow); 
+    for(int spriteCol = 0; spriteCol <= spriteColMax; ++spriteCol){
       screenCol = screenColBase + spriteCol;
       if(screenCol < 0) continue;
       if(screenCol >= screen._resolution._x) break;
-      const Color4u& color = sheetPxs[sprite._position._y + spriteRow][sprite._position._x + spriteCol];
+      spriteColOffset = sprite._position._x + (mirrorX ? spriteColMax - spriteCol : spriteCol); 
+      const Color4u& color = sheetPxs[spriteRowOffset][spriteColOffset];
       if(color._a == ALPHA_KEY) continue;
       screen._pxColors[screenCol + screenRowOffset] =
         (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, screenCol, screenRow) : color;

@@ -1,7 +1,8 @@
 #ifndef _PIXIRETRO_INPUT_H_
 #define _PIXIRETRO_INPUT_H_
 
-//#include <SDL2/SDL_events.h>
+#include <vector>
+
 union SDL_Event;
 
 namespace pxr

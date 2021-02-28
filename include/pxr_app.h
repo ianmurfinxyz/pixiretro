@@ -2,6 +2,8 @@
 #define _PIXIRETRO_APP_H_
 
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace pxr
 {
@@ -20,7 +22,7 @@ public:
   virtual ~AppState() = default;
   virtual bool onInit() = 0;
   virtual void onUpdate(double now, float dt) = 0;
-  virtual void onDraw(double now, float dt) = 0;
+  virtual void onDraw(double now, float dt, int screenid) = 0;
   virtual void onReset() = 0;
 
   virtual std::string getName() const = 0;
@@ -42,6 +44,8 @@ public:
   //
   // Invoked by the engine on boot. For use by derived classes to instantiate and
   // add all their app states, as well as setting their initial state.
+  // 
+  // Must also create all the gfx screens the app required for drawing.
   //
   virtual bool onInit() = 0;
 
@@ -63,7 +67,7 @@ public:
   //
   void onDraw(double now, float dt)
   {
-    _active->onDraw(now, dt);
+    _active->onDraw(now, dt, _activeScreenid);
   }
 
   //
@@ -89,6 +93,7 @@ public:
 protected:
   std::unordered_map<std::string, std::shared_ptr<AppState>> _states;
   std::shared_ptr<AppState> _active;
+  int _activeScreenid;
 };
 
 } // namespace pxr

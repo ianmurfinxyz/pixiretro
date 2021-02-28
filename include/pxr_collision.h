@@ -70,19 +70,19 @@ struct AABB
   int32_t _ymax;
 };
 
-struct Collision
-{
-  bool _isCollision;
-  AABB _aBounds;
-  AABB _bBounds;
-  AABB _aOverlap;
-  AABB _bOverlap;
-  std::vector<Vector2i> _aPixels;
-  std::vector<Vector2i> _bPixels;
-};
+//struct Collision
+//{
+//  bool _isCollision;
+//  AABB _aBounds;
+//  AABB _bBounds;
+//  AABB _aOverlap;
+//  AABB _bOverlap;
+//  std::vector<Vector2i> _aPixels;
+//  std::vector<Vector2i> _bPixels;
+//};
 
-const Collision& testCollision(Vector2i aPosition, const Bitmap& aBitmap, 
-                               Vector2i bPosition, const Bitmap& bBitmap, bool pixelLists = true);
+//const Collision& testCollision(Vector2i aPosition, const Bitmap& aBitmap, 
+//                               Vector2i bPosition, const Bitmap& bBitmap, bool pixelLists = true);
 
 } // namespace pxr
 

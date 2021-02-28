@@ -134,7 +134,10 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   _engineFontKey = gfx::loadFont(engineFontName);
   
-  _app->onInit();
+  if(!_app->onInit()){
+    log::log(log::FATAL, log::msg_eng_fail_init_app);
+    exit(EXIT_FAILURE);
+  }
 
   _statsScreenId = gfx::createScreen(statsScreenResolution);
   gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, _statsScreenId);

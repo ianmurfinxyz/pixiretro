@@ -375,7 +375,8 @@ void clearScreenColor(Color4u color, ScreenId_t screenid);
 //
 // Draw a sprite of a spritesheet.
 //
-void drawSprite(Vector2i position, ResourceKey_t sheetKey, SpriteId_t spriteid, ScreenId_t screenid);
+void drawSprite(Vector2i position, ResourceKey_t sheetKey, SpriteId_t spriteid, ScreenId_t screenid, 
+                bool mirrorX = false, bool mirrorY = false);
 
 //
 // Takes a column of pixels from a specific sprite of a spritesheet and draws it with the bottom

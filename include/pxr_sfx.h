@@ -39,6 +39,11 @@ void shutdown();
 // Internally sounds are reference counted and so can be loaded multiple times without 
 // duplication, each time returning the same key. To actually remove sounds from memory it is
 // necessary to unload a sound an equal number of times to which it was loaded.
+// 
+// If a sounds cannot be loaded an error will be logged to the log and the resource key of
+// the error sound will be returned.
+//
+// Returned resource keys are always positive.
 //
 ResourceKey_t loadSound(ResourceName_t soundName);
 

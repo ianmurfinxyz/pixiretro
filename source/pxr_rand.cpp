@@ -123,9 +123,10 @@ bool operator!=(const xorwow& lhs, const xorwow& rhs)
 // them since it restricts the ability to copy and move such objects. It is thus far more
 // flexible to just call a function which requires the callee to maintain no internal state.
 //
-// note: my tests showed generating 10^6 random ints, creating a new distribution each time, 
-// took around 3^4us on my machine, whereas using the same distribution took around 2.4^4, i.e.
-// around 80% of the time. This is an acceptable difference for my needs.
+// note: my tests (on a different but similar xorshift algorithm) showed generating 10^6 random 
+// ints, creating a new distribution each time, took around 3^4us on my machine, whereas using 
+// the same distribution took around 2.4^4, i.e. around 80% of the time. This is an acceptable 
+// difference for my needs.
 //
 
 int uniformSignedInt(int lo, int hi)
