@@ -390,9 +390,15 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, SpriteId_t spri
 void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, ScreenId_t screenid);
 
 //
-// Draw a rectangle.
+// Draw a border rectangle, i.e draw only the outline. This function clamps the rectangle to 
+// within the screen boundary.
 //
-void drawRectangle(iRect rect, Color4u color, ScreenId_t screenid);
+void drawBorderRectangle(iRect rect, Color4u color, ScreenId_t screenid);
+
+//
+// Draw a fill rectangle. This function clamps the rectangle to within the screen boundary.
+//
+void drawFillRectangle(iRect rect, Color4u color, ScreenId_t screenid);
 
 //
 // Draw a line.

@@ -776,8 +776,45 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
   }
 }
 
-void drawRectangle(iRect rect, Color4u color, int screenid)
+void drawBorderRectangle(iRect rect, Color4u color, int screenid)
 {
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  int xmin = std::clamp(rect._x,           0, screen._resolution._x - 1);
+  int xmax = std::clamp(rect._x + rect._w, 0, screen._resolution._x - 1);
+  int ymin = std::clamp(rect._y,           0, screen._resolution._y - 1);
+  int ymax = std::clamp(rect._y + rect._h, 0, screen._resolution._y - 1);
+
+  for(int x = xmin; x <= xmax; ++x){
+    screen._pxColors[x + (ymin * screen._resolution._x)] = 
+      (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, ymin) : color;
+    screen._pxColors[x + (ymax * screen._resolution._x)] = 
+      (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, ymax) : color;
+  }
+
+  for(int y = ymin; y <= ymax; ++y){
+    screen._pxColors[xmin + (y * screen._resolution._x)] = 
+      (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, xmin, y) : color;
+    screen._pxColors[xmax + (y * screen._resolution._x)] = 
+      (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, xmax, y) : color;
+  }
+}
+
+void drawFillRectangle(iRect rect, Color4u color, int screenid)
+{
+  assert(0 <= screenid && screenid < screens.size());
+  auto& screen = screens[screenid];
+
+  int xmin = std::clamp(rect._x,           0, screen._resolution._x - 1);
+  int xmax = std::clamp(rect._x + rect._w, 0, screen._resolution._x - 1);
+  int ymin = std::clamp(rect._y,           0, screen._resolution._y - 1);
+  int ymax = std::clamp(rect._y + rect._h, 0, screen._resolution._y - 1);
+
+  for(int x = xmin; x <= xmax; ++x)
+    for(int y = ymin; y <= ymax; ++y)
+      screen._pxColors[x + (y * screen._resolution._x)] = 
+        (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, x, ymin) : color;
 }
 
 void drawLine(Vector2i p0, Vector2i p1, Color4u color, int screenid)

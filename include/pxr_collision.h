@@ -70,6 +70,14 @@ struct AABB
   int32_t _ymax;
 };
 
+//
+// Simple AABB intersection test.
+//
+inline bool isAABBIntersection(const AABB& a, const AABB& b)
+{
+  return ((a._xmin <= b._xmax) && (a._xmax >= b._xmin)) && ((a._ymin <= b._ymax) && (a._ymax >= b._ymin));
+}
+
 //struct Collision
 //{
 //  bool _isCollision;
