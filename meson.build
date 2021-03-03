@@ -5,6 +5,7 @@ pxr_src = [
   'source/pxr_engine.cpp',
   'source/pxr_rc.cpp',
   'source/pxr_gfx.cpp',
+  'source/pxr_collision.cpp',
   'source/pxr_input.cpp',
   'source/pxr_sfx.cpp',
   'source/pxr_log.cpp',

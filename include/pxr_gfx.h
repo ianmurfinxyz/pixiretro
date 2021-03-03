@@ -473,11 +473,15 @@ bool isErrorSpritesheet(ResourceKey_t sheetKey);
 //
 Vector2i getSpritesheetSize(ResourceKey_t sheetKey);
 
-
 //
 // Utility to access the size of a sprite within a spritesheet.
 //
 Vector2i getSpriteSize(ResourceKey_t sheetKey, SpriteId_t spriteid);
+
+//
+// Provides read only access to internally stored spritesheets.
+//
+const Spritesheet& getSpritesheet(ResourceKey_t sheetKey);
 
 } // namespace gfx
 } // namespace pxr

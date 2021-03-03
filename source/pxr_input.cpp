@@ -1,6 +1,7 @@
 #include <array>
 #include <vector>
 #include <cassert>
+#include <string>
 #include <SDL2/SDL_events.h>
 
 #include "pxr_input.h"
@@ -138,6 +139,78 @@ int keyToAsciiCode(KeyCode key)
     case KEY_SPACE: return ' ';
     default: return -1;
   }
+}
+
+KeyCode keyStringToKeyCode(const std::string& keyString)
+{
+  if(keyString == "KEY_a")
+    return KEY_a;
+  else if(keyString == "KEY_b")
+    return KEY_b;
+  else if(keyString == "KEY_c")
+    return KEY_c;
+  else if(keyString == "KEY_d")
+    return KEY_d;
+  else if(keyString == "KEY_e")
+    return KEY_e;
+  else if(keyString == "KEY_f")
+    return KEY_f;
+  else if(keyString == "KEY_g")
+    return KEY_g;
+  else if(keyString == "KEY_h")
+    return KEY_h;
+  else if(keyString == "KEY_i")
+    return KEY_i;
+  else if(keyString == "KEY_j")
+    return KEY_j;
+  else if(keyString == "KEY_k")
+    return KEY_k;
+  else if(keyString == "KEY_l")
+    return KEY_l;
+  else if(keyString == "KEY_m")
+    return KEY_m;
+  else if(keyString == "KEY_n")
+    return KEY_n;
+  else if(keyString == "KEY_o")
+    return KEY_o;
+  else if(keyString == "KEY_p")
+    return KEY_p;
+  else if(keyString == "KEY_q")
+    return KEY_q;
+  else if(keyString == "KEY_r")
+    return KEY_r;
+  else if(keyString == "KEY_s")
+    return KEY_s;
+  else if(keyString == "KEY_t")
+    return KEY_t;
+  else if(keyString == "KEY_u")
+    return KEY_u;
+  else if(keyString == "KEY_v")
+    return KEY_v;
+  else if(keyString == "KEY_w")
+    return KEY_w;
+  else if(keyString == "KEY_x")
+    return KEY_x;
+  else if(keyString == "KEY_y")
+    return KEY_y;
+  else if(keyString == "KEY_z")
+    return KEY_z;
+  else if(keyString == "KEY_SPACE")
+    return KEY_SPACE;
+  else if(keyString == "KEY_ENTER")
+    return KEY_ENTER;
+  else if(keyString == "KEY_BACKSPACE")
+    return KEY_BACKSPACE;
+  else if(keyString == "KEY_LEFT")
+    return KEY_LEFT;
+  else if(keyString == "KEY_RIGHT")
+    return KEY_RIGHT;
+  else if(keyString == "KEY_UP")
+    return KEY_UP;
+  else if(keyString == "KEY_DOWN")
+    return KEY_DOWN;
+  else
+    return KEY_COUNT;
 }
 
 } // namespace input

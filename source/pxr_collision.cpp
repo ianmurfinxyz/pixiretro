@@ -1,24 +1,40 @@
-#include "collision.h"
+#include <cassert>
+#include "pxr_collision.h"
+#include "pxr_bmp.h"
 
 namespace pxr
 {
 
-static bool isAABBIntersection(const AABB& a, const AABB& b)
+//
+// The collision result instance used to return collision data. This struct is reused in
+// every call to avoid repeated memory allocations.
+//
+static CollisionResult cr;
+
+static void clearResults()
 {
-  return ((a._xmin <= b._xmax) && (a._xmax >= b._xmin)) && ((a._ymin <= b._ymax) && (a._ymax >= b._ymin));
+  cr._isCollision = false;
+  cr._aOverlap = {0, 0, 0, 0};
+  cr._bOverlap = {0, 0, 0, 0};
+  cr._aPixels.clear();
+  cr._bPixels.clear();
 }
 
-static void calculateAABBOverlap(const AABB& aBounds, const AABB& bBounds, 
-                                 AABB& aOverlap, AABB& bOverlap)
+static void calculateAABBOverlap(const AABB& aBounds, AABB& aOverlap, 
+                                 const AABB& bBounds, AABB& bOverlap)
 {
-  // Overlap w.r.t screen space which is common to both.
+  //
+  // Overlap w.r.t the space common to both.
+  //
   AABB overlap;
   overlap._xmax = std::min(aBounds._xmax, bBounds._xmax);
   overlap._xmin = std::max(aBounds._xmin, bBounds._xmin);
   overlap._ymax = std::min(aBounds._ymax, bBounds._ymax);
   overlap._ymin = std::max(aBounds._ymin, bBounds._ymin);
 
-  // Overlaps w.r.t each local bitmap coordinate space.
+  //
+  // Overlaps w.r.t each local sprite coordinate space.
+  //
   aOverlap._xmax = overlap._xmax - aBounds._xmin; 
   aOverlap._xmin = overlap._xmin - aBounds._xmin;
   aOverlap._ymax = overlap._ymax - aBounds._ymin; 
@@ -29,75 +45,146 @@ static void calculateAABBOverlap(const AABB& aBounds, const AABB& bBounds,
   bOverlap._ymax = overlap._ymax - bBounds._ymin; 
   bOverlap._ymin = overlap._ymin - bBounds._ymin;
 
+  //
   // The results should be the same overlap region w.r.t two different coordinate spaces.
+  //
   assert((aOverlap._xmax - aOverlap._xmin) == (bOverlap._xmax - bOverlap._xmin));
   assert((aOverlap._ymax - aOverlap._ymin) == (bOverlap._ymax - bOverlap._ymin));
 }
 
-static void findPixelIntersectionSets(const AABB& aOverlap, const Bitmap& aBitmap, 
-                                      const AABB& bOverlap, const Bitmap& bBitmap,
-                                      std::vector<Vector2i>& aPixels, std::vector<Vector2i>& bPixels,
-                                      bool pixelLists)
+static void findPixelIntersections(const AABB& aOverlap, 
+                                   const gfx::Spritesheet& aSheet,
+                                   const gfx::Sprite& aSprite,
+                                   const AABB& bOverlap, 
+                                   const gfx::Spritesheet& bSheet,
+                                   const gfx::Sprite& bSprite,
+                                   bool pixelLists)
 {
-  int32_t overlapWidth = aOverlap._xmax - aOverlap._xmin;
-  int32_t overlapHeight = aOverlap._ymax - aOverlap._ymin;
 
-  int32_t aBitRow, bBitRow, aBitCol, bBitCol, aBitValue, bBitValue;
+  //
+  // aSprite is the subregion of aSheet.
+  //
+  // aOverlap is the subregion of aSprite overlapping b.
+  //
+  // aSheetOverlap is the subregion of aSheet overlapping b.
+  //
+  static AABB aSheetOverlap, bSheetOverlap;
 
-  for(int32_t row = 0; row < overlapHeight; ++row){
-    for(int32_t col = 0; col < overlapWidth; ++col){
-      aBitRow = aOverlap._ymin + row;
-      aBitCol = aOverlap._xmin + col;
+  aSheetOverlap._xmin = aSprite._position._x + aOverlap._xmin;
+  aSheetOverlap._xmax = aSprite._position._x + aOverlap._xmax;
+  aSheetOverlap._ymin = aSprite._position._y + aOverlap._ymin;
+  aSheetOverlap._ymax = aSprite._position._y + aOverlap._ymax;
 
-      bBitRow = bOverlap._ymin + row;
-      bBitCol = bOverlap._xmin + col;
+  bSheetOverlap._xmin = bSprite._position._x + bOverlap._xmin;
+  bSheetOverlap._xmax = bSprite._position._x + bOverlap._xmax;
+  bSheetOverlap._ymin = bSprite._position._y + bOverlap._ymin;
+  bSheetOverlap._ymax = bSprite._position._y + bOverlap._ymax;
 
-      aBitValue = aBitmap.getBit(aBitRow, aBitCol);
-      bBitValue = bBitmap.getBit(bBitRow, bBitCol);
+  assert(0 <= aSheetOverlap._xmin && aSheetOverlap._xmin < aSheet._image.getWidth());
+  assert(0 <= bSheetOverlap._xmin && bSheetOverlap._xmin < bSheet._image.getWidth());
+  assert(0 <= aSheetOverlap._xmax && aSheetOverlap._xmax < aSheet._image.getWidth());
+  assert(0 <= bSheetOverlap._xmax && bSheetOverlap._xmax < bSheet._image.getWidth());
 
-      if(aBitValue == 0 || bBitValue == 0)
+  assert(0 <= aSheetOverlap._ymin && aSheetOverlap._ymin < aSheet._image.getHeight());
+  assert(0 <= bSheetOverlap._ymin && bSheetOverlap._ymin < bSheet._image.getHeight());
+  assert(0 <= aSheetOverlap._ymax && aSheetOverlap._ymax < aSheet._image.getHeight());
+  assert(0 <= bSheetOverlap._ymax && bSheetOverlap._ymax < bSheet._image.getHeight());
+
+  const gfx::Color4u* const* aPixels = aSheet._image.getPixels();
+  const gfx::Color4u* const* bPixels = bSheet._image.getPixels();
+
+  int overlapWidth = aSheetOverlap._xmax - aSheetOverlap._xmin;
+  int overlapHeight = aSheetOverlap._ymax - aSheetOverlap._ymin;
+
+  int aPxRow, bPxRow, aPxCol, bPxCol;
+
+  for(int row = 0; row < overlapHeight; ++row){
+    for(int col = 0; col < overlapWidth; ++col){
+      aPxRow = aSheetOverlap._ymin + row;
+      aPxCol = aSheetOverlap._xmin + col;
+
+      bPxRow = bSheetOverlap._ymin + row;
+      bPxCol = bSheetOverlap._xmin + col;
+
+      if(aPixels[aPxRow][aPxCol]._a == 0 || bPixels[bPxRow][bPxCol]._a == 0)
         continue;
 
-      aPixels.push_back({aBitCol, aBitRow});
-      bPixels.push_back({bBitCol, bBitRow});
+      cr._aPixels.push_back({aPxCol, aPxRow});
+      cr._bPixels.push_back({bPxCol, bPxRow});
 
       if(!pixelLists)
-        return;
+        break;
     }
   }
 }
 
-const Collision& testCollision(Vector2i aPosition, const Bitmap& aBitmap, 
-                               Vector2i bPosition, const Bitmap& bBitmap, bool pixelLists)
+bool isAABBIntersection(const AABB& a, const AABB& b)
 {
-  static Collision c;
+  return ((a._xmin <= b._xmax) && (a._xmax >= b._xmin)) 
+         && 
+         ((a._ymin <= b._ymax) && (a._ymax >= b._ymin));
+}
 
-  c._isCollision = false;
-  c._aOverlap = {0, 0, 0, 0};
-  c._bOverlap = {0, 0, 0, 0};
-  c._aPixels.clear();
-  c._bPixels.clear();
+const CollisionResult& isPixelIntersection(const CollisionSubject& a,
+                                           const CollisionSubject& b,
+                                           bool pixelLists)
+{
 
-  c._aBounds = {aPosition._x, aPosition._y, 
-                aPosition._x + aBitmap.getWidth(), aPosition._y + aBitmap.getHeight()};
-  c._bBounds = {bPosition._x, bPosition._y, 
-                bPosition._x + bBitmap.getWidth(), bPosition._y + bBitmap.getHeight()};
+  const gfx::Spritesheet& aSheet = gfx::getSpritesheet(a._spritesheetKey);
+  const gfx::Spritesheet& bSheet = gfx::getSpritesheet(b._spritesheetKey);
 
-  if(!isAABBIntersection(c._aBounds, c._bBounds))
-    return c;
+  //
+  // bottom-left most pixel position of the sprites w.r.t the common space.
+  //
+  Vector2f aBLPosition, bBLPosition;
 
-  calculateAABBOverlap(c._aBounds, c._bBounds, c._aOverlap, c._bOverlap);
+  assert(0 <= a._spriteid && a._spriteid < aSheet._sprites.size());
+  assert(0 <= b._spriteid && b._spriteid < bSheet._sprites.size());
+  
+  const gfx::Sprite& aSprite = aSheet._sprites[a._spriteid];
+  const gfx::Sprite& bSprite = bSheet._sprites[b._spriteid];
 
-  findPixelIntersectionSets(c._aOverlap, aBitmap, 
-                            c._bOverlap, bBitmap, 
-                            c._aPixels, c._bPixels, pixelLists);
+  clearResults();
 
-  assert(c._aPixels.size() == c._bPixels.size());
+  //
+  // calculate bounds w.r.t the common space.
+  //
 
-  if(c._aPixels.size() != 0)
-    c._isCollision = true;  
+  aBLPosition = a._position - aSprite._origin;
+  bBLPosition = b._position - bSprite._origin;
+  
+  cr._aBounds = {
+    aBLPosition._x,
+    aBLPosition._y,
+    aBLPosition._x + (aSprite._size._x - 1), 
+    aBLPosition._y + (aSprite._size._y - 1)
+  };
 
-  return c;
+  cr._bBounds = {
+    bBLPosition._x,
+    bBLPosition._y,
+    bBLPosition._x + (bSprite._size._x - 1), 
+    bBLPosition._y + (bSprite._size._y - 1)
+  };
+
+  if(!isAABBIntersection(cr._aBounds, cr._bBounds))
+    return cr;
+
+  //
+  // calculate the local region of each sprite overlapping with the other sprite.
+  //
+
+  calculateAABBOverlap(cr._aBounds, cr._aOverlap, cr._bBounds, cr._bOverlap);
+
+  findPixelIntersections(cr._aOverlap, aSheet, aSprite, 
+                         cr._bOverlap, bSheet, bSprite, pixelLists);
+
+  assert(cr._aPixels.size() == cr._bPixels.size());
+
+  if(cr._aPixels.size() > 0)
+    cr._isCollision = true;
+
+  return cr;
 }
 
 } // namespace pxr

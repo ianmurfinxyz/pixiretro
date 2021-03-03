@@ -61,6 +61,12 @@ const std::vector<KeyCode>& getHistory();
 //
 int keyToAsciiCode(KeyCode key);
 
+//
+// Simple helper to translate a string of a key enum value to the enum value, e.g. translate
+// "KEY_a" to Key_a enum value.
+//
+KeyCode keyStringToKeyCode(const std::string& keyString);
+
 } // namespace input
 } // namespace pxr
 

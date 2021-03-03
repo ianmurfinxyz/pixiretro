@@ -73,6 +73,7 @@ static std::map<ResourceKey_t, FontResource> fonts;
 static constexpr const char* errorSpritesheetName {"error_spritesheet"};
 static constexpr const char* errorFontName {"error_font"};
 
+static ResourceKey_t errorSpritesheetKey;
 static SpritesheetResource errorSpritesheet;
 static FontResource errorFont;
 
@@ -118,7 +119,9 @@ static void genErrorSpritesheet()
   resource._name = errorSpritesheetName;
   resource._referenceCount = 0;
 
-  spritesheets.emplace(std::make_pair(nextResourceKey++, resource));
+  errorSpritesheetKey = nextResourceKey++;
+
+  spritesheets.emplace(std::make_pair(errorSpritesheetKey, resource));
 }
 
 //
@@ -676,7 +679,12 @@ void drawSprite(Vector2i position, ResourceKey_t sheetKey, int spriteid, int scr
   const Color4u* const * sheetPxs = sheet._image.getPixels();
 
   assert(0 <= spriteid);
-  spriteid = (spriteid < sheet._sprites.size()) ? spriteid : 0; // may be an error sheet with 1 sprite.
+
+  if(sheetKey == errorSpritesheetKey)
+    spriteid = (spriteid < sheet._sprites.size()) ? spriteid : 0;
+  else
+    assert(spriteid < sheet._sprites.size());
+
   auto& sprite = sheet._sprites[spriteid];
 
   int screenRow {0}, screenCol{0}, screenRowOffset{0}, screenRowBase{0}, screenColBase{0},
@@ -1006,6 +1014,13 @@ Vector2i getSpriteSize(ResourceKey_t sheetKey, int spriteid)
   assert(search != spritesheets.end());
   assert(0 <= spriteid && spriteid < search->second._sheet._sprites.size());
   return search->second._sheet._sprites[spriteid]._size;
+}
+
+const Spritesheet& getSpritesheet(ResourceKey_t sheetKey)
+{
+  auto search = spritesheets.find(sheetKey);
+  assert(search != spritesheets.end());
+  return search->second._sheet;
 }
 
 } // namespace gfx
