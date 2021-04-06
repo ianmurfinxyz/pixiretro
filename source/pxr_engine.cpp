@@ -308,7 +308,7 @@ void Engine::drawEngineStats()
   ss << "update FPS: " << updateHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
      << "render FPS: " << drawHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
      << "frame FPS: " << _measuredFrameFrequency << "hz";
-  gfx::drawText({10, 20}, ss.str(), _engineFontKey, _statsScreenId);
+  gfx::drawText({10, 20}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
 
   std::stringstream().swap(ss);
 
@@ -319,7 +319,7 @@ void Engine::drawEngineStats()
   ss << std::setprecision(3);
   ss << "time [h:m:s] -- game=" << gameHours << ":" << gameMins << ":" << gameSecs
                  << " -- real=" << realHours << ":" << realMins << ":" << realSecs;
-  gfx::drawText({10, 10}, ss.str(), _engineFontKey, _statsScreenId);
+  gfx::drawText({10, 10}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
 
   _needRedrawEngineStats = false;
 }
@@ -343,7 +343,7 @@ void Engine::drawPauseDialog()
   pausedTxtPos._x = (xmax / 2) - (pausedTxtBox._x / 2); 
   pausedTxtPos._y = (ymax / 2) - (pausedTxtBox._y / 2);
 
-  gfx::drawText(pausedTxtPos, dialogTxt, _engineFontKey, _pauseScreenId);
+  gfx::drawText(pausedTxtPos, dialogTxt, _engineFontKey, gfx::colors::white, _pauseScreenId);
 }
 
 void Engine::onUpdateTick(float tickPeriodSeconds)

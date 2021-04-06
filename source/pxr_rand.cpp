@@ -39,10 +39,10 @@ void xorwow::seed()
   _state = default_seed;
 }
 
-void xorwow::seed(result_type seeds)
+void xorwow::seed(result_type seed)
 {
   _state = default_seed;
-  _state[state_size - 2] = seeds;
+  _state[state_size - 2] = seed;
 }
 
 void xorwow::seed(state_type seeds)

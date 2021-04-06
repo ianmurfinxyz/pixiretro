@@ -285,3 +285,33 @@ as the music tracks are very short repetitive sounds that can just be looped. - 
 - strip the color modes from the gfx module - these would be better implemented as shader functions
  in which I call the shader function when assigning the color - pass the input color and pixel
  position into a shader function - assign the output color of the function to the vscreen.
+
+ ------------------------------------------
+ ------------------------------------------
+ ------------------------------------------
+ EXTENDING INTO A FULL 2D PLATFORMER ENGINE
+ ------------------------------------------
+ ------------------------------------------
+ ------------------------------------------
+
+ 6th march 2021
+
+  - implement the improved prop system - so the prop class and components - the prop factory
+  - implement the quadtree to divide up world space.
+  - implement the camera which will follow the player, will also want a free fly mode.
+  - implement an update simple player class (will need to greatly expand this class later to
+      add more deaths and move mechanics etc).
+  - whip up a simple xml level file via text editor to test all the above.
+  - then start work on a level editor.
+  - get rid of the enginerc file and replace it with an xml file? then add the relative path
+      to the assets dir to this file so can find it. my enginerc file does not support strings
+      and is rather unnecessary when I can just use an xml file. will want to handle missing
+      data in the xml file without logging a tinyxml error probably. But it wouldn't be the
+      end of the world if I did log such errors redundantly. I would be using defaults for 
+      missing data probably thus it would be a recorverable error.
+  - find a solution to the fps and vsync issue. 
+
+  - do a dev diary on youtube? or atleast a showcase. should aim to do one of these every couple
+  weeks or so, or atleast reasonably regularly. This may get some potential players of the game
+  when its done.
+

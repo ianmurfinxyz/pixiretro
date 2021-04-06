@@ -115,7 +115,7 @@ struct Sprite
 //
 // The type of sprite ids required in draw calls. Primarily used to improve code readability.
 //
-using SpriteId_t = int;
+using SpriteID_t = int;
 
 //
 // A spritesheet organises a bitmap image into sprites.
@@ -260,7 +260,7 @@ struct Screen
 //
 // The type of screen ids. Primarly used to improve code readability.
 //
-using ScreenId_t = int;
+using ScreenID_t = int;
 
 //
 // Initializes the gfx subsystem. Returns true if success and false if fatal error.
@@ -341,6 +341,11 @@ ResourceKey_t loadFont(ResourceName_t name);
 void unloadFont(ResourceKey_t fontKey);
 
 //
+// Read only access to a font's data structure.
+//
+const Font* getFont(ResourceKey_t fontKey);
+
+//
 // Provides access to the sprite count of a spritesheet.
 //
 int getSpriteCount(ResourceKey_t sheetKey);
@@ -353,7 +358,7 @@ void clearWindowColor(Color4f color);
 //
 // Clears a screen to full transparency.
 //
-void clearScreenTransparent(ScreenId_t screenid);
+void clearScreenTransparent(ScreenID_t screenid);
 
 //
 // Clears a screen with a solid color shade by setting all color channels of all pixels to 
@@ -362,7 +367,7 @@ void clearScreenTransparent(ScreenId_t screenid);
 // note: if shade=0 (the alpha color key) this call has the same effect as 'clearScreen'. It is 
 // thus not possible to fill a screen pure black; instead use shade=1.
 //
-void clearScreenShade(int shade, ScreenId_t screenid);
+void clearScreenShade(int shade, ScreenID_t screenid);
 
 //
 // Clears a screen with a solid color. 
@@ -370,45 +375,45 @@ void clearScreenShade(int shade, ScreenId_t screenid);
 // note: this is a slow operation to be used only if you really need a specific color. For 
 // simple clearing ops use 'fillScreenShade'. 
 //
-void clearScreenColor(Color4u color, ScreenId_t screenid);
+void clearScreenColor(Color4u color, ScreenID_t screenid);
 
 //
 // Draw a sprite of a spritesheet.
 //
-void drawSprite(Vector2i position, ResourceKey_t sheetKey, SpriteId_t spriteid, ScreenId_t screenid, 
+void drawSprite(Vector2i position, ResourceKey_t sheetKey, SpriteID_t spriteid, ScreenID_t screenid, 
                 bool mirrorX = false, bool mirrorY = false);
 
 //
 // Takes a column of pixels from a specific sprite of a spritesheet and draws it with the bottom
 // most pixel in the column at position.
 //
-void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, SpriteId_t spriteid, int colid, ScreenId_t screenid);
+void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, SpriteID_t spriteid, int colid, ScreenID_t screenid);
 
 // 
 // Draw a text string.
 //
-void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, ScreenId_t screenid);
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Color4u color, ScreenID_t screenid);
 
 //
 // Draw a border rectangle, i.e draw only the outline. This function clamps the rectangle to 
 // within the screen boundary.
 //
-void drawBorderRectangle(iRect rect, Color4u color, ScreenId_t screenid);
+void drawBorderRectangle(iRect rect, Color4u color, ScreenID_t screenid);
 
 //
 // Draw a fill rectangle. This function clamps the rectangle to within the screen boundary.
 //
-void drawFillRectangle(iRect rect, Color4u color, ScreenId_t screenid);
+void drawFillRectangle(iRect rect, Color4u color, ScreenID_t screenid);
 
 //
 // Draw a line.
 //
-void drawLine(Vector2i p0, Vector2i p1, Color4u color, ScreenId_t screenid);
+void drawLine(Vector2i p0, Vector2i p1, Color4u color, ScreenID_t screenid);
 
 //
 // Draws a single pixel to a screen.
 //
-void drawPoint(Vector2i position, Color4u color, ScreenId_t screenid);
+void drawPoint(Vector2i position, Color4u color, ScreenID_t screenid);
 
 //
 // Issues opengl calls to render results of (software) draw calls and then swaps the buffers.
@@ -418,43 +423,43 @@ void present();
 //
 // Changes the pixel mode of a screen for all future draw calls.
 //
-void setScreenPixelMode(PixelMode mode, ScreenId_t screenid);
+void setScreenPixelMode(PixelMode mode, ScreenID_t screenid);
 
 //
 // Changes the size mode of a screen with immediate effect.
 //
-void setScreenSizeMode(SizeMode mode, ScreenId_t screenid);
+void setScreenSizeMode(SizeMode mode, ScreenID_t screenid);
 
 //
 // Changes the position mode of a screen with immediate effect.
 //
-void setScreenPositionMode(PositionMode mode, ScreenId_t screenid);
+void setScreenPositionMode(PositionMode mode, ScreenID_t screenid);
 
 //
 // Changes the manual position of a screen.
 //
-void setScreenManualPosition(Vector2i position, ScreenId_t screenid);
+void setScreenManualPosition(Vector2i position, ScreenID_t screenid);
 
 //
 // Changes the manual pixel size of a screen.
 //
-void setScreenManualPixelSize(int pxSize, ScreenId_t screenid);
+void setScreenManualPixelSize(int pxSize, ScreenID_t screenid);
 
 //
 // Sets the pixel shader function to use for a particular screen. This function will only be 
 // used if the screen is in PixelMode::SHADER.
 //
-void setPixelShader(PXShader_t shader, ScreenId_t screenid);
+void setPixelShader(PXShader_t shader, ScreenID_t screenid);
 
 //
 // Enables a screen so it will be rendered to the window.
 //
-void enableScreen(ScreenId_t screenid);
+void enableScreen(ScreenID_t screenid);
 
 //
 // Disable a screen so it will not be rendered to the window.
 //
-void disableScreen(ScreenId_t screenid);
+void disableScreen(ScreenID_t screenid);
 
 //
 // Utility function for calculating the dimensions of the smallest possible bounding box of 
@@ -476,7 +481,7 @@ Vector2i getSpritesheetSize(ResourceKey_t sheetKey);
 //
 // Utility to access the size of a sprite within a spritesheet.
 //
-Vector2i getSpriteSize(ResourceKey_t sheetKey, SpriteId_t spriteid);
+Vector2i getSpriteSize(ResourceKey_t sheetKey, SpriteID_t spriteid);
 
 //
 // Provides read only access to internally stored spritesheets.

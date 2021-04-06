@@ -59,8 +59,6 @@ namespace pxr
 // pixels in the lists are expressed in coordinates w.r.t their sprites coordinate space. Note 
 // pixels are returned as 2D vectors where [x,y] = [col][row]. 
 //
-// MODULE USAGE
-//
 // The collision data returned from the pixel intersection function is stored internally and 
 // returned via constant reference to avoid allocating memory for each and every test. 
 // Consequently the data returned persists only between calls to the test function; a subsequent
@@ -108,12 +106,11 @@ struct CollisionResult
 //
 // A potentially colliding object.
 //
-//
 struct CollisionSubject
 {
   Vector2i _position;
   gfx::ResourceKey_t _spritesheetKey;
-  gfx::SpriteId_t _spriteid;
+  gfx::SpriteID_t _spriteid;
 };
 
 //
@@ -124,8 +121,8 @@ bool isAABBIntersection(const AABB& a, const AABB& b);
 //
 // Pixel perfect collision test.
 //
-// Note: providing invalid subject data (an invalid spritesheet key or spriteid) will terminate
-// the program (via strippable assert).
+// Note: providing invalid subject data (an invalid spritesheet key or spriteid) will immediately 
+// terminate (via strippable assertion).
 //
 const CollisionResult& isPixelIntersection(const CollisionSubject& a,
                                            const CollisionSubject& b,

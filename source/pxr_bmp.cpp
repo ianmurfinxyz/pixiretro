@@ -367,6 +367,15 @@ void Bmp::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& i
       uint8_t blue = (rawPixelBytes & infoHead._blueMask) >> blueShift;
       uint8_t alpha = (rawPixelBytes & infoHead._alphaMask) >> alphaShift;
 
+      //
+      // Bug fix: In my gfx module all pixels with alpha==0 are not drawn. When loading 24-bit
+      // bmp images that have no alpha channel, was previously setting the alpha channel of all
+      // pixels to a default of 0 thus the image was not being draw. The fix is thus to set the
+      // default to 255.
+      //
+      //uint8_t alpha = infoHead._alphaMask == 0 ? 
+      //  (rawPixelBytes & infoHead._alphaMask) >> alphaShift : 255;
+
       _pixels[row][col] = gfx::Color4u{red, green, blue, alpha};
     }
     seekPos += rowOffset_bytes;

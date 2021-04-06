@@ -56,8 +56,8 @@ private:
   // and to aid checking bmp image integrity. It is very game dependent so feel free
   // to adjust these limits to suit your needs.
   //
-  static constexpr int BMP_MAX_WIDTH {256};
-  static constexpr int BMP_MAX_HEIGHT {128};
+  static constexpr int BMP_MAX_WIDTH {3000};
+  static constexpr int BMP_MAX_HEIGHT {3000};
 
   enum Compression
   {

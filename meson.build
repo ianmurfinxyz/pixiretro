@@ -13,6 +13,7 @@ pxr_src = [
   'source/pxr_wav.cpp',
   'source/pxr_xml.cpp',
   'source/pxr_rand.cpp',
+  'source/pxr_hud.cpp',
   'source/lib/tinyxml2/tinyxml2.cpp'
 ]
 

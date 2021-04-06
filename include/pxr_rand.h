@@ -43,7 +43,7 @@ public:
   //
   // reinitializes the state to the default_seed then sets the 'e' state to seed.
   //
-  void seed(result_type seeds);
+  void seed(result_type seed);
 
   //
   // reinitializes the full state to seed.

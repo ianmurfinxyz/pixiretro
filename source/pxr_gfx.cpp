@@ -624,6 +624,16 @@ void unloadFont(ResourceKey_t fontKey)
   }
 }
 
+const Font* getFont(ResourceKey_t fontKey)
+{
+  auto search = fonts.find(fontKey);
+  if(search == fonts.end()){
+    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
+    return nullptr;
+  }
+  return &(search->second._font);
+}
+
 int getSpriteCount(ResourceKey_t sheetKey)
 {
   auto search = spritesheets.find(sheetKey);
@@ -748,7 +758,7 @@ void drawSpriteColumn(Vector2i position, ResourceKey_t sheetKey, int spriteid, i
   }
 }
 
-void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, int screenid)
+void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey, Color4u color, int screenid)
 {
   assert(0 <= screenid && screenid < screens.size());
   auto& screen = screens[screenid];
@@ -774,8 +784,8 @@ void drawText(Vector2i position, const std::string& text, ResourceKey_t fontKey,
         screenCol = position._x + glyphCol + glyph._xoffset;
         if(screenCol < 0) continue;
         if(screenCol >= screen._resolution._x) return;
-        const Color4u& color = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
-        if(color._a == ALPHA_KEY) continue;
+        const Color4u& pxcolor = fontPxs[glyph._y + glyphRow][glyph._x + glyphCol];
+        if(pxcolor._a == ALPHA_KEY) continue;
         screen._pxColors[screenCol + screenRowOffset] =
           (screen._xmode == PixelMode::SHADER) ? screen._pxShader(color, screenCol, screenRow) : color;
       }
