@@ -5,7 +5,7 @@
 #include <cassert>
 #include "pxr_engine.h"
 #include "pxr_log.h"
-#include "pxr_app.h"
+#include "pxr_game.h"
 #include "pxr_input.h"
 #include "pxr_gfx.h"
 #include "pxr_sfx.h"
@@ -96,7 +96,7 @@ void Engine::Ticker::reset()
   _ticksAccumulated = 0;
 }
 
-void Engine::initialize(std::unique_ptr<App> app)
+void Engine::initialize(std::unique_ptr<Game> game)
 {
   log::initialize();
   input::initialize();
@@ -114,14 +114,14 @@ void Engine::initialize(std::unique_ptr<App> app)
     exit(EXIT_FAILURE);
   }
 
-  _app = std::move(app);
+  _game = std::move(game);
 
   std::stringstream ss {};
-  ss << _app->getName() 
+  ss << _game->getName() 
      << " version:" 
-     << _app->getVersionMajor() 
+     << _game->getVersionMajor() 
      << "." 
-     << _app->getVersionMinor();
+     << _game->getVersionMinor();
 
   Vector2i windowSize{};
   windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
@@ -134,8 +134,8 @@ void Engine::initialize(std::unique_ptr<App> app)
 
   _engineFontKey = gfx::loadFont(engineFontName);
   
-  if(!_app->onInit()){
-    log::log(log::FATAL, log::msg_eng_fail_init_app);
+  if(!_game->onInit()){
+    log::log(log::FATAL, log::msg_eng_fail_init_game);
     exit(EXIT_FAILURE);
   }
 
@@ -190,7 +190,7 @@ void Engine::initialize(std::unique_ptr<App> app)
 
 void Engine::shutdown()
 {
-  _app->onShutdown();
+  _game->onShutdown();
   gfx::shutdown();
   sfx::shutdown();
   log::shutdown();
@@ -349,7 +349,7 @@ void Engine::drawPauseDialog()
 void Engine::onUpdateTick(float tickPeriodSeconds)
 {
   double nowSeconds = durationToSeconds(_gameClock.getNow());
-  _app->onUpdate(nowSeconds, tickPeriodSeconds);
+  _game->onUpdate(nowSeconds, tickPeriodSeconds);
   input::onUpdate();
 }
 
@@ -358,7 +358,7 @@ void Engine::onDrawTick(float tickPeriodSeconds)
   gfx::clearWindowColor(gfx::colors::silver);
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
-  _app->onDraw(nowSeconds, tickPeriodSeconds);
+  _game->onDraw(nowSeconds, tickPeriodSeconds);
 
   if(_isDrawingEngineStats)
     drawEngineStats();

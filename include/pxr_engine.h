@@ -7,7 +7,7 @@
 #include <chrono>
 
 #include "pxr_rc.h"
-#include "pxr_app.h"
+#include "pxr_game.h"
 #include "pxr_color.h"
 #include "pxr_gfx.h"
 #include "pxr_sfx.h"
@@ -25,12 +25,12 @@ public:
   ~Engine() = default;
 
   //
-  // Call prior to all other methods to setup the engine. Takes an app instance to manage.
+  // Call prior to all other methods to setup the engine. Takes an game instance to manage.
   //
-  // The engine will initialize the app so it only requires a new instance, not an initialized
-  // app instance.
+  // The engine will initialize the game so it only requires a new instance, not an initialized
+  // game instance.
   //
-  void initialize(std::unique_ptr<App> app);
+  void initialize(std::unique_ptr<Game> game);
 
   //
   // Call after run() has returned.
@@ -69,7 +69,7 @@ private:
 
   //
   // Keys used by the engine for user controlled engine features. If these keys
-  // clash with your application controls they can be changed here.
+  // clash with your game controls they can be changed here.
   //
   static constexpr int decrementGameClockScaleKey {SDLK_LEFTBRACKET };
   static constexpr int incrementGameClockScaleKey {SDLK_RIGHTBRACKET};
@@ -274,7 +274,7 @@ private:
   int _splashProgress;
   bool _isSplashDone;
 
-  std::unique_ptr<App> _app;
+  std::unique_ptr<Game> _game;
 
   bool _isDrawingEngineStats;
   bool _needRedrawEngineStats;

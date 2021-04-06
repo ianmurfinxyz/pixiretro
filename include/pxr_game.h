@@ -8,38 +8,39 @@
 namespace pxr
 {
 
-class App;
+class Game;
 
 //
 // Virtual base class for app states. Derive from this class to create app 'modes'
 // that can be switched between, e.g. a splash screen, a menu, a gameplay state etc.
 //
-class AppState
+class Scene
 {
 public:
-  AppState(App* owner) : _owner(owner) {}
+  Scene(Game* owner) : _owner(owner) {}
 
-  virtual ~AppState() = default;
+  virtual ~Scene() = default;
   virtual bool onInit() = 0;
   virtual void onUpdate(double now, float dt) = 0;
   virtual void onDraw(double now, float dt, int screenid) = 0;
-  virtual void onReset() = 0;
+  virtual void onEnter() = 0;
+  virtual void onExit() = 0;
 
   virtual std::string getName() const = 0;
 
 protected:
-  App* _owner;
+  Game* _owner;
 };
 
 //
 // Virtual base class for applications. Derive from this class and setup some
 // states to create a game.
 //
-class App
+class Game
 {
 public:
-  App() = default;
-  virtual ~App() = default;
+  Game() = default;
+  virtual ~Game() = default;
 
   //
   // Invoked by the engine on boot. For use by derived classes to instantiate and
@@ -73,10 +74,11 @@ public:
   //
   // For use by app states to switch between other states (game state, menu states etc).
   //
-  void switchState(const std::string& name)
+  void switchScene(const std::string& name)
   {
-    _active = _states[name];
-    _active->onReset();
+    _active->onExit();
+    _active = _scenes[name];
+    _active->onEnter();
   }
 
   //
@@ -91,9 +93,9 @@ public:
   virtual int getVersionMinor() const = 0;
 
 protected:
-  std::unordered_map<std::string, std::shared_ptr<AppState>> _states;
-  std::shared_ptr<AppState> _active;
-  int _activeScreenid;
+  std::unordered_map<std::string, std::shared_ptr<Scene>> _scenes;
+  std::shared_ptr<Scene> _active;
+  int _activeScreenid;                             // must be initialized by derived classes.
 };
 
 } // namespace pxr
