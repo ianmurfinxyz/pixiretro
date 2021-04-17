@@ -1,5 +1,5 @@
 
-<p align="left">
+<p align="center">
   <img src="img/pixiretro_logo.png" atl="pixiretro_engine_logo">
 </p>
 
