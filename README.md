@@ -5,7 +5,7 @@
 
 ## What's this?
 
-Pixiretro is a game engine I made to develop small pixel art retor arcade games like pacman, space invaders, snake and donkey kong.
+Pixiretro is a game engine I made to develop small pixel art retro arcade games like Pacman, Space Invaders :space_invader:, Snake :snake: and Donkey Kong.
 
 ## Features
 
