@@ -1,6 +1,8 @@
 #ifndef _PIXIRETRO_COLLISION_H_
 #define _PIXIRETRO_COLLISION_H_
 
+#include <vector>
+
 #include "pxr_gfx.h"
 #include "pxr_vec.h"
 

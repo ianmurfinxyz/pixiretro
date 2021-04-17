@@ -18,7 +18,7 @@ HUD::Label::Label(
   _activationClock{0.f},
   _age{0.f},
   _lifetime{std::max(0.f, lifetime)},
-  _flashState{false},
+  _flashState{true},
   _isActive{_activationDelay == 0.f},
   _isHidden{false},
   _isFlashing{false},
@@ -61,6 +61,7 @@ void HUD::Label::startFlashing()
 void HUD::Label::stopFlashing()
 {
   _isFlashing = false;
+  _flashState = true;
 }
 
 void HUD::Label::initialize(const HUD* owner, uid_t uid)
@@ -81,7 +82,7 @@ HUD::TextLabel::TextLabel(
   Label(position, color, activationDelay, lifetime),
   _fontKey{fontKey},
   _fullText{text},
-  _visibleText{phaseIn ? text : std::string{}},
+  _visibleText{phaseIn ? std::string{} : text},
   _nextCharToShow{0},
   _isPhasingIn{phaseIn}
 {}
@@ -127,8 +128,11 @@ HUD::IntLabel::IntLabel(
   Label(position, color, activationDelay, lifetime),
   _fontKey{fontKey},
   _sourceValue{sourceValue},
+  _displayValue{sourceValue},
   _precision{precision}
-{}
+{
+  composeDisplayStr();
+}
 
 void HUD::IntLabel::onReset()
 {
@@ -142,18 +146,7 @@ void HUD::IntLabel::onUpdate(float dt)
   if(!_isActive) return;
 
   if(_displayValue != _sourceValue){
-    std::string valueStr = std::to_string(_sourceValue);
-    _displayStr.clear();
-    int sign{0};
-    if(_sourceValue < 0){
-      assert(valueStr.front() == '-');
-      sign = 1;
-      _displayStr += '-';
-    }
-    for(int i{0}; i < _precision - (valueStr.length() - sign); ++i){
-      _displayStr += '0';
-    }
-    _displayStr.append(valueStr.begin() + sign, valueStr.end());
+    composeDisplayStr();
     _displayValue = _sourceValue;
   }
 }
@@ -162,6 +155,22 @@ void HUD::IntLabel::onDraw(gfx::ScreenID_t screenid)
 {
   if(_isActive && !_isHidden && _flashState)
     gfx::drawText(_position, _displayStr, _fontKey, _color, screenid);
+}
+
+void HUD::IntLabel::composeDisplayStr()
+{
+  std::string valueStr = std::to_string(_sourceValue);
+  _displayStr.clear();
+  int sign{0};
+  if(_sourceValue < 0){
+    assert(valueStr.front() == '-');
+    sign = 1;
+    _displayStr += '-';
+  }
+  for(int i{0}; i < _precision - (valueStr.length() - sign); ++i){
+    _displayStr += '0';
+  }
+  _displayStr.append(valueStr.begin() + sign, valueStr.end());
 }
 
 HUD::BitmapLabel::BitmapLabel(
@@ -197,9 +206,8 @@ void HUD::BitmapLabel::onDraw(gfx::ScreenID_t screenid)
     gfx::drawSprite(_position, _sheetKey, _spriteid, screenid, _mirrorX, _mirrorY);
 }
 
-HUD::HUD(gfx::ResourceKey_t fontKey, float flashPeriod, float phaseInPeriod) :
+HUD::HUD(float flashPeriod, float phaseInPeriod) :
   _labels{},
-  _fontKey{fontKey},
   _nextUid{0},
   _flashNo{0},
   _phaseInNo{0},
@@ -255,9 +263,11 @@ HUD::uid_t HUD::addLabel(std::unique_ptr<Label> label)
 
 void HUD::removeLabel(uid_t uid)
 {
-  _labels.erase(std::remove_if(_labels.begin(), _labels.end(), [uid](const std::unique_ptr<Label>& label){
-    return label->getUid() == uid;
-  }));
+  auto search = std::find_if(_labels.begin(), _labels.end(), [uid](const std::unique_ptr<Label>& l){
+      return l->getUid() == uid;
+  });
+  if(search == _labels.end()) return;
+  _labels.erase(search);
 }
 
 void HUD::clear()
@@ -295,6 +305,21 @@ bool HUD::stopLabelFlashing(uid_t uid)
   if(search == _labels.end()) return false;
   (*search)->stopFlashing();
   return true;
+}
+
+bool HUD::setLabelColor(uid_t uid, gfx::Color4u color)
+{
+  auto search = findLabel(uid);
+  if(search == _labels.end()) return false;
+  (*search)->setColor(color);
+  return true;
+}
+
+gfx::Color4u HUD::getLabelColor(uid_t uid)
+{
+  auto search = findLabel(uid);
+  if(search == _labels.end()) return gfx::colors::black;
+  return (*search)->getColor();
 }
 
 std::vector<std::unique_ptr<HUD::Label>>::iterator HUD::findLabel(uid_t uid)

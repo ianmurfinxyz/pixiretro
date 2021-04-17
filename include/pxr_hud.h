@@ -22,7 +22,7 @@ class HUD
 public:
   using uid_t = uint32_t;
 
-  static constexpr float immortalLifetime {0.f};
+  static constexpr float IMMORTAL_LIFETIME {0.f};
 
   class Label
   {
@@ -42,6 +42,8 @@ public:
     bool isHidden() const {return _isHidden;}
     bool isDead() {return _isDead;}
     uid_t getUid() const {return _uid;}
+    void setColor(gfx::Color4u color){_color = color;}
+    gfx::Color4u getColor(){return _color;}
 
   protected:
     Label(
@@ -122,6 +124,9 @@ public:
     void onDraw(gfx::ScreenID_t screenid);
 
   private:
+    void composeDisplayStr();
+
+  private:
     gfx::ResourceKey_t _fontKey;
     const int& _sourceValue;
     int _displayValue;
@@ -158,7 +163,7 @@ public:
   };
 
 public:
-  HUD(gfx::ResourceKey_t fontKey, float flashPeriod, float phaseInPeriod);
+  HUD(float flashPeriod, float phaseInPeriod);
 
   void onReset();
   void onUpdate(float dt);
@@ -178,12 +183,16 @@ public:
   long getFlashNo() const {return _flashNo;}
   long getPhaseInNo() const {return _phaseInNo;}
 
+  bool setLabelColor(uid_t uid, gfx::Color4u color);
+
+// returns black if label does not exist.
+  gfx::Color4u getLabelColor(uid_t uid); 
+
 private:
   std::vector<std::unique_ptr<Label>>::iterator findLabel(uid_t uid);
 
 private:
   std::vector<std::unique_ptr<Label>> _labels;
-  gfx::ResourceKey_t _fontKey;
   uid_t _nextUid;
   long _flashNo;
   long _phaseInNo;

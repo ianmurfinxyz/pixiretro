@@ -154,17 +154,17 @@ const CollisionResult& isPixelIntersection(const CollisionSubject& a,
   bBLPosition = b._position - bSprite._origin;
   
   cr._aBounds = {
-    aBLPosition._x,
-    aBLPosition._y,
-    aBLPosition._x + (aSprite._size._x - 1), 
-    aBLPosition._y + (aSprite._size._y - 1)
+    static_cast<int32_t>(aBLPosition._x),
+    static_cast<int32_t>(aBLPosition._y),
+    static_cast<int32_t>(aBLPosition._x + (aSprite._size._x - 1)),
+    static_cast<int32_t>(aBLPosition._y + (aSprite._size._y - 1))
   };
 
   cr._bBounds = {
-    bBLPosition._x,
-    bBLPosition._y,
-    bBLPosition._x + (bSprite._size._x - 1), 
-    bBLPosition._y + (bSprite._size._y - 1)
+    static_cast<int32_t>(bBLPosition._x),
+    static_cast<int32_t>(bBLPosition._y),
+    static_cast<int32_t>(bBLPosition._x + (bSprite._size._x - 1)),
+    static_cast<int32_t>(bBLPosition._y + (bSprite._size._y - 1))
   };
 
   if(!isAABBIntersection(cr._aBounds, cr._bBounds))

@@ -81,8 +81,8 @@ void ParticleEngine::spawnParticle(Vector2f position, Vector2f velocity)
 {
   assert(_particles != nullptr);
   Vector2f a {
-    rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent),
-    rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent)
+    static_cast<float>(rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent)),
+    static_cast<float>(rand::uniformReal(_config._loAccelerationComponent, _config._hiAccelerationComponent))
   };
   spawnParticle(position, velocity, a);
 }
@@ -91,8 +91,8 @@ void ParticleEngine::spawnParticle(Vector2f position)
 {
   assert(_particles != nullptr);
   Vector2f v {
-    rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent),
-    rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent)
+    static_cast<float>(rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent)),
+    static_cast<float>(rand::uniformReal(_config._loVelocityComponent, _config._hiVelocityComponent))
   };
   spawnParticle(position, v);
 }

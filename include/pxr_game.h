@@ -1,12 +1,20 @@
 #ifndef _PIXIRETRO_APP_H_
 #define _PIXIRETRO_APP_H_
 
+#include <vector>
 #include <memory>
 #include <string>
 #include <unordered_map>
 
+//#include "pxr_gfx.h"
+
 namespace pxr
 {
+
+namespace gfx
+{
+  using ScreenID_t = int;
+}
 
 class Game;
 
@@ -22,7 +30,7 @@ public:
   virtual ~Scene() = default;
   virtual bool onInit() = 0;
   virtual void onUpdate(double now, float dt) = 0;
-  virtual void onDraw(double now, float dt, int screenid) = 0;
+  virtual void onDraw(double now, float dt, const std::vector<gfx::ScreenID_t>& screens) = 0;
   virtual void onEnter() = 0;
   virtual void onExit() = 0;
 
@@ -60,7 +68,7 @@ public:
   //
   void onUpdate(double now, float dt)
   {
-    _active->onUpdate(now, dt);
+    _activeScene->onUpdate(now, dt);
   }
 
   //
@@ -68,7 +76,7 @@ public:
   //
   void onDraw(double now, float dt)
   {
-    _active->onDraw(now, dt, _activeScreenid);
+    _activeScene->onDraw(now, dt, _screens);
   }
 
   //
@@ -76,9 +84,9 @@ public:
   //
   void switchScene(const std::string& name)
   {
-    _active->onExit();
-    _active = _scenes[name];
-    _active->onEnter();
+    _activeScene->onExit();
+    _activeScene = _scenes[name];
+    _activeScene->onEnter();
   }
 
   //
@@ -94,8 +102,8 @@ public:
 
 protected:
   std::unordered_map<std::string, std::shared_ptr<Scene>> _scenes;
-  std::shared_ptr<Scene> _active;
-  int _activeScreenid;                             // must be initialized by derived classes.
+  std::shared_ptr<Scene> _activeScene;
+  std::vector<gfx::ScreenID_t> _screens;
 };
 
 } // namespace pxr

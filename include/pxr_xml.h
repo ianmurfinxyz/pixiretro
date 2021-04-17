@@ -2,7 +2,7 @@
 #define _PIXIRETRO_IO_XML_H_
 
 #include <string>
-#include "lib/tinyxml2/tinyxml2.h"
+#include "tinyxml2.h"
 
 namespace pxr
 {

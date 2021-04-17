@@ -10,6 +10,7 @@
 #include "pxr_gfx.h"
 #include "pxr_sfx.h"
 #include "pxr_color.h"
+#include "pxr_rand.h"
 
 #include <iostream>
 
@@ -101,7 +102,7 @@ void Engine::initialize(std::unique_ptr<Game> game)
   log::initialize();
   input::initialize();
 
-  if(!_rc.load(EngineRC::filename))
+  if(_rc.load(EngineRC::filename) < 0)
     _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
 
   if(SDL_Init(SDL_INIT_VIDEO) < 0){
@@ -113,6 +114,21 @@ void Engine::initialize(std::unique_ptr<Game> game)
     log::log(log::FATAL, log::msg_sfx_fail_init);
     exit(EXIT_FAILURE);
   }
+
+  // 
+  // Testing the seed_seq on my system shows it just produces the same results with every run, 
+  // which is obviously useless. However I get different results with std::random_device so have 
+  // opted to use that instead. I am lead to believe however that this may differ on different 
+  // systems.
+  //
+  // std::seed_seq seq{1, 2, 3, 4, 5};
+  // randGenerator.seed(seq);
+  //
+  std::random_device rd{};
+  rand::xorwow::state_type seedstate {};
+  for(auto& seed : seedstate)
+    seed = rd();
+  rand::generator.seed(seedstate);
 
   _game = std::move(game);
 
@@ -150,13 +166,13 @@ void Engine::initialize(std::unique_ptr<Game> game)
   Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
   log::log(log::INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
 
-  _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 1, true};
+  _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 5, true};
   _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
 
-  _splashSoundKey = sfx::loadSound(splashName);
+  //_splashSoundKey = sfx::loadSound(splashName);
   _splashSpriteKey = gfx::loadSpritesheet(splashName);
   if(gfx::isErrorSpritesheet(_splashSpriteKey)){
-    log::log(log::ERROR, log::msg_eng_fail_load_splash);
+    log::log(log::INFO, log::msg_eng_fail_load_splash);
     onSplashExit();
   }
   else{
@@ -351,11 +367,12 @@ void Engine::onUpdateTick(float tickPeriodSeconds)
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _game->onUpdate(nowSeconds, tickPeriodSeconds);
   input::onUpdate();
+  sfx::onUpdate(tickPeriodSeconds);
 }
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
-  gfx::clearWindowColor(gfx::colors::silver);
+  gfx::clearWindowColor(_clearColor);
 
   double nowSeconds = durationToSeconds(_gameClock.getNow());
   _game->onDraw(nowSeconds, tickPeriodSeconds);
@@ -389,7 +406,7 @@ void Engine::onSplashUpdateTick(float tickPeriodSeconds)
 
   else if(splashMode == 1){
     if(!playedSound){
-      sfx::playSound(_splashSoundKey);  
+      //sfx::playSound(_splashSoundKey);  
       playedSound = true;
     }
     if(clock > delay){
@@ -420,7 +437,7 @@ void Engine::onSplashExit()
   _isSplashDone = true;
   _updateTicker.setCallback(&Engine::onUpdateTick);
   _drawTicker.setCallback(&Engine::onDrawTick);
-  sfx::unloadSound(_splashSoundKey);
+  //sfx::unloadSound(_splashSoundKey);
   gfx::disableScreen(_pauseScreenId);
   drawPauseDialog();
   gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);

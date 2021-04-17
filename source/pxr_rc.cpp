@@ -172,7 +172,11 @@ int RC::load(const std::string& filename)
 
 bool RC::write(const std::string& filename, bool genComments)
 {
-  std::ofstream file {filename, std::ios_base::out | std::ios_base::trunc};
+  std::string path{};
+  path += RESOURCE_PATH_RC;
+  path += filename;
+  path += RC::FILE_EXTENSION;
+  std::ofstream file {path, std::ios_base::out | std::ios_base::trunc};
   if(!file){
     log::log(log::WARN, log::msg_rcfile_fail_create, filename);
     return false;

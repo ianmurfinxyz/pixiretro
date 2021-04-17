@@ -66,26 +66,29 @@ LOGSTR msg_gfx_unload_font_success = "successfully unloaded font";
 //
 
 LOGSTR msg_sfx_initializing = "initializing sfx module";
-LOGSTR msg_sfx_fail_init = "failed to initialize sfx module : terminating program";
-LOGSTR msg_sfx_listing_devices = "listing sound devices : [<device-id>] : <device-name>";
-LOGSTR msg_sfx_device = "device";
-LOGSTR msg_sfx_default_device = "default device";
-LOGSTR msg_sfx_set_device_info = "modify enginerc to select an alternate sound device";
-LOGSTR msg_sfx_invalid_deviceid = "deviceid invalid : no such device";
-LOGSTR msg_sfx_creating_device = "creating openAL sound device";
-LOGSTR msg_sfx_fail_create_device = "failed to create openAL sound device";
-LOGSTR msg_sfx_fail_create_context = "failed to create openAL sound context";
-LOGSTR msg_sfx_openal_error = "openAL error";
-LOGSTR msg_sfx_openal_call = "openAL call";
-LOGSTR msg_sfx_playing_nonexistent_sound = "trying to play nonexistent sound";
-LOGSTR msg_sfx_using_error_sound = "substituting unloaded sound with error sound";
-LOGSTR msg_sfx_no_free_sources = "cannot play sound as no free sources";
+LOGSTR msg_sfx_fail_init = "failed to initialize sfx module";
+LOGSTR msg_sfx_fail_open_audio = "failed to open SDL_Mixer audio device";
+LOGSTR msg_sfx_fail_query_spec = "failed to query sfx module initialisation spec";
 LOGSTR msg_sfx_loading_sound = "loading sound";
+LOGSTR msg_sfx_loading_music = "loading music";
+LOGSTR msg_sfx_sound_unloaded = "successfully unloaded sound";
+LOGSTR msg_sfx_music_unloaded = "successfully unloaded music";
 LOGSTR msg_sfx_sound_already_loaded = "sound already loaded";
-LOGSTR msg_sfx_unloading_nonexistent_sound = "trying to unload nonexistent sound";
+LOGSTR msg_sfx_music_already_loaded = "music already loaded";
+LOGSTR msg_sfx_fail_load_sound = "failed to load sound";
+LOGSTR msg_sfx_fail_load_music = "failed to load music";
+LOGSTR msg_sfx_using_error_sound = "using error sound to substitute sound";
+LOGSTR msg_sfx_no_error_music = "unloaded music is substituted with silence";
+LOGSTR msg_sfx_error_sound_usage = "error sound usage count";
 LOGSTR msg_sfx_load_sound_success = "successfully loaded sound";
-LOGSTR msg_sfx_unload_sound_success = "successfully unloaded sound";
-
+LOGSTR msg_sfx_load_music_success = "successfully loaded music";
+LOGSTR msg_sfx_unloading_nonexistent_sound = "trying to unload nonexistent sound with sound key";
+LOGSTR msg_sfx_unloading_nonexistent_music = "trying to unload nonexistent music with music key";
+LOGSTR msg_sfx_already_unloading_sound = "trying to add sound to unload queue multiple times : sound key";
+LOGSTR msg_sfx_playing_nonexistent_sound = "trying to play nonexistent sound with key";
+LOGSTR msg_sfx_playing_nonexistent_music = "trying to play nonexistent music with key";
+LOGSTR msg_sfx_fail_play_sound = "failed to play sound with key";
+LOGSTR msg_sfx_fail_play_music = "failed to play music with key";
 
 //
 // xml log strings.

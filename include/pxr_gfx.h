@@ -2,6 +2,8 @@
 #define _PIXIRETRO_GFX_H_
 
 #include <string>
+#include <vector>
+#include <array>
 #include <cmath>
 
 #include "pxr_color.h"
@@ -284,7 +286,7 @@ void shutdown();
 // Returns the integer id of the screen for use with draw calls. Internally screens are stored
 // in an array thus returned ids start at 0 and increase by 1 with each new screen created.
 //
-int createScreen(Vector2i resolution);
+ScreenID_t createScreen(Vector2i resolution);
 
 //
 // Must be called whenever the window resizes to update the screens.
