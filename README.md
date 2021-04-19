@@ -10,11 +10,17 @@ Pixiretro is a game engine I made to develop small pixel art retro arcade games 
 ## Features
 - A 2D pixel based software renderer with an opengl backend, which is not a contradiction! (see below)
 - An SDL_mixer backed audio module that supports sound effects on multiple channels and music loop sequences.
-- Custom file loading (.bmp and .wav)
+- Custom file loading (.bmp and .wav) and custom rc configuration file format for key=value pair data.
+- A simple XML module which wraps around tinyxml to simplify its usage.
 - Custom lightweight and efficient random number generation using an xorwow generator and a std distribution. This generator maintains significantly less state than the common mersenne twister generator.
 - A simple logging system to log info and errors to a log file or to stdout.
-- 
-
+- Custom 2D vector mathematics module.
+- A HUD system for drawing basic UIs which can flash and phase in colored text.
+- A pixel perfect collision detection module which can identify sets of intersecting pixels.
+- A basic 2D particle system.
+- A fixed update mainloop with a time scalable clock (speed up and slow down game time) which can aid in debugging.
+- Real time performance statistics printed to a statistics virtual screen (press the backtick key to toggle on/off).
+- The graphics module supports a custom sprite sheet format in which a bmp image can be divided up (specified in an xml file) into indivual sprites referencable by integer id. Sprites within an image can also overlap freely allowing you to avoid duplicate image pixels.
 
 ## What it doesn't do
 
