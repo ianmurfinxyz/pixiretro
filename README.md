@@ -29,7 +29,7 @@ Pixiretro is a game engine I made to develop small pixel art retro arcade games 
 
 ## Renderer
 
-The gfx module maintains a set of virtual screens which you instruct it to create. These screens have fixed (virtual) pixel resolutions set upon creation but are designed so that the size of each (virtual) pixel when renderd to the window (the real screen) can change dynamically, i.e. the scale mapping between virtual pixels and real pixels can change. This allows for the creation of classic arcade games in which the size of the world was a fixed size in pixels (such as space invaders with its world size of 232x256 pixels) which are playable on any size screen, even an ultrawide of 3440x1440 pixels.
+The gfx module maintains a set of virtual screens which you instruct it to create. These screens have fixed (virtual) pixel resolutions set upon creation but are designed so that the size of each (virtual) pixel when rendered to the window (the real screen) can change dynamically, i.e. the scale mapping between virtual pixels and real pixels can change. This allows for the creation of classic arcade games in which the size of the world was a fixed size in pixels (such as space invaders with its world size of 232x256 pixels) which are playable on any size screen, even an ultrawide of 3440x1440 pixels.
 
 The virtual screens support basic transparency (alpha channel masking but not blending) and can be layered. This allows splitting up drawing into layers which can be independently updated. Thus providing a potential performance boost of reducing the load on the (CPU executed) software renderer drawing to the virtual screens; you can split drawing up into things which are updated every frame (such as moving game objects) and those which are static (such as static backgrounds).
 
@@ -40,3 +40,25 @@ Each virtual screen is rendered to the window via a single opengl draw call. Thu
 The engine currently uses a meson build system which compiles it into a library. Alternatively you can just include the source files in your own project and compile it into your build. I took this approach in the game Itzcoatl which utilises this engine. See the compilation instructions of that project for further such details (https://github.com/ianmurfinxyz/itzcoatl).
 
 ## License
+
+MIT License
+
+Copyright (c) 2021 Ian Murfin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
