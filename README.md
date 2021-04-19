@@ -7,6 +7,11 @@
 
 Pixiretro is a game engine I made to develop small pixel art retro arcade games like Pacman, Space Invaders :space_invader:, Snake :snake: and Donkey Kong. The engine is implemented in C++ using SDL2, SDL2_mixer, Opengl and Tinyxml2. It runs on Linux only.
 
+For example usage of this engine see my projects:
+
+- https://github.com/ianmurfinxyz/itzcoatl
+- https://github.com/ianmurfinxyz/space_invaders_part_ii
+
 ## Features
 - A 2D pixel based software renderer with an opengl backend, which is not a contradiction! (see below)
 - An SDL_mixer backed audio module that supports sound effects on multiple channels and music loop sequences.
