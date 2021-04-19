@@ -35,4 +35,8 @@ The virtual screens support basic transparency (alpha channel masking but not bl
 
 Each virtual screen is rendered to the window via a single opengl draw call. Thus the demand on the graphics hardware is low. This is achieved using vertex arrays; each pixel in a virtual screen is represented as a vertex which is drawn as a point (GL_POINT). If your virtual screens are relatively low resolution (say 256x256 pixels) this approach is somewhat efficient. I wouldn't recommend it for high resolution games. The number of pixels, and thus number of vertices, in a virtual screen is the square of its size, thus demand on the GUP will increase exponentially as you increase the size of a virtual screen.
 
+## Compilation
+
+The engine currently uses a meson build system which compiles it into a library. Alternatively you can just include the source files in your own project and compile it into your build. I took this approach in the game Itzcoatl which utilises this engine. See the compilation instructions of that project for further such details (https://github.com/ianmurfinxyz/itzcoatl).
+
 ## License
