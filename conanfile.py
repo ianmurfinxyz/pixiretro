@@ -1,5 +1,5 @@
-from conans import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
+from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 class PixiRetroConan(ConanFile):
 	name = "PixiRetro"
@@ -27,15 +27,18 @@ class PixiRetroConan(ConanFile):
 	def config_options(self):
 		if self.settings.os == "Windows":
 			del self.options.fPIC
+			
+	def layout(self):
+        cmake_layout(self)
 	
-	def generate(self):
-		tc = CMakeToolchain(self)
-		tc.generate()
-		
 	def requirements(self):
 		self.requires("tinyxml2/9.0.0")
 		self.requires("sdl/2.0.20")
 		self.requires("sdl_image/2.0.5")
+		
+	def generate(self):
+		tc = CMakeToolchain(self)
+		tc.generate()
 	
 	def build(self):
 		cmake = CMake(self)
