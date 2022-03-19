@@ -1,10 +1,5 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.7)
 project(PixiRetro CXX)
-
-add_definitions("-std=c++11")
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
 
 set(PXR_SOURCE
 	Source/pxr_bmp.cpp
@@ -20,6 +15,9 @@ set(PXR_SOURCE
 	Source/pxr_sfx.cpp
 	Source/pxr_wav.cpp
 	Source/pxr_xml.cpp)
+
+include(conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
 
 add_library(PixiRetro ${PXR_SOURCE})
 target_include_directories(PixiRetro PUBLIC Include)
