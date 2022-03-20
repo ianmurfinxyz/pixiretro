@@ -26,8 +26,6 @@ struct Vector2i
   void operator+=(const Vector2i& v) {_x += v._x; _y += v._y;}
   Vector2i operator-(const Vector2i& v) const {return Vector2i{_x - v._x, _y - v._y};}
   void operator-=(const Vector2i& v) {_x -= v._x; _y -= v._y;}
-  inline Vector2i normalized() const;
-  inline void normalize();
 
   Vector2i operator*(float scale) const 
   {return Vector2i(static_cast<int32_t>(_x * scale), static_cast<int32_t>(_y * scale));}
@@ -92,23 +90,6 @@ constexpr Vector2i::Vector2i(const Vector2f& v) :
   _x{static_cast<int32_t>(v._x)},
   _y{static_cast<int32_t>(v._y)}
 {}
-
-Vector2i Vector2i::normalized() const
-{
-  Vector2i v = *this;
-  v.normalize();
-  return v;
-}
-
-void Vector2i::normalize()
-{
-  float l = (_x * _x) + (_y * _y);
-  if(l) {
-    l = std::sqrt(l);
-    _x /= l;
-    _y /= l;
-  }
-}
 
 constexpr Vector2f::Vector2f(const Vector2i& v) :
   _x{static_cast<float>(v._x)},
