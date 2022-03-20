@@ -13,8 +13,8 @@ void initialize()
 {
   _os.open(LOG_FILENAME, std::ios_base::trunc);
   if(!_os){
-    log(ERROR, log::msg_log_fail_open);
-    log(INFO, log::msg_log_to_stderr);
+    log(LVL_ERROR, log::msg_log_fail_open);
+    log(LVL_INFO, log::msg_log_to_stderr);
   }
 }
 

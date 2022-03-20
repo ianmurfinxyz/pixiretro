@@ -106,12 +106,12 @@ void Engine::initialize(std::unique_ptr<Game> game)
     _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
 
   if(SDL_Init(SDL_INIT_VIDEO) < 0){
-    log::log(log::FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
+    log::log(log::LVL_FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
     exit(EXIT_FAILURE);
   }
 
   if(!sfx::initialize()){
-    log::log(log::FATAL, log::msg_sfx_fail_init);
+    log::log(log::LVL_FATAL, log::msg_sfx_fail_init);
     exit(EXIT_FAILURE);
   }
 
@@ -144,14 +144,14 @@ void Engine::initialize(std::unique_ptr<Game> game)
   windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
   bool fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
   if(!gfx::initialize(ss.str(), windowSize, fullscreen)){
-    log::log(log::FATAL, log::msg_gfx_fail_init);
+    log::log(log::LVL_FATAL, log::msg_gfx_fail_init);
     exit(EXIT_FAILURE);
   }
 
   _engineFontKey = gfx::loadFont(engineFontName);
   
   if(!_game->onInit()){
-    log::log(log::FATAL, log::msg_eng_fail_init_game);
+    log::log(log::LVL_FATAL, log::msg_eng_fail_init_game);
     exit(EXIT_FAILURE);
   }
 
@@ -164,7 +164,7 @@ void Engine::initialize(std::unique_ptr<Game> game)
 
   _fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
   Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
-  log::log(log::INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
+  log::log(log::LVL_INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
 
   _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 5, true};
   _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
@@ -172,7 +172,7 @@ void Engine::initialize(std::unique_ptr<Game> game)
   //_splashSoundKey = sfx::loadSound(splashName);
   _splashSpriteKey = gfx::loadSpritesheet(splashName);
   if(gfx::isErrorSpritesheet(_splashSpriteKey)){
-    log::log(log::INFO, log::msg_eng_fail_load_splash);
+    log::log(log::LVL_INFO, log::msg_eng_fail_load_splash);
     onSplashExit();
   }
   else{

@@ -189,14 +189,14 @@ static bool unloadSound(ResourceKey_t soundKey)
   assert(soundKey != errorSoundKey);
   auto search = sounds.find(soundKey);
   if(search == sounds.end()){
-    log::log(log::WARN, log::msg_sfx_unloading_nonexistent_sound, std::to_string(soundKey));
+    log::log(log::LVL_WARN, log::msg_sfx_unloading_nonexistent_sound, std::to_string(soundKey));
   }
   else{
     search->second._referenceCount--;
     if(search->second._referenceCount <= 0){
       Mix_FreeChunk(search->second._chunk);
       sounds.erase(search);
-      log::log(log::INFO, log::msg_sfx_sound_unloaded, std::to_string(soundKey));
+      log::log(log::LVL_INFO, log::msg_sfx_sound_unloaded, std::to_string(soundKey));
     }
   }
   return true;
@@ -220,20 +220,20 @@ static ResourceKey_t returnErrorSound()
   auto search = sounds.find(errorSoundKey);
   assert(search != sounds.end());
   search->second._referenceCount++;
-  log::log(log::INFO, log::msg_sfx_error_sound_usage, std::to_string(search->second._referenceCount));
+  log::log(log::LVL_INFO, log::msg_sfx_error_sound_usage, std::to_string(search->second._referenceCount));
   return errorSoundKey;
 }
 
 ResourceKey_t loadSoundWAV(ResourceName_t soundName)
 {
-  log::log(log::INFO, log::msg_sfx_loading_sound, soundName);
+  log::log(log::LVL_INFO, log::msg_sfx_loading_sound, soundName);
 
   for(auto& pair : sounds){
     if(pair.second._name == soundName){
       pair.second._referenceCount++;
       std::string addendum {"reference count="};
       addendum += std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_sfx_sound_already_loaded, addendum);
+      log::log(log::LVL_INFO, log::msg_sfx_sound_already_loaded, addendum);
       return pair.first;
     }
   }
@@ -245,8 +245,8 @@ ResourceKey_t loadSoundWAV(ResourceName_t soundName)
   wavpath += io::Wav::FILE_EXTENSION;
   resource._chunk = Mix_LoadWAV(wavpath.c_str());
   if(resource._chunk == nullptr){
-    log::log(log::ERROR, log::msg_sfx_fail_load_sound, wavpath + " : " + Mix_GetError());
-    log::log(log::INFO, log::msg_sfx_using_error_sound, wavpath);
+    log::log(log::LVL_ERROR, log::msg_sfx_fail_load_sound, wavpath + " : " + Mix_GetError());
+    log::log(log::LVL_INFO, log::msg_sfx_using_error_sound, wavpath);
     return returnErrorSound();
   }
   resource._name = soundName;
@@ -261,7 +261,7 @@ ResourceKey_t loadSoundWAV(ResourceName_t soundName)
   addendum += ":";
   addendum += std::to_string(newKey);
   addendum += "]";
-  log::log(log::INFO, log::msg_sfx_load_sound_success, addendum);
+  log::log(log::LVL_INFO, log::msg_sfx_load_sound_success, addendum);
 
   return newKey;
 }
@@ -276,7 +276,7 @@ static Mix_Chunk* findChunk(ResourceKey_t soundKey)
 {
   auto search = sounds.find(soundKey);
   if(search == sounds.end()){
-    log::log(log::WARN, log::msg_sfx_playing_nonexistent_sound, std::to_string(soundKey));
+    log::log(log::LVL_WARN, log::msg_sfx_playing_nonexistent_sound, std::to_string(soundKey));
     return nullptr;
   }
   return search->second._chunk;
@@ -288,7 +288,7 @@ static SoundChannel_t onSoundPlayError(ResourceKey_t soundKey)
   addendum += std::to_string(soundKey);
   addendum += " : ";
   addendum += Mix_GetError();
-  log::log(log::WARN, log::msg_sfx_fail_play_sound, addendum);
+  log::log(log::LVL_WARN, log::msg_sfx_fail_play_sound, addendum);
   return NULL_CHANNEL;
 }
 
@@ -409,12 +409,12 @@ int getChannelVolume(SoundChannel_t channel)
 static Mix_Music* findMusic(ResourceKey_t musicKey)
 {
   if(musicKey == nullResourceKey){
-    log::log(log::WARN, log::msg_sfx_playing_nonexistent_music, std::to_string(musicKey));
+    log::log(log::LVL_WARN, log::msg_sfx_playing_nonexistent_music, std::to_string(musicKey));
     return nullptr;
   }
   auto search = music.find(musicKey);
   if(search == music.end()){
-    log::log(log::WARN, log::msg_sfx_playing_nonexistent_music, std::to_string(musicKey));
+    log::log(log::LVL_WARN, log::msg_sfx_playing_nonexistent_music, std::to_string(musicKey));
     return nullptr;
   }
   return search->second._music;
@@ -426,7 +426,7 @@ static void onMusicPlayError(ResourceKey_t musicKey)
   addendum += std::to_string(musicKey);
   addendum += " : ";
   addendum += Mix_GetError();
-  log::log(log::WARN, log::msg_sfx_fail_play_music, addendum);
+  log::log(log::LVL_WARN, log::msg_sfx_fail_play_music, addendum);
 }
 
 static void playMusic__(ResourceKey_t musicKey, int loops)
@@ -589,14 +589,14 @@ void MusicSequencePlayer::onFadingOutUpdate(float dt)
 
 ResourceKey_t loadMusicWAV(ResourceName_t musicName)
 {
-  log::log(log::INFO, log::msg_sfx_loading_music, musicName);
+  log::log(log::LVL_INFO, log::msg_sfx_loading_music, musicName);
 
   for(auto& pair : music){
     if(pair.second._name == musicName){
       pair.second._referenceCount++;
       std::string addendum {"reference count="};
       addendum += std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_sfx_music_already_loaded, addendum);
+      log::log(log::LVL_INFO, log::msg_sfx_music_already_loaded, addendum);
       return pair.first;
     }
   }
@@ -608,8 +608,8 @@ ResourceKey_t loadMusicWAV(ResourceName_t musicName)
   wavpath += io::Wav::FILE_EXTENSION;
   resource._music = Mix_LoadMUS(wavpath.c_str());
   if(resource._music == nullptr){
-    log::log(log::ERROR, log::msg_sfx_fail_load_music, wavpath + " : " + Mix_GetError());
-    log::log(log::WARN, log::msg_sfx_no_error_music);
+    log::log(log::LVL_ERROR, log::msg_sfx_fail_load_music, wavpath + " : " + Mix_GetError());
+    log::log(log::LVL_WARN, log::msg_sfx_no_error_music);
     return nullResourceKey;
   }
   resource._name = musicName;
@@ -624,7 +624,7 @@ ResourceKey_t loadMusicWAV(ResourceName_t musicName)
   addendum += ":";
   addendum += std::to_string(newKey);
   addendum += "]";
-  log::log(log::INFO, log::msg_sfx_load_music_success, addendum);
+  log::log(log::LVL_INFO, log::msg_sfx_load_music_success, addendum);
 
   return newKey;
 }
@@ -633,14 +633,14 @@ static bool unloadMusic(ResourceKey_t musicKey)
 {
   auto search = music.find(musicKey);
   if(search == music.end()){
-    log::log(log::WARN, log::msg_sfx_unloading_nonexistent_music, std::to_string(musicKey));
+    log::log(log::LVL_WARN, log::msg_sfx_unloading_nonexistent_music, std::to_string(musicKey));
   }
   else{
     search->second._referenceCount--;
     if(search->second._referenceCount <= 0){
       Mix_FreeMusic(search->second._music);
       music.erase(search);
-      log::log(log::INFO, log::msg_sfx_music_unloaded, std::to_string(musicKey));
+      log::log(log::LVL_INFO, log::msg_sfx_music_unloaded, std::to_string(musicKey));
     }
   }
   return true;
@@ -720,14 +720,14 @@ int getMusicVolume(int volume)
 static void logSpec()
 {
   const SDL_version* version = Mix_Linked_Version();
-  log::log(log::INFO, "SDL_Mixer Version:");
-  log::log(log::INFO, "major:", std::to_string(version->major));
-  log::log(log::INFO, "minor:", std::to_string(version->minor));
-  log::log(log::INFO, "patch:", std::to_string(version->patch));
+  log::log(log::LVL_INFO, "SDL_Mixer Version:");
+  log::log(log::LVL_INFO, "major:", std::to_string(version->major));
+  log::log(log::LVL_INFO, "minor:", std::to_string(version->minor));
+  log::log(log::LVL_INFO, "patch:", std::to_string(version->patch));
 
   int freq, channels; uint16_t format;
   if(!Mix_QuerySpec(&freq, &format, &channels)){
-    log::log(log::WARN, log::msg_sfx_fail_query_spec, std::string{Mix_GetError()});
+    log::log(log::LVL_WARN, log::msg_sfx_fail_query_spec, std::string{Mix_GetError()});
     return;
   }
   
@@ -748,16 +748,16 @@ static void logSpec()
     default:                 {modeString = "unknown mode";}
   }
 
-  log::log(log::INFO, "SDL_Mixer Audio Device Spec: ");
-  log::log(log::INFO, "sample frequency: ", std::to_string(freq));
-  log::log(log::INFO, "sample format: ", formatString);
-  log::log(log::INFO, "output mode: ", modeString);
+  log::log(log::LVL_INFO, "SDL_Mixer Audio Device Spec: ");
+  log::log(log::LVL_INFO, "sample frequency: ", std::to_string(freq));
+  log::log(log::LVL_INFO, "sample format: ", formatString);
+  log::log(log::LVL_INFO, "output mode: ", modeString);
 }
 
 bool initialize(SFXConfiguration sfxconf)
 {
   assert(!(SDL_AUDIO_ISFLOAT(sfxconf._sampleFormat)));
-  log::log(log::INFO, log::msg_sfx_initializing);
+  log::log(log::LVL_INFO, log::msg_sfx_initializing);
   sfxconfiguration = sfxconf;
   int result = Mix_OpenAudio(
     sfxconf._samplingFreq_hz, 
@@ -766,7 +766,7 @@ bool initialize(SFXConfiguration sfxconf)
     sfxconf._chunkSize
   );
   if(result != 0){
-    log::log(log::ERROR, log::msg_sfx_fail_open_audio, std::string{Mix_GetError()});
+    log::log(log::LVL_ERROR, log::msg_sfx_fail_open_audio, std::string{Mix_GetError()});
     return false;
   }
   Mix_AllocateChannels(sfxconf._numMixChannels);

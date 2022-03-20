@@ -39,8 +39,8 @@ int RC::load(const std::string& filename)
   path += RC::FILE_EXTENSION;
   std::ifstream file {path};
   if(!file){
-    log::log(log::ERROR, log::msg_rcfile_fail_open, filename);
-    log::log(log::INFO, log::msg_rcfile_using_default);
+    log::log(log::LVL_ERROR, log::msg_rcfile_fail_open, filename);
+    log::log(log::LVL_INFO, log::msg_rcfile_using_default);
     for(auto& pair : _properties)
       pair.second._value = pair.second._default;
     return -1;
@@ -63,10 +63,10 @@ int RC::load(const std::string& filename)
     int count {0};
     count = std::count(line.begin(), line.end(), seperator);
     if(count != 1){
-      log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-      log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-      log::log(log::INFO, log::msg_rcfile_excess_seperators, std::to_string(count));
-      log::log(log::INFO, log::msg_ignoring_line);
+      log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+      log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+      log::log(log::LVL_INFO, log::msg_rcfile_excess_seperators, std::to_string(count));
+      log::log(log::LVL_INFO, log::msg_ignoring_line);
       ++nErrors;
       continue;
     }
@@ -76,10 +76,10 @@ int RC::load(const std::string& filename)
     std::string value {line.substr(pos + 1)};
 
     if(name.empty() || value.empty()){
-      log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-      log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-      log::log(log::INFO, log::msg_rcfile_malformed_property);
-      log::log(log::INFO, log::msg_ignoring_line);
+      log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+      log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+      log::log(log::LVL_INFO, log::msg_rcfile_malformed_property);
+      log::log(log::LVL_INFO, log::msg_ignoring_line);
       ++nErrors;
       continue;
     }
@@ -93,10 +93,10 @@ int RC::load(const std::string& filename)
     }
 
     if(p == nullptr){
-      log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-      log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-      log::log(log::INFO, log::msg_rcfile_unknown_property, name);
-      log::log(log::INFO, log::msg_ignoring_line);
+      log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+      log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+      log::log(log::LVL_INFO, log::msg_rcfile_unknown_property, name);
+      log::log(log::LVL_INFO, log::msg_ignoring_line);
       continue;
     }
 
@@ -105,51 +105,51 @@ int RC::load(const std::string& filename)
         {
           int result {0};
           if(!parseInt(value, result)){
-            log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-            log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-            log::log(log::INFO, log::msg_rcfile_expected_int, value);
-            log::log(log::INFO, log::msg_ignoring_line);
+            log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+            log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+            log::log(log::LVL_INFO, log::msg_rcfile_expected_int, value);
+            log::log(log::LVL_INFO, log::msg_ignoring_line);
             ++nErrors;
             continue;
           }
           p->_value = std::clamp(result, std::get<int>(p->_min), std::get<int>(p->_max));
           if(std::get<int>(p->_value) != result){
-            log::log(log::INFO, log::msg_rcfile_property_clamped, name);
+            log::log(log::LVL_INFO, log::msg_rcfile_property_clamped, name);
           }
-          log::log(log::INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
+          log::log(log::LVL_INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
           break;
         }
       case 1:
         {
           float result {0.f};
           if(!parseFloat(value, result)){
-            log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-            log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-            log::log(log::INFO, log::msg_rcfile_expected_float, value);
-            log::log(log::INFO, log::msg_ignoring_line);
+            log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+            log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+            log::log(log::LVL_INFO, log::msg_rcfile_expected_float, value);
+            log::log(log::LVL_INFO, log::msg_ignoring_line);
             ++nErrors;
             continue;
           }
           p->_value = std::clamp(result, std::get<float>(p->_min), std::get<float>(p->_max));
           if(std::get<float>(p->_value) != result){
-            log::log(log::INFO, log::msg_rcfile_property_clamped, name);
+            log::log(log::LVL_INFO, log::msg_rcfile_property_clamped, name);
           }
-          log::log(log::INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
+          log::log(log::LVL_INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
           break;
         }
       case 2:
         {
           bool result {false};
           if(!parseBool(value, result)){
-            log::log(log::ERROR, log::msg_rcfile_malformed, filename); 
-            log::log(log::INFO, log::msg_on_line, lineNoToString(lineNo) + line);
-            log::log(log::INFO, log::msg_rcfile_expected_bool, value);
-            log::log(log::INFO, log::msg_ignoring_line);
+            log::log(log::LVL_ERROR, log::msg_rcfile_malformed, filename); 
+            log::log(log::LVL_INFO, log::msg_on_line, lineNoToString(lineNo) + line);
+            log::log(log::LVL_INFO, log::msg_rcfile_expected_bool, value);
+            log::log(log::LVL_INFO, log::msg_ignoring_line);
             ++nErrors;
             continue;
           }
           p->_value = result;
-          log::log(log::INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
+          log::log(log::LVL_INFO, log::msg_rcfile_property_read_success, filename + lineNoToString(lineNo) + line);
           break;
         }
     }
@@ -157,15 +157,15 @@ int RC::load(const std::string& filename)
 
   for(auto& pair : _properties){
     if(pair.second._value == unsetValue){
-      log::log(log::WARN, log::msg_rcfile_property_not_set, pair.second._name);
-      log::log(log::INFO, log::msg_rcfile_using_property_default);
+      log::log(log::LVL_WARN, log::msg_rcfile_property_not_set, pair.second._name);
+      log::log(log::LVL_INFO, log::msg_rcfile_using_property_default);
       pair.second._value = pair.second._default;
       ++nErrors;
     }
   }
 
   if(nErrors > 0)
-    log::log(log::WARN, log::msg_rcfile_errors, std::to_string(nErrors));
+    log::log(log::LVL_WARN, log::msg_rcfile_errors, std::to_string(nErrors));
 
   return nErrors;
 }
@@ -178,7 +178,7 @@ bool RC::write(const std::string& filename, bool genComments)
   path += RC::FILE_EXTENSION;
   std::ofstream file {path, std::ios_base::out | std::ios_base::trunc};
   if(!file){
-    log::log(log::WARN, log::msg_rcfile_fail_create, filename);
+    log::log(log::LVL_WARN, log::msg_rcfile_fail_create, filename);
     return false;
   }
 

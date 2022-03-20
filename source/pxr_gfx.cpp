@@ -154,7 +154,7 @@ static void genErrorFont()
 
 bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_)
 {
-  log::log(log::INFO, log::msg_gfx_initializing);
+  log::log(log::LVL_INFO, log::msg_gfx_initializing);
 
   windowSize = windowSize_;
   windowTitle = windowTitle_;
@@ -163,12 +163,12 @@ bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_
   uint32_t flags = SDL_WINDOW_OPENGL;
   if(fullscreen){
     flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-    log::log(log::INFO, log::msg_gfx_fullscreen);
+    log::log(log::LVL_INFO, log::msg_gfx_fullscreen);
   }
 
   std::stringstream ss {};
   ss << "{w:" << windowSize._x << ",h:" << windowSize._y << "}";
-  log::log(log::INFO, log::msg_gfx_creating_window, std::string{ss.str()});
+  log::log(log::LVL_INFO, log::msg_gfx_creating_window, std::string{ss.str()});
 
   window = SDL_CreateWindow(
       windowTitle.c_str(), 
@@ -180,41 +180,41 @@ bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_
   );
 
   if(window == nullptr){
-    log::log(log::FATAL, log::msg_gfx_fail_create_window, std::string{SDL_GetError()});
+    log::log(log::LVL_FATAL, log::msg_gfx_fail_create_window, std::string{SDL_GetError()});
     return false;
   }
 
   SDL_GL_GetDrawableSize(window, &windowSize._x, &windowSize._y);
   std::stringstream().swap(ss);
   ss << "{w:" << windowSize._x << ",h:" << windowSize._y << "}";
-  log::log(log::INFO, log::msg_gfx_created_window, std::string{ss.str()});
+  log::log(log::LVL_INFO, log::msg_gfx_created_window, std::string{ss.str()});
 
   glContext = SDL_GL_CreateContext(window);
   if(glContext == nullptr){
-    log::log(log::FATAL, log::msg_gfx_fail_create_opengl_context, std::string{SDL_GetError()});
+    log::log(log::LVL_FATAL, log::msg_gfx_fail_create_opengl_context, std::string{SDL_GetError()});
     return false;
   }
 
   if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, DEF_OPENGL_VERSION_MAJOR) < 0){
-    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
+    log::log(log::LVL_FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
     return false;
   }
 
   if(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, DEF_OPENGL_VERSION_MINOR) < 0){
-    log::log(log::FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
+    log::log(log::LVL_FATAL, log::msg_gfx_fail_set_opengl_attribute, std::string{SDL_GetError()});
     return false;
   }
 
   std::string glVersion {reinterpret_cast<const char*>(glGetString(GL_VERSION))};
-  log::log(log::INFO, log::msg_gfx_opengl_version, glVersion);
+  log::log(log::LVL_INFO, log::msg_gfx_opengl_version, glVersion);
 
   // TODO: extract version from string and check it meets min requirement.
 
   const char* glRenderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-  log::log(log::INFO, log::msg_gfx_opengl_renderer, glRenderer);
+  log::log(log::LVL_INFO, log::msg_gfx_opengl_renderer, glRenderer);
 
   const char* glVendor {reinterpret_cast<const char*>(glGetString(GL_VENDOR))};
-  log::log(log::INFO, log::msg_gfx_opengl_vendor, glVendor);
+  log::log(log::LVL_INFO, log::msg_gfx_opengl_vendor, glVendor);
 
   GLfloat params[2];
   glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, params);
@@ -222,7 +222,7 @@ bool initialize(std::string windowTitle_, Vector2i windowSize_, bool fullscreen_
   maxPixelSize = params[1];
   std::stringstream().swap(ss);
   ss << "[min:" << minPixelSize << ",max:" << maxPixelSize << "]";
-  log::log(log::INFO, log::msg_gfx_pixel_size_range, std::string{ss.str()});
+  log::log(log::LVL_INFO, log::msg_gfx_pixel_size_range, std::string{ss.str()});
 
   setViewport(iRect{0, 0, windowSize._x, windowSize._y});
 
@@ -344,7 +344,7 @@ int createScreen(Vector2i resolution)
 
   std::stringstream ss {};
   ss << "resolution:" << resolution._x << "x" << resolution._y << "vpx mem:" << memkib << "kib";
-  log::log(log::INFO, log::msg_gfx_created_vscreen, ss.str());
+  log::log(log::LVL_INFO, log::msg_gfx_created_vscreen, ss.str());
 
   return screenid;
 }
@@ -355,7 +355,7 @@ static ResourceKey_t useErrorSpritesheet()
     if(pair.second._name == errorSpritesheetName){
       pair.second._referenceCount++;
       std::string addendum = "ref count=" + std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_gfx_using_error_spritesheet, addendum);
+      log::log(log::LVL_INFO, log::msg_gfx_using_error_spritesheet, addendum);
       return pair.first;
     }
   }
@@ -369,7 +369,7 @@ static ResourceKey_t useErrorFont()
     if(resource.second._name == errorFontName){
       resource.second._referenceCount++;
       std::string addendum = "ref count=" + std::to_string(resource.second._referenceCount);
-      log::log(log::INFO, log::msg_gfx_using_error_font, addendum);
+      log::log(log::LVL_INFO, log::msg_gfx_using_error_font, addendum);
       return resource.first;
     }
   }
@@ -379,14 +379,14 @@ static ResourceKey_t useErrorFont()
 
 ResourceKey_t loadSpritesheet(ResourceName_t name)
 {
-  log::log(log::INFO, log::msg_gfx_loading_spritesheet, name);
+  log::log(log::LVL_INFO, log::msg_gfx_loading_spritesheet, name);
 
   for(auto& pair : spritesheets){
     if(pair.second._name == name){
       pair.second._referenceCount++;
       std::string addendum {"ref count="};
       addendum += std::to_string(pair.second._referenceCount);
-      log::log(log::INFO, log::msg_gfx_spritesheet_already_loaded, addendum);
+      log::log(log::LVL_INFO, log::msg_gfx_spritesheet_already_loaded, addendum);
       return pair.first;
     }
   }
@@ -402,7 +402,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   bmppath += name;
   bmppath += Bmp::FILE_EXTENSION;
   if(!sheet._image.load(bmppath)){
-    log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
+    log::log(log::LVL_ERROR, log::msg_gfx_fail_load_asset_bmp, name);
     return useErrorSpritesheet();
   }
 
@@ -449,7 +449,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   }
 
   if(err){
-    log::log(log::ERROR, log::msg_gfx_spritesheet_invalid_xml_bmp_mismatch, name);
+    log::log(log::LVL_ERROR, log::msg_gfx_spritesheet_invalid_xml_bmp_mismatch, name);
     return useErrorSpritesheet();
   }
 
@@ -464,7 +464,7 @@ ResourceKey_t loadSpritesheet(ResourceName_t name)
   addendum += ":"; 
   addendum += std::to_string(newKey);
   addendum += "]";
-  log::log(log::INFO, log::msg_gfx_loading_spritesheet_success, addendum);
+  log::log(log::LVL_INFO, log::msg_gfx_loading_spritesheet_success, addendum);
 
   return newKey;
 }
@@ -473,25 +473,25 @@ void unloadSpritesheet(ResourceKey_t sheetKey)
 {
   auto search = spritesheets.find(sheetKey);
   if(search == spritesheets.end()){
-    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "key=" + std::to_string(sheetKey));
+    log::log(log::LVL_WARN, log::msg_gfx_unloading_nonexistent_resource, "key=" + std::to_string(sheetKey));
     return;
   }
 
   SpritesheetResource& resource = search->second;
   resource._referenceCount--;
   if(resource._referenceCount <= 0 && resource._name != errorSpritesheetName){
-    log::log(log::INFO, log::msg_gfx_unload_spritesheet_success, "key=" + std::to_string(sheetKey));
+    log::log(log::LVL_INFO, log::msg_gfx_unload_spritesheet_success, "key=" + std::to_string(sheetKey));
     spritesheets.erase(search);
   }
 }
 
 ResourceKey_t loadFont(ResourceName_t name)
 {
-  log::log(log::INFO, log::msg_gfx_loading_font, name);
+  log::log(log::LVL_INFO, log::msg_gfx_loading_font, name);
 
   for(auto& resource : fonts){
     if(resource.second._name == name){
-      log::log(log::INFO, log::msg_gfx_loading_font_success);
+      log::log(log::LVL_INFO, log::msg_gfx_loading_font_success);
       resource.second._referenceCount++;
       return resource.first;
     }
@@ -508,7 +508,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   bmppath += name;
   bmppath += Bmp::FILE_EXTENSION;
   if(!resource._font._image.load(bmppath)){
-    log::log(log::ERROR, log::msg_gfx_fail_load_asset_bmp, name);
+    log::log(log::LVL_ERROR, log::msg_gfx_fail_load_asset_bmp, name);
     return useErrorFont();
   }
 
@@ -536,7 +536,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   if(!extractIntAttribute(xmlchars, "count", &charsCount)) return useErrorFont();
 
   if(charsCount != ASCII_CHAR_COUNT){
-    log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, name);
+    log::log(log::LVL_ERROR, log::msg_gfx_missing_ascii_glyphs, name);
     return useErrorFont();
   }
 
@@ -563,7 +563,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   });
 
   if(charsRead != ASCII_CHAR_COUNT){
-    log::log(log::ERROR, log::msg_gfx_missing_ascii_glyphs, name);
+    log::log(log::LVL_ERROR, log::msg_gfx_missing_ascii_glyphs, name);
     return useErrorFont();
   }
 
@@ -581,7 +581,7 @@ ResourceKey_t loadFont(ResourceName_t name)
   }
 
   if(err){
-    log::log(log::ERROR, log::msg_gfx_font_invalid_xml_bmp_mismatch);
+    log::log(log::LVL_ERROR, log::msg_gfx_font_invalid_xml_bmp_mismatch);
     return useErrorFont();
   }
 
@@ -594,11 +594,11 @@ ResourceKey_t loadFont(ResourceName_t name)
     checksum += glyph._ascii;
   }
   if(checksum != ASCII_CHAR_CHECKSUM){
-    log::log(log::ERROR, log::msg_gfx_font_fail_checksum);
+    log::log(log::LVL_ERROR, log::msg_gfx_font_fail_checksum);
     return useErrorFont();
   }
 
-  log::log(log::INFO, log::msg_gfx_loading_font_success);
+  log::log(log::LVL_INFO, log::msg_gfx_loading_font_success);
 
   ResourceKey_t newKey = nextResourceKey;
   ++nextResourceKey;
@@ -612,14 +612,14 @@ void unloadFont(ResourceKey_t fontKey)
 {
   auto search = fonts.find(fontKey);
   if(search == fonts.end()){
-    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
+    log::log(log::LVL_WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
     return;
   }
 
   FontResource& resource = search->second;
   resource._referenceCount--;
   if(resource._referenceCount <= 0 && resource._name != errorFontName){
-    log::log(log::INFO, log::msg_gfx_unload_font_success, "key=" + std::to_string(fontKey));
+    log::log(log::LVL_INFO, log::msg_gfx_unload_font_success, "key=" + std::to_string(fontKey));
     fonts.erase(search);
   }
 }
@@ -628,7 +628,7 @@ const Font* getFont(ResourceKey_t fontKey)
 {
   auto search = fonts.find(fontKey);
   if(search == fonts.end()){
-    log::log(log::WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
+    log::log(log::LVL_WARN, log::msg_gfx_unloading_nonexistent_resource, "font" + std::to_string(fontKey));
     return nullptr;
   }
   return &(search->second._font);

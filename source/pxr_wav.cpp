@@ -27,16 +27,16 @@ bool Wav::load(std::string filepath)
 {
   unload();
 
-  log::log(log::INFO, log::msg_wav_loading, filepath);
+  log::log(log::LVL_INFO, log::msg_wav_loading, filepath);
 
   std::ifstream file {filepath, std::ios::binary};  
   if(!file){
-    log::log(log::ERROR, log::msg_wav_fail_open, filepath);
+    log::log(log::LVL_ERROR, log::msg_wav_fail_open, filepath);
     return false;
   }
 
   auto readFail = [](){
-    log::log(log::ERROR, log::msg_wav_read_fail);
+    log::log(log::LVL_ERROR, log::msg_wav_read_fail);
     return false;
   };
 
@@ -44,7 +44,7 @@ bool Wav::load(std::string filepath)
   if(!file.read(reinterpret_cast<char*>(&riff._riffMagic), sizeof(riff._riffMagic))) return readFail();
 
   if(riff._riffMagic != RIFFMAGIC){
-    log::log(log::ERROR, log::msg_wav_not_riff);
+    log::log(log::LVL_ERROR, log::msg_wav_not_riff);
     return false;
   }
 
@@ -52,7 +52,7 @@ bool Wav::load(std::string filepath)
   if(!file.read(reinterpret_cast<char*>(&riff._waveMagic), sizeof(riff._waveMagic))) return readFail();
 
   if(riff._waveMagic != WAVEMAGIC){
-    log::log(log::ERROR, log::msg_wav_not_wave);
+    log::log(log::LVL_ERROR, log::msg_wav_not_wave);
     return false;
   }
 
@@ -60,7 +60,7 @@ bool Wav::load(std::string filepath)
   if(!file.read(reinterpret_cast<char*>(&fmt._formatMagic), sizeof(fmt._formatMagic))) return readFail();
 
   if(fmt._formatMagic != FORMATMAGIC){
-    log::log(log::ERROR, log::msg_wav_fmt_chunk_missing);
+    log::log(log::LVL_ERROR, log::msg_wav_fmt_chunk_missing);
     return false;
   }
 
@@ -73,22 +73,22 @@ bool Wav::load(std::string filepath)
   if(!file.read(reinterpret_cast<char*>(&fmt._bitsPerSample), sizeof(fmt._bitsPerSample))) return readFail();
 
   if(fmt._subChunkSize != 16){
-    log::log(log::ERROR, log::msg_wav_not_pcm);
+    log::log(log::LVL_ERROR, log::msg_wav_not_pcm);
     return false;
   }
 
   if(fmt._audioFormat != 1){
-    log::log(log::ERROR, log::msg_wav_bad_compressed);
+    log::log(log::LVL_ERROR, log::msg_wav_bad_compressed);
     return false;
   }
 
   if(fmt._numChannels != 1 && fmt._numChannels != 2){
-    log::log(log::ERROR, log::msg_wav_odd_channels, std::to_string(fmt._numChannels));
+    log::log(log::LVL_ERROR, log::msg_wav_odd_channels, std::to_string(fmt._numChannels));
     return false;
   }
 
   if(fmt._bitsPerSample != 8 && fmt._bitsPerSample != 16){
-    log::log(log::ERROR, log::msg_wav_odd_sample_bits, std::to_string(fmt._bitsPerSample));
+    log::log(log::LVL_ERROR, log::msg_wav_odd_sample_bits, std::to_string(fmt._bitsPerSample));
     return false;
   }
 
@@ -101,14 +101,14 @@ bool Wav::load(std::string filepath)
   if(!file.read(reinterpret_cast<char*>(&data._subChunkSize), sizeof(data._subChunkSize))) return readFail();
 
   if(data._dataMagic != DATAMAGIC){
-    log::log(log::ERROR, log::msg_wav_data_chunk_missing);
+    log::log(log::LVL_ERROR, log::msg_wav_data_chunk_missing);
     return false;
   }
 
   _waveSizeBytes = data._subChunkSize;
 
   if(!(0 < _waveSizeBytes || _waveSizeBytes <= SOUND_DATA_SIZE_MAX_BYTES)){
-    log::log(log::ERROR, log::msg_wav_odd_data_size, std::to_string(_waveSizeBytes));
+    log::log(log::LVL_ERROR, log::msg_wav_odd_data_size, std::to_string(_waveSizeBytes));
     return false;
   }
 
@@ -151,7 +151,7 @@ bool Wav::load(std::string filepath)
     }
   }
 
-  log::log(log::INFO, log::msg_wav_load_success, filepath);
+  log::log(log::LVL_INFO, log::msg_wav_load_success, filepath);
 
   return true;
 }

@@ -181,10 +181,10 @@ static constexpr const char* LOG_DELIM {" : "};
 //
 enum Level
 {
-  FATAL,
-  ERROR,
-  WARN,
-  INFO
+  LVL_FATAL,
+  LVL_ERROR,
+  LVL_WARN,
+  LVL_INFO
 };
 
 //
