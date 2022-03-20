@@ -39,31 +39,3 @@ The gfx module maintains a set of virtual screens which you instruct it to creat
 The virtual screens support basic transparency (alpha channel masking but not blending) and can be layered. This allows splitting up drawing into layers which can be independently updated. Thus providing a potential performance boost of reducing the load on the (CPU executed) software renderer drawing to the virtual screens; you can split drawing up into things which are updated every frame (such as moving game objects) and those which are static (such as static backgrounds).
 
 Each virtual screen is rendered to the window via a single opengl draw call. Thus the demand on the graphics hardware is low. This is achieved using vertex arrays; each pixel in a virtual screen is represented as a vertex which is drawn as a point (GL_POINT). If your virtual screens are relatively low resolution (say 256x256 pixels) this approach is somewhat efficient. I wouldn't recommend it for high resolution games. The number of pixels, and thus number of vertices, in a virtual screen is the square of its size, thus demand on the GUP will increase exponentially as you increase the size of a virtual screen.
-
-## Compilation
-
-The engine currently uses a meson build system which compiles it into a library. Alternatively you can just include the source files in your own project and compile it into your build. I took this approach in the game Itzcoatl which utilises this engine. See the compilation instructions of that project for further such details (https://github.com/ianmurfinxyz/itzcoatl).
-
-## License
-
-MIT License
-
-Copyright (c) 2021 Ian Murfin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
