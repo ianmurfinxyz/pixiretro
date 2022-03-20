@@ -21,19 +21,34 @@ struct Vector2i
 
   void zero() {_x = _y = 0;}
   bool isZero() {return _x == 0 && _y == 0;}
+
   Vector2i operator+(const Vector2i& v) const {return Vector2i{_x + v._x, _y + v._y};}
   void operator+=(const Vector2i& v) {_x += v._x; _y += v._y;}
   Vector2i operator-(const Vector2i& v) const {return Vector2i{_x - v._x, _y - v._y};}
   void operator-=(const Vector2i& v) {_x -= v._x; _y -= v._y;}
-  Vector2i operator*(float scale) const {return Vector2i(_x * scale, _y * scale);}
-  void operator*=(float scale) {_x *= scale; _y *= scale;}
-  void operator*=(int32_t scale) {_x *= scale; _y *= scale;}
-  float dot(const Vector2i& v) {return (_x * v._x) + (_y * v._y);}
-  float cross(const Vector2i& v) const {return (_x * v._y) - (_y * v._x);}
-  float length() const {return std::hypot(_x, _y);}
-  float lengthSquared() const {return (_x * _x) + (_y * _y);}
   inline Vector2i normalized() const;
   inline void normalize();
+
+  Vector2i operator*(float scale) const 
+  {return Vector2i(static_cast<int32_t>(_x * scale), static_cast<int32_t>(_y * scale));}
+
+  void operator*=(float scale) 
+  {_x = static_cast<int32_t>(_x * scale); _y = static_cast<int32_t>(_y * scale);}
+
+  void operator*=(int32_t scale) 
+  {_x *= scale; _y *= scale;}
+
+  float dot(const Vector2i& v) 
+  {return static_cast<float>((_x * v._x) + (_y * v._y));}
+
+  float cross(const Vector2i& v) const 
+  {return static_cast<float>((_x * v._y) - (_y * v._x));}
+
+  float length() const 
+  {return std::hypotf(static_cast<float>(_x), static_cast<float>(_y));}
+
+  float lengthSquared() const 
+  {return std::powf(static_cast<float>(_x), 2) + std::powf(static_cast<float>(_y), 2);}
 
   bool operator==(const Vector2i& v) const {return _x == v._x && _y == v._y;}
   bool operator!=(const Vector2i& v) const {return _x != v._x && _y != v._y;}
