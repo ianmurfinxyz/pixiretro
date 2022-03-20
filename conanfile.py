@@ -31,6 +31,10 @@ class PixiRetroConan(ConanFile):
 		self.build_requires("sdl-mixer/2.0.4@ianmurfinxyz/stable")
 		self.build_requires("sdl-ttf/2.0.18@ianmurfinxyz/stable")
 
+	def configure(self):
+		if self.settings.compiler.cppstd != "17":
+			raise Exception("package build requires std=c++17")
+
 	def build(self):
 		cmake = CMake(self)
 		cmake.configure(build_folder=self.build_subfolder)
@@ -40,7 +44,6 @@ class PixiRetroConan(ConanFile):
 		self.copy("*.h", dst="include", src=self.source_subfolder)
 		self.copy("*.lib", dst="lib", keep_path=False)
 		self.copy("*.a", dst="lib", keep_path=False)
-		self.copy("*.pdb", dst="lib", keep_path=False)
 		self.copy("*.exp", dst="lib", keep_path=False)
 		self.copy("*.dll", dst="bin",keep_path=False)
 		self.copy("*.so", dst="bin", keep_path=False)
