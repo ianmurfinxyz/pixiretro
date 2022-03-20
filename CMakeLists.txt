@@ -21,5 +21,5 @@ conan_basic_setup(TARGETS)
 
 add_library(PixiRetro ${PXR_SOURCE})
 target_compile_features(PixiRetro PRIVATE cxx_std_17)
-target_include_directories(PixiRetro PUBLIC Include)
+target_include_directories(PixiRetro PUBLIC Include ${CONAN_INCLUDE_DIRS})
 target_link_libraries(PixiRetro ${CONAN_LIBS})
