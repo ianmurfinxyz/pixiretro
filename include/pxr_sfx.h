@@ -49,8 +49,8 @@ extern ResourceKey_t errorSoundKey;
 
 enum OutputMode 
 { 
-  MONO   = 1, 
-  STEREO = 2 
+	MONO   = 1, 
+	STEREO = 2 
 };
 
 //
@@ -65,14 +65,14 @@ enum OutputMode
 //
 enum SampleFormat : uint16_t
 {
-  SAMPLE_FORMAT_U8     = AUDIO_U8,     // Unsigned 8-bit samples.
-  SAMPLE_FORMAT_S8     = AUDIO_S8,     // Signed 8-bit samples.
-  SAMPLE_FORMAT_U16LSB = AUDIO_U16LSB, // Unsigned 16-bit samples little-endian.
-  SAMPLE_FORMAT_S16LSB = AUDIO_S16LSB, // Signed 16-bit samples little-endian.
-  SAMPLE_FORMAT_U16    = AUDIO_U16,    // Unsigned 16-bit samples little endian.
-  SAMPLE_FORMAT_S16    = AUDIO_S16,    // Signed 16-bit samples little endian.
-  SAMPLE_FORMAT_S32LSB = AUDIO_S32LSB, // Signed 32-bit samples little endian.
-  SAMPLE_FORMAT_S32    = AUDIO_S32,    // Signed 32-bit samples little endian.
+	SAMPLE_FORMAT_U8     = AUDIO_U8,     // Unsigned 8-bit samples.
+	SAMPLE_FORMAT_S8     = AUDIO_S8,     // Signed 8-bit samples.
+	SAMPLE_FORMAT_U16LSB = AUDIO_U16LSB, // Unsigned 16-bit samples little-endian.
+	SAMPLE_FORMAT_S16LSB = AUDIO_S16LSB, // Signed 16-bit samples little-endian.
+	SAMPLE_FORMAT_U16    = AUDIO_U16,    // Unsigned 16-bit samples little endian.
+	SAMPLE_FORMAT_S16    = AUDIO_S16,    // Signed 16-bit samples little endian.
+	SAMPLE_FORMAT_S32LSB = AUDIO_S32LSB, // Signed 32-bit samples little endian.
+	SAMPLE_FORMAT_S32    = AUDIO_S32,    // Signed 32-bit samples little endian.
 };
 
 static constexpr int DEFAULT_SAMPLING_FREQ_HZ {22050               };
@@ -82,11 +82,11 @@ static constexpr int DEFAULT_NUM_MIX_CHANNELS {16                  };
 
 struct SFXConfiguration
 {
-  int      _samplingFreq_hz {DEFAULT_SAMPLING_FREQ_HZ};
-  uint16_t _sampleFormat    {DEFAULT_SAMPLE_FORMAT   };
-  int      _outputMode      {OutputMode::MONO        };
-  int      _chunkSize       {DEFAULT_CHUNK_SIZE      };
-  int      _numMixChannels  {DEFAULT_NUM_MIX_CHANNELS};
+	int      _samplingFreq_hz {DEFAULT_SAMPLING_FREQ_HZ};
+	uint16_t _sampleFormat    {DEFAULT_SAMPLE_FORMAT   };
+	int      _outputMode      {OutputMode::MONO        };
+	int      _chunkSize       {DEFAULT_CHUNK_SIZE      };
+	int      _numMixChannels  {DEFAULT_NUM_MIX_CHANNELS};
 };
 
 //
@@ -208,10 +208,10 @@ static constexpr float PLAY_MUSIC_FOREVER {std::numeric_limits<float>::max()};
 
 struct MusicSequenceNode
 {
-  ResourceKey_t _musicKey;
-  int _fadeInDuration_ms;
-  int _playDuration_ms;
-  int _fadeOutDuration_ms;
+	ResourceKey_t _musicKey;
+	int _fadeInDuration_ms;
+	int _playDuration_ms;
+	int _fadeOutDuration_ms;
 };
 
 using MusicSequence_t = std::vector<MusicSequenceNode>;

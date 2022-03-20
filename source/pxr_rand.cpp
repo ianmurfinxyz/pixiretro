@@ -21,40 +21,40 @@ constexpr xorwow::state_type xorwow::default_seed;
 
 xorwow::xorwow(result_type value)
 {
-  seed(value);
+	seed(value);
 }
 
 xorwow::xorwow(const state_type& seeds)
 {
-  seed(seeds);
+	seed(seeds);
 }
 
 xorwow::xorwow(std::seed_seq& seq)
 {
-  seed(seq);
+	seed(seq);
 }
 
 void xorwow::seed() 
 {
-  _state = default_seed;
+	_state = default_seed;
 }
 
 void xorwow::seed(result_type seed)
 {
-  _state = default_seed;
-  _state[state_size - 2] = seed;
+	_state = default_seed;
+	_state[state_size - 2] = seed;
 }
 
 void xorwow::seed(state_type seeds)
 {
-  for(int i{0}; i < state_size; ++i)
-    _state[i] = seeds[i] != 0 ? seeds[i] : default_seed[i];
+	for(int i{0}; i < state_size; ++i)
+		_state[i] = seeds[i] != 0 ? seeds[i] : default_seed[i];
 }
 
 void xorwow::seed(std::seed_seq& seq)
 {
-  seq.generate(_state.begin(), _state.end());
-  *_state.end() = 0;
+	seq.generate(_state.begin(), _state.end());
+	*_state.end() = 0;
 }
 
 //
@@ -62,52 +62,52 @@ void xorwow::seed(std::seed_seq& seq)
 //
 xorwow::result_type xorwow::operator()()
 {
-  //
-  // Algorithm "xorwow" from p. 5 of Marsaglia, "Xorshift RNGs"
-  //
-  result_type t = _state[4];
-  result_type s = _state[0];
-  _state[4] = _state[3];
-  _state[3] = _state[2];
-  _state[2] = _state[1];
-  _state[1] = s;
-  t ^= t >> 2;
-  t ^= t << 1;
-  t ^= s ^ (s << 4);
-  _state[0] = t;
-  _state[5] += 362437;
-  return t + _state[5];
+	//
+	// Algorithm "xorwow" from p. 5 of Marsaglia, "Xorshift RNGs"
+	//
+	result_type t = _state[4];
+	result_type s = _state[0];
+	_state[4] = _state[3];
+	_state[3] = _state[2];
+	_state[2] = _state[1];
+	_state[1] = s;
+	t ^= t >> 2;
+	t ^= t << 1;
+	t ^= s ^ (s << 4);
+	_state[0] = t;
+	_state[5] += 362437;
+	return t + _state[5];
 }
 
 void xorwow::discard(unsigned long long z)
 {
-  while(z--)
-    (*this)();
+	while(z--)
+		(*this)();
 }
 
 constexpr xorwow::result_type xorwow::min()
 {
-  return std::numeric_limits<result_type>::min();
+	return std::numeric_limits<result_type>::min();
 }
 
 constexpr xorwow::result_type xorwow::max()
 {
-  return std::numeric_limits<result_type>::max();
+	return std::numeric_limits<result_type>::max();
 }
 
 bool operator==(const xorwow& lhs, const xorwow& rhs)
 {
-  const auto& lhss = lhs.getState();
-  const auto& rhss = rhs.getState();
-  for(int i{0}; i < xorwow::state_size; ++i)
-    if(lhss[i] != rhss[i])
-      return false;
-  return true;
+	const auto& lhss = lhs.getState();
+	const auto& rhss = rhs.getState();
+	for(int i{0}; i < xorwow::state_size; ++i)
+		if(lhss[i] != rhss[i])
+			return false;
+	return true;
 }
 
 bool operator!=(const xorwow& lhs, const xorwow& rhs)
 {
-  return !(lhs == rhs);
+	return !(lhs == rhs);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,20 +131,20 @@ bool operator!=(const xorwow& lhs, const xorwow& rhs)
 
 int uniformSignedInt(int lo, int hi)
 {
-  std::uniform_int_distribution<int> d {lo, hi};
-  return d(generator);
+	std::uniform_int_distribution<int> d {lo, hi};
+	return d(generator);
 }
 
 unsigned int uniformUnsignedInt(unsigned int lo, unsigned int hi)
 {
-  std::uniform_int_distribution<unsigned int> d {lo, hi};
-  return d(generator);
+	std::uniform_int_distribution<unsigned int> d {lo, hi};
+	return d(generator);
 }
 
 double uniformReal(double lo, double hi)
 {
-  std::uniform_real_distribution<double> d {lo, hi};
-  return d(generator);
+	std::uniform_real_distribution<double> d {lo, hi};
+	return d(generator);
 }
 
 } // namespace rand

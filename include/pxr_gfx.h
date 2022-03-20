@@ -53,14 +53,14 @@ constexpr int ASCII_CHAR_CHECKSUM = 7505;
 //
 struct Glyph
 {
-  int _ascii;
-  int _x;
-  int _y;
-  int _width;
-  int _height;
-  int _xoffset;
-  int _yoffset;
-  int _xadvance;
+	int _ascii;
+	int _x;
+	int _y;
+	int _width;
+	int _height;
+	int _xoffset;
+	int _yoffset;
+	int _xadvance;
 };
 
 // 
@@ -68,11 +68,11 @@ struct Glyph
 //
 struct Font
 {
-  std::array<Glyph, ASCII_CHAR_COUNT> _glyphs;
-  io::Bmp _image;
-  int _lineHeight;
-  int _baseLine;
-  int _glyphSpace;
+	std::array<Glyph, ASCII_CHAR_COUNT> _glyphs;
+	io::Bmp _image;
+	int _lineHeight;
+	int _baseLine;
+	int _glyphSpace;
 };
 
 //
@@ -109,9 +109,9 @@ struct Font
 //
 struct Sprite
 {
-  Vector2i _position;
-  Vector2i _size;
-  Vector2i _origin;
+	Vector2i _position;
+	Vector2i _size;
+	Vector2i _origin;
 };
 
 //
@@ -124,8 +124,8 @@ using SpriteID_t = int;
 //
 struct Spritesheet
 {
-  io::Bmp _image;
-  std::vector<Sprite> _sprites;
+	io::Bmp _image;
+	std::vector<Sprite> _sprites;
 };
 
 //
@@ -141,8 +141,8 @@ struct Spritesheet
 //
 enum class PixelMode
 {
-  NO_SHADER,
-  SHADER
+	NO_SHADER,
+	SHADER
 };
 
 //
@@ -164,9 +164,9 @@ enum class PixelMode
 //
 enum class SizeMode
 {
-  MANUAL,
-  AUTO_MIN,
-  AUTO_MAX
+	MANUAL,
+	AUTO_MIN,
+	AUTO_MAX
 };
 
 //
@@ -189,12 +189,12 @@ enum class SizeMode
 //
 enum class PositionMode
 {
-  MANUAL,
-  CENTER,
-  TOP_LEFT,
-  TOP_RIGHT,
-  BOTTOM_LEFT,
-  BOTTOM_RIGHT
+	MANUAL,
+	CENTER,
+	TOP_LEFT,
+	TOP_RIGHT,
+	BOTTOM_LEFT,
+	BOTTOM_RIGHT
 };
 
 //
@@ -244,19 +244,19 @@ using PXShader_t = Color4u (*)(Color4u inColor, int pxx, int pxy);
 //
 struct Screen
 {
-  PXShader_t   _pxShader;
-  PositionMode _pmode;
-  SizeMode     _smode;
-  PixelMode    _xmode;
-  Vector2i     _position;        // position w.r.t window space.
-  Vector2i     _manualPosition;  // position w.r.t window space when in manual position mode.
-  Vector2i     _resolution;      // size/dimensions of the virtual screen.
-  int          _pxSize;          // size of virtual pixels (unit: real pixels).
-  int          _pxManualSize;    // size of virtual pixels when in manual size mode.
-  int          _pxCount;         // total number of virtual pixels on the screen.
-  Color4u*     _pxColors;        // accessed [col + (row * width)]
-  Vector2i*    _pxPositions;     // accessed [col + (row * width)]
-  bool         _isEnabled;       // enable/disable drawing this screen to the window.
+	PXShader_t   _pxShader;
+	PositionMode _pmode;
+	SizeMode     _smode;
+	PixelMode    _xmode;
+	Vector2i     _position;        // position w.r.t window space.
+	Vector2i     _manualPosition;  // position w.r.t window space when in manual position mode.
+	Vector2i     _resolution;      // size/dimensions of the virtual screen.
+	int          _pxSize;          // size of virtual pixels (unit: real pixels).
+	int          _pxManualSize;    // size of virtual pixels when in manual size mode.
+	int          _pxCount;         // total number of virtual pixels on the screen.
+	Color4u*     _pxColors;        // accessed [col + (row * width)]
+	Vector2i*    _pxPositions;     // accessed [col + (row * width)]
+	bool         _isEnabled;       // enable/disable drawing this screen to the window.
 };
 
 //
@@ -383,7 +383,7 @@ void clearScreenColor(Color4u color, ScreenID_t screenid);
 // Draw a sprite of a spritesheet.
 //
 void drawSprite(Vector2i position, ResourceKey_t sheetKey, SpriteID_t spriteid, ScreenID_t screenid, 
-                bool mirrorX = false, bool mirrorY = false);
+								bool mirrorX = false, bool mirrorY = false);
 
 //
 // Takes a column of pixels from a specific sprite of a spritesheet and draws it with the bottom

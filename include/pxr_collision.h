@@ -85,10 +85,10 @@ namespace pxr
 //
 struct AABB
 {
-  int32_t _xmin;
-  int32_t _ymin;
-  int32_t _xmax;
-  int32_t _ymax;
+	int32_t _xmin;
+	int32_t _ymin;
+	int32_t _xmax;
+	int32_t _ymax;
 };
 
 //
@@ -96,13 +96,13 @@ struct AABB
 //
 struct CollisionResult
 {
-  bool _isCollision;
-  AABB _aBounds;
-  AABB _bBounds;
-  AABB _aOverlap;
-  AABB _bOverlap;
-  std::vector<Vector2i> _aPixels;       // x,y = col,row
-  std::vector<Vector2i> _bPixels;
+	bool _isCollision;
+	AABB _aBounds;
+	AABB _bBounds;
+	AABB _aOverlap;
+	AABB _bOverlap;
+	std::vector<Vector2i> _aPixels;       // x,y = col,row
+	std::vector<Vector2i> _bPixels;
 };
 
 //
@@ -110,9 +110,9 @@ struct CollisionResult
 //
 struct CollisionSubject
 {
-  Vector2i _position;
-  gfx::ResourceKey_t _spritesheetKey;
-  gfx::SpriteID_t _spriteid;
+	Vector2i _position;
+	gfx::ResourceKey_t _spritesheetKey;
+	gfx::SpriteID_t _spriteid;
 };
 
 //
@@ -127,8 +127,8 @@ bool isAABBIntersection(const AABB& a, const AABB& b);
 // terminate (via strippable assertion).
 //
 const CollisionResult& isPixelIntersection(const CollisionSubject& a,
-                                           const CollisionSubject& b,
-                                           bool pixelLists = false);
+																					 const CollisionSubject& b,
+																					 bool pixelLists = false);
 
 } // namespace pxr
 

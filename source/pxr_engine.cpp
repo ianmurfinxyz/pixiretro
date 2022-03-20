@@ -20,453 +20,452 @@ namespace pxr
 
 Engine::Duration_t Engine::RealClock::update()
 {
-  auto old = _now;
-  _now = Clock_t::now();
-  return _now - old;
+	auto old = _now;
+	_now = Clock_t::now();
+	return _now - old;
 }
 
 void Engine::GameClock::update(Duration_t realDt)
 {
-  if(!_isPaused)
-    _now += Duration_t{static_cast<int64_t>(realDt.count() * _scale)};
+	if(!_isPaused)
+		_now += Duration_t{static_cast<int64_t>(realDt.count() * _scale)};
 }
 
 Engine::Ticker::Ticker(Callback_t onTick, Engine* tickCtx, Duration_t tickPeriod, 
-                       int maxTicksPerFrame, bool isChasingGameNow) :
-  _onTick{onTick},
-  _tickCtx{tickCtx},
-  _tickerNow{0},
-  _lastMeasureNow{0},
-  _tickPeriod{tickPeriod},
-  _tickPeriodSeconds{static_cast<float>(tickPeriod.count()) / oneSecond.count()},
-  _ticksDoneTotal{0},
-  _ticksDoneThisHalfSecond{0},
-  _ticksDoneThisFrame{0},
-  _maxTicksPerFrame{maxTicksPerFrame},
-  _ticksAccumulated{0},
-  _isChasingGameNow{isChasingGameNow},
-  _isNewTickFrequencySample{false}
+											 int maxTicksPerFrame, bool isChasingGameNow) :
+	_onTick{onTick},
+	_tickCtx{tickCtx},
+	_tickerNow{0},
+	_lastMeasureNow{0},
+	_tickPeriod{tickPeriod},
+	_tickPeriodSeconds{static_cast<float>(tickPeriod.count()) / oneSecond.count()},
+	_ticksDoneTotal{0},
+	_ticksDoneThisHalfSecond{0},
+	_ticksDoneThisFrame{0},
+	_maxTicksPerFrame{maxTicksPerFrame},
+	_ticksAccumulated{0},
+	_isChasingGameNow{isChasingGameNow},
+	_isNewTickFrequencySample{false}
 {
-  for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
-    _measuredTickFrequencyHistory[i] = 0.0;
+	for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
+		_measuredTickFrequencyHistory[i] = 0.0;
 
 }
 
 void Engine::Ticker::doTicks(Duration_t gameNow, Duration_t realNow)
 {
-  Duration_t now = _isChasingGameNow ? gameNow : realNow;
+	Duration_t now = _isChasingGameNow ? gameNow : realNow;
 
-  while(_tickerNow + _tickPeriod < now){
-    _tickerNow += _tickPeriod;
-    ++_ticksAccumulated;
-  }
+	while(_tickerNow + _tickPeriod < now){
+		_tickerNow += _tickPeriod;
+		++_ticksAccumulated;
+	}
 
-  _ticksDoneThisFrame = 0;
-  while(_ticksAccumulated > 0 && _ticksDoneThisFrame < _maxTicksPerFrame){
-    ++_ticksDoneThisFrame;
-    --_ticksAccumulated;
-    (_tickCtx->*_onTick)(_tickPeriodSeconds);
-  }
+	_ticksDoneThisFrame = 0;
+	while(_ticksAccumulated > 0 && _ticksDoneThisFrame < _maxTicksPerFrame){
+		++_ticksDoneThisFrame;
+		--_ticksAccumulated;
+		(_tickCtx->*_onTick)(_tickPeriodSeconds);
+	}
 
-  _ticksDoneThisHalfSecond += _ticksDoneThisFrame;
-  _ticksDoneTotal += _ticksDoneThisFrame;
+	_ticksDoneThisHalfSecond += _ticksDoneThisFrame;
+	_ticksDoneTotal += _ticksDoneThisFrame;
 
-  _isNewTickFrequencySample = false;
-  if((realNow - _lastMeasureNow) >= oneHalfSecond){
-    double freqSample = (static_cast<double>(_ticksDoneThisHalfSecond) / 
-                        (realNow - _lastMeasureNow).count()) * oneHalfSecond.count() * 2;
+	_isNewTickFrequencySample = false;
+	if((realNow - _lastMeasureNow) >= oneHalfSecond){
+		double freqSample = (static_cast<double>(_ticksDoneThisHalfSecond) / 
+												(realNow - _lastMeasureNow).count()) * oneHalfSecond.count() * 2;
 
-    for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
-      _measuredTickFrequencyHistory[i] = _measuredTickFrequencyHistory[i + 1];
+		for(int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
+			_measuredTickFrequencyHistory[i] = _measuredTickFrequencyHistory[i + 1];
 
-    _measuredTickFrequencyHistory[FPS_HISTORY_SIZE - 1] = freqSample;
+		_measuredTickFrequencyHistory[FPS_HISTORY_SIZE - 1] = freqSample;
 
-    _ticksDoneThisHalfSecond = 0;
-    _lastMeasureNow = realNow;
-    _isNewTickFrequencySample = true;
-  }
+		_ticksDoneThisHalfSecond = 0;
+		_lastMeasureNow = realNow;
+		_isNewTickFrequencySample = true;
+	}
 }
 
 void Engine::Ticker::reset()
 {
-  _tickerNow = Duration_t::zero();
-  _lastMeasureNow = Duration_t::zero();
-  _ticksDoneTotal = 0;
-  _ticksDoneThisHalfSecond = 0;
-  _ticksDoneThisFrame = 0;
-  _ticksAccumulated = 0;
+	_tickerNow = Duration_t::zero();
+	_lastMeasureNow = Duration_t::zero();
+	_ticksDoneTotal = 0;
+	_ticksDoneThisHalfSecond = 0;
+	_ticksDoneThisFrame = 0;
+	_ticksAccumulated = 0;
 }
 
 void Engine::initialize(std::unique_ptr<Game> game)
 {
-  log::initialize();
-  input::initialize();
+	log::initialize();
+	input::initialize();
 
-  if(_rc.load(EngineRC::filename) < 0)
-    _rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
+	if(_rc.load(EngineRC::filename) < 0)
+		_rc.write(EngineRC::filename);    // generate a default rc file if one doesn't exist.
 
-  if(SDL_Init(SDL_INIT_VIDEO) < 0){
-    log::log(log::LVL_FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
-    exit(EXIT_FAILURE);
-  }
+	if(SDL_Init(SDL_INIT_VIDEO) < 0){
+		log::log(log::LVL_FATAL, log::msg_eng_fail_sdl_init, std::string{SDL_GetError()});
+		exit(EXIT_FAILURE);
+	}
 
-  if(!sfx::initialize()){
-    log::log(log::LVL_FATAL, log::msg_sfx_fail_init);
-    exit(EXIT_FAILURE);
-  }
+	if(!sfx::initialize()){
+		log::log(log::LVL_FATAL, log::msg_sfx_fail_init);
+		exit(EXIT_FAILURE);
+	}
 
-  // 
-  // Testing the seed_seq on my system shows it just produces the same results with every run, 
-  // which is obviously useless. However I get different results with std::random_device so have 
-  // opted to use that instead. I am lead to believe however that this may differ on different 
-  // systems.
-  //
-  // std::seed_seq seq{1, 2, 3, 4, 5};
-  // randGenerator.seed(seq);
-  //
-  std::random_device rd{};
-  rand::xorwow::state_type seedstate {};
-  for(auto& seed : seedstate)
-    seed = rd();
-  rand::generator.seed(seedstate);
+	// 
+	// Testing the seed_seq on my system shows it just produces the same results with every run, 
+	// which is obviously useless. However I get different results with std::random_device so have 
+	// opted to use that instead. I am lead to believe however that this may differ on different 
+	// systems.
+	//
+	// std::seed_seq seq{1, 2, 3, 4, 5};
+	// randGenerator.seed(seq);
+	//
+	std::random_device rd{};
+	rand::xorwow::state_type seedstate {};
+	for(auto& seed : seedstate)
+		seed = rd();
+	rand::generator.seed(seedstate);
 
-  _game = std::move(game);
+	_game = std::move(game);
 
-  std::stringstream ss {};
-  ss << _game->getName() 
-     << " version:" 
-     << _game->getVersionMajor() 
-     << "." 
-     << _game->getVersionMinor();
+	std::stringstream ss {};
+	ss << _game->getName() 
+		 << " version:" 
+		 << _game->getVersionMajor() 
+		 << "." 
+		 << _game->getVersionMinor();
 
-  Vector2i windowSize{};
-  windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
-  windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
-  bool fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
-  if(!gfx::initialize(ss.str(), windowSize, fullscreen)){
-    log::log(log::LVL_FATAL, log::msg_gfx_fail_init);
-    exit(EXIT_FAILURE);
-  }
+	Vector2i windowSize{};
+	windowSize._x = _rc.getIntValue(EngineRC::KEY_WINDOW_WIDTH);
+	windowSize._y = _rc.getIntValue(EngineRC::KEY_WINDOW_HEIGHT);
+	bool fullscreen = _rc.getBoolValue(EngineRC::KEY_FULLSCREEN);
+	if(!gfx::initialize(ss.str(), windowSize, fullscreen)){
+		log::log(log::LVL_FATAL, log::msg_gfx_fail_init);
+		exit(EXIT_FAILURE);
+	}
 
-  _engineFontKey = gfx::loadFont(engineFontName);
+	_engineFontKey = gfx::loadFont(engineFontName);
   
-  if(!_game->onInit()){
-    log::log(log::LVL_FATAL, log::msg_eng_fail_init_game);
-    exit(EXIT_FAILURE);
-  }
+	if(!_game->onInit()){
+		log::log(log::LVL_FATAL, log::msg_eng_fail_init_game);
+		exit(EXIT_FAILURE);
+	}
 
-  _statsScreenId = gfx::createScreen(statsScreenResolution);
-  gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, _statsScreenId);
-  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _statsScreenId);
-  gfx::disableScreen(_statsScreenId);
+	_statsScreenId = gfx::createScreen(statsScreenResolution);
+	gfx::setScreenPositionMode(gfx::PositionMode::BOTTOM_LEFT, _statsScreenId);
+	gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _statsScreenId);
+	gfx::disableScreen(_statsScreenId);
 
-  _pauseScreenId = gfx::createScreen(pauseScreenResolution);
+	_pauseScreenId = gfx::createScreen(pauseScreenResolution);
 
-  _fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
-  Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
-  log::log(log::LVL_INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
+	_fpsLockHz = _rc.getIntValue(EngineRC::KEY_FPS_LOCK);
+	Duration_t tickPeriod {static_cast<int64_t>(1.0e9 / static_cast<double>(_fpsLockHz))};
+	log::log(log::LVL_INFO, log::msg_eng_locking_fps, std::to_string(_fpsLockHz) + "hz");
 
-  _updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 5, true};
-  _drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
+	_updateTicker = Ticker{&Engine::onSplashUpdateTick, this, tickPeriod, 5, true};
+	_drawTicker = Ticker{&Engine::onSplashDrawTick, this, tickPeriod, 1, false};
 
-  //_splashSoundKey = sfx::loadSound(splashName);
-  _splashSpriteKey = gfx::loadSpritesheet(splashName);
-  if(gfx::isErrorSpritesheet(_splashSpriteKey)){
-    log::log(log::LVL_INFO, log::msg_eng_fail_load_splash);
-    onSplashExit();
-  }
-  else{
-    _splashSize = gfx::getSpriteSize(_splashSpriteKey, 0);
-    _splashPosition = Vector2i{
-      ((pauseScreenResolution._x - _splashSize._x) / 2),
-      ((pauseScreenResolution._y - _splashSize._y) / 2),
-    };
-    _splashProgress = 0;
-    _isSplashDone = false;
-    gfx::enableScreen(_pauseScreenId);
-    gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MAX, _pauseScreenId);
-  }
+	//_splashSoundKey = sfx::loadSound(splashName);
+	_splashSpriteKey = gfx::loadSpritesheet(splashName);
+	if(gfx::isErrorSpritesheet(_splashSpriteKey)){
+		log::log(log::LVL_INFO, log::msg_eng_fail_load_splash);
+		onSplashExit();
+	}
+	else{
+		_splashSize = gfx::getSpriteSize(_splashSpriteKey, 0);
+		_splashPosition = Vector2i{
+			((pauseScreenResolution._x - _splashSize._x) / 2),
+			((pauseScreenResolution._y - _splashSize._y) / 2),
+		};
+		_splashProgress = 0;
+		_isSplashDone = false;
+		gfx::enableScreen(_pauseScreenId);
+		gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MAX, _pauseScreenId);
+	}
 
-  gfx::Color4u clearColor {
-    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_RED)),
-    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_GREEN)),
-    static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_BLUE)),
-    255
-  };
+	gfx::Color4u clearColor {
+		static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_RED)),
+		static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_GREEN)),
+		static_cast<uint8_t>(_rc.getIntValue(EngineRC::KEY_CLEAR_BLUE)),
+		255
+	};
 
-  _clearColor = clearColor;
+	_clearColor = clearColor;
 
-  _framesDone = 0;
-  _framesDoneThisSecond = 0;
-  _measuredFrameFrequency = 0;
-  _lastFrameMeasureNow = Duration_t::zero();
-  _isDrawingEngineStats = false;
-  _isDone = false;
+	_framesDone = 0;
+	_framesDoneThisSecond = 0;
+	_measuredFrameFrequency = 0;
+	_lastFrameMeasureNow = Duration_t::zero();
+	_isDrawingEngineStats = false;
+	_isDone = false;
 }
 
 void Engine::shutdown()
 {
-  _game->onShutdown();
-  gfx::shutdown();
-  sfx::shutdown();
-  log::shutdown();
+	_game->onShutdown();
+	gfx::shutdown();
+	sfx::shutdown();
+	log::shutdown();
 }
 
 void Engine::run()
 {
-  _realClock.reset();
-  while(!_isSplashDone) 
-    mainloop();
+	_realClock.reset();
+	while(!_isSplashDone) 
+		mainloop();
   
-  _realClock.reset();
-  _gameClock.reset();
-  _updateTicker.reset();
-  _drawTicker.reset();
-  while(!_isDone) 
-    mainloop();
+	_realClock.reset();
+	_gameClock.reset();
+	_updateTicker.reset();
+	_drawTicker.reset();
+	while(!_isDone) 
+		mainloop();
 }
 
 void Engine::mainloop()
 {
-  auto frameStart = Clock_t::now();
+	auto frameStart = Clock_t::now();
 
-  _gameClock.update(_realClock.update()); 
-  auto gameNow = _gameClock.getNow();
-  auto realNow = _realClock.getNow();
+	_gameClock.update(_realClock.update()); 
+	auto gameNow = _gameClock.getNow();
+	auto realNow = _realClock.getNow();
 
-  SDL_Event event;
-  while(SDL_PollEvent(&event) != 0){
-    switch(event.type){
-      case SDL_QUIT:
-        _isSplashDone = true;
-        _isDone = true;
-        return;
-      case SDL_WINDOWEVENT:
-        if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-          gfx::onWindowResize(Vector2i{event.window.data1, event.window.data2});
-        break;
-      case SDL_KEYDOWN:
-        if(event.key.keysym.sym == decrementGameClockScaleKey){
-          _gameClock.incrementScale(-0.1f);
-          break;
-        }
-        else if(event.key.keysym.sym == incrementGameClockScaleKey){
-          _gameClock.incrementScale(0.1f);
-          break;
-        }
-        else if(event.key.keysym.sym == resetGameClockScaleKey){
-          _gameClock.setScale(1.f);
-          break;
-        }
-        else if(event.key.keysym.sym == pauseGameClockKey){
-          if(!_isSplashDone)
-            continue;
-          _gameClock.togglePause();
-          if(_gameClock.isPaused())
-            gfx::enableScreen(_pauseScreenId);
-          else
-            gfx::disableScreen(_pauseScreenId);
-          break;
-        }
-        else if(event.key.keysym.sym == toggleDrawEngineStatsKey){
-          _isDrawingEngineStats = !_isDrawingEngineStats;
-          if(!_isDrawingEngineStats)
-            gfx::disableScreen(_statsScreenId);
-          else
-            gfx::enableScreen(_statsScreenId);
-          break;
-        }
-        else if(event.key.keysym.sym == skipSplashKey && !_isSplashDone){
-          onSplashExit(); 
-          break;
-        }
-        // FALLTHROUGH
-      case SDL_KEYUP:
-        input::onKeyEvent(event);
-        break;
-    }
-  }
+	SDL_Event event;
+	while(SDL_PollEvent(&event) != 0){
+		switch(event.type){
+			case SDL_QUIT:
+				_isSplashDone = true;
+				_isDone = true;
+				return;
+			case SDL_WINDOWEVENT:
+				if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+					gfx::onWindowResize(Vector2i{event.window.data1, event.window.data2});
+				break;
+			case SDL_KEYDOWN:
+				if(event.key.keysym.sym == decrementGameClockScaleKey){
+					_gameClock.incrementScale(-0.1f);
+					break;
+				}
+				else if(event.key.keysym.sym == incrementGameClockScaleKey){
+					_gameClock.incrementScale(0.1f);
+					break;
+				}
+				else if(event.key.keysym.sym == resetGameClockScaleKey){
+					_gameClock.setScale(1.f);
+					break;
+				}
+				else if(event.key.keysym.sym == pauseGameClockKey){
+					if(!_isSplashDone)
+						continue;
+					_gameClock.togglePause();
+					if(_gameClock.isPaused())
+						gfx::enableScreen(_pauseScreenId);
+					else
+						gfx::disableScreen(_pauseScreenId);
+					break;
+				}
+				else if(event.key.keysym.sym == toggleDrawEngineStatsKey){
+					_isDrawingEngineStats = !_isDrawingEngineStats;
+					if(!_isDrawingEngineStats)
+						gfx::disableScreen(_statsScreenId);
+					else
+						gfx::enableScreen(_statsScreenId);
+					break;
+				}
+				else if(event.key.keysym.sym == skipSplashKey && !_isSplashDone){
+					onSplashExit(); 
+					break;
+				}
+				// FALLTHROUGH
+			case SDL_KEYUP:
+				input::onKeyEvent(event);
+				break;
+		}
+	}
 
-  _updateTicker.doTicks(gameNow, realNow);
-  _drawTicker.doTicks(gameNow, realNow);
+	_updateTicker.doTicks(gameNow, realNow);
+	_drawTicker.doTicks(gameNow, realNow);
 
-  if(_updateTicker.isNewTickFrequencySample() || _drawTicker.isNewTickFrequencySample())
-    _needRedrawEngineStats = true;
+	if(_updateTicker.isNewTickFrequencySample() || _drawTicker.isNewTickFrequencySample())
+		_needRedrawEngineStats = true;
 
-  ++_framesDone;
-  ++_framesDoneThisSecond;
-  if((realNow - _lastFrameMeasureNow) >= oneSecond){
-    _measuredFrameFrequency = 
-      (static_cast<float>(_framesDoneThisSecond) / 
-      (realNow - _lastFrameMeasureNow).count()) * 
-      oneSecond.count();
-    _lastFrameMeasureNow = realNow;
-    _framesDoneThisSecond = 0;
-  }
+	++_framesDone;
+	++_framesDoneThisSecond;
+	if((realNow - _lastFrameMeasureNow) >= oneSecond){
+		_measuredFrameFrequency = 
+			(static_cast<float>(_framesDoneThisSecond) / 
+			(realNow - _lastFrameMeasureNow).count()) * 
+			oneSecond.count();
+		_lastFrameMeasureNow = realNow;
+		_framesDoneThisSecond = 0;
+	}
 
-  auto framePeriod = Clock_t::now() - frameStart;
-  if(framePeriod < minFramePeriod)
-    std::this_thread::sleep_for(minFramePeriod - framePeriod); 
+	auto framePeriod = Clock_t::now() - frameStart;
+	if(framePeriod < minFramePeriod)
+		std::this_thread::sleep_for(minFramePeriod - framePeriod); 
 }
 
 void Engine::drawEngineStats()
 {
-  if(!_needRedrawEngineStats)
-    return;
+	if(!_needRedrawEngineStats)
+		return;
 
-  gfx::clearScreenShade(1, _statsScreenId);
+	gfx::clearScreenShade(1, _statsScreenId);
 
-  const auto& updateHistory = _updateTicker.getTickFrequencyHistory();
-  const auto& drawHistory = _drawTicker.getTickFrequencyHistory();
+	const auto& updateHistory = _updateTicker.getTickFrequencyHistory();
+	const auto& drawHistory = _drawTicker.getTickFrequencyHistory();
 
-  std::stringstream ss{};
+	std::stringstream ss{};
 
-  ss << std::setprecision(3);
-  ss << "update FPS: " << updateHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
-     << "render FPS: " << drawHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
-     << "frame FPS: " << _measuredFrameFrequency << "hz";
-  gfx::drawText({10, 20}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
+	ss << std::setprecision(3);
+	ss << "update FPS: " << updateHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
+		 << "render FPS: " << drawHistory[Ticker::FPS_HISTORY_SIZE - 1] << "hz  "
+		 << "frame FPS: " << _measuredFrameFrequency << "hz";
+	gfx::drawText({10, 20}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
 
-  std::stringstream().swap(ss);
+	std::stringstream().swap(ss);
 
-  int gameHours, gameMins, gameSecs, realHours, realMins, realSecs;
-  durationToDigitalClock(_gameClock.getNow(), gameHours, gameMins, gameSecs);
-  durationToDigitalClock(_realClock.getNow(), realHours, realMins, realSecs);
+	int gameHours, gameMins, gameSecs, realHours, realMins, realSecs;
+	durationToDigitalClock(_gameClock.getNow(), gameHours, gameMins, gameSecs);
+	durationToDigitalClock(_realClock.getNow(), realHours, realMins, realSecs);
 
-  ss << std::setprecision(3);
-  ss << "time [h:m:s] -- game=" << gameHours << ":" << gameMins << ":" << gameSecs
-                 << " -- real=" << realHours << ":" << realMins << ":" << realSecs;
-  gfx::drawText({10, 10}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
+	ss << std::setprecision(3);
+	ss << "time [h:m:s] -- game=" << gameHours << ":" << gameMins << ":" << gameSecs
+								 << " -- real=" << realHours << ":" << realMins << ":" << realSecs;
+	gfx::drawText({10, 10}, ss.str(), _engineFontKey, gfx::colors::white, _statsScreenId);
 
-  _needRedrawEngineStats = false;
+	_needRedrawEngineStats = false;
 }
 
 void Engine::drawPauseDialog()
 {
-  static constexpr const char* dialogTxt = "PAUSED";
+	static constexpr const char* dialogTxt = "PAUSED";
 
-  gfx::clearScreenShade(1, _pauseScreenId);
+	gfx::clearScreenShade(1, _pauseScreenId);
 
-  int xmax = pauseScreenResolution._x - 1;
-  int ymax = pauseScreenResolution._y - 1;
+	int xmax = pauseScreenResolution._x - 1;
+	int ymax = pauseScreenResolution._y - 1;
 
-  gfx::drawLine(Vector2i{0, 0}, Vector2i{0, ymax}, gfx::colors::barbiepink, _pauseScreenId);
-  gfx::drawLine(Vector2i{0, 0}, Vector2i{xmax, 0}, gfx::colors::barbiepink, _pauseScreenId);
-  gfx::drawLine(Vector2i{0, ymax}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
-  gfx::drawLine(Vector2i{xmax, 0}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+	gfx::drawLine(Vector2i{0, 0}, Vector2i{0, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+	gfx::drawLine(Vector2i{0, 0}, Vector2i{xmax, 0}, gfx::colors::barbiepink, _pauseScreenId);
+	gfx::drawLine(Vector2i{0, ymax}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
+	gfx::drawLine(Vector2i{xmax, 0}, Vector2i{xmax, ymax}, gfx::colors::barbiepink, _pauseScreenId);
 
-  Vector2i pausedTxtPos{};
-  Vector2i pausedTxtBox = gfx::calculateTextSize(dialogTxt, _engineFontKey);
-  pausedTxtPos._x = (xmax / 2) - (pausedTxtBox._x / 2); 
-  pausedTxtPos._y = (ymax / 2) - (pausedTxtBox._y / 2);
+	Vector2i pausedTxtPos{};
+	Vector2i pausedTxtBox = gfx::calculateTextSize(dialogTxt, _engineFontKey);
+	pausedTxtPos._x = (xmax / 2) - (pausedTxtBox._x / 2); 
+	pausedTxtPos._y = (ymax / 2) - (pausedTxtBox._y / 2);
 
-  gfx::drawText(pausedTxtPos, dialogTxt, _engineFontKey, gfx::colors::white, _pauseScreenId);
+	gfx::drawText(pausedTxtPos, dialogTxt, _engineFontKey, gfx::colors::white, _pauseScreenId);
 }
 
 void Engine::onUpdateTick(float tickPeriodSeconds)
 {
-  double nowSeconds = durationToSeconds(_gameClock.getNow());
-  _game->onUpdate(nowSeconds, tickPeriodSeconds);
-  input::onUpdate();
-  sfx::onUpdate(tickPeriodSeconds);
+	double nowSeconds = durationToSeconds(_gameClock.getNow());
+	_game->onUpdate(nowSeconds, tickPeriodSeconds);
+	input::onUpdate();
+	sfx::onUpdate(tickPeriodSeconds);
 }
 
 void Engine::onDrawTick(float tickPeriodSeconds)
 {
-  gfx::clearWindowColor(_clearColor);
+	gfx::clearWindowColor(_clearColor);
 
-  double nowSeconds = durationToSeconds(_gameClock.getNow());
-  _game->onDraw(nowSeconds, tickPeriodSeconds);
+	double nowSeconds = durationToSeconds(_gameClock.getNow());
+	_game->onDraw(nowSeconds, tickPeriodSeconds);
 
-  if(_isDrawingEngineStats)
-    drawEngineStats();
+	if(_isDrawingEngineStats)
+		drawEngineStats();
 
-  gfx::present();
-
+	gfx::present();
 }
 
 void Engine::onSplashUpdateTick(float tickPeriodSeconds)
 {
-  static bool playedSound {false};
-  static int splashMode {0}; // 0=waiting, 1=splashing.
-  static float clock {0.f};
-  static float delay {splashDurationSeconds / _splashSize._x};
+	static bool playedSound {false};
+	static int splashMode {0}; // 0=waiting, 1=splashing.
+	static float clock {0.f};
+	static float delay {splashDurationSeconds / _splashSize._x};
 
-  clock += tickPeriodSeconds;
+	clock += tickPeriodSeconds;
 
-  if(splashMode == 0){
-    if(clock > splashWaitDurationSeconds){
-      clock = 0.f;
-      if(_splashProgress == _splashSize._x){
-        onSplashExit();
-      }
-      else
-        splashMode = 1;
-    }
-  }
+	if(splashMode == 0){
+		if(clock > splashWaitDurationSeconds){
+			clock = 0.f;
+			if(_splashProgress == _splashSize._x){
+				onSplashExit();
+			}
+			else
+				splashMode = 1;
+		}
+	}
 
-  else if(splashMode == 1){
-    if(!playedSound){
-      //sfx::playSound(_splashSoundKey);  
-      playedSound = true;
-    }
-    if(clock > delay){
-      clock = 0.f;
-      ++_splashProgress;
-      if(_splashProgress >= _splashSize._x)
-        splashMode = 0;
-    }
-  }
+	else if(splashMode == 1){
+		if(!playedSound){
+			//sfx::playSound(_splashSoundKey);  
+			playedSound = true;
+		}
+		if(clock > delay){
+			clock = 0.f;
+			++_splashProgress;
+			if(_splashProgress >= _splashSize._x)
+				splashMode = 0;
+		}
+	}
 }
 
 void Engine::onSplashDrawTick(float tickPeriodSeconds)
 {
-  gfx::clearWindowColor(gfx::colors::silver);
-  gfx::clearScreenShade(1, _pauseScreenId);
+	gfx::clearWindowColor(gfx::colors::silver);
+	gfx::clearScreenShade(1, _pauseScreenId);
   
-  for(int col = 0; col < _splashProgress; ++col)
-    gfx::drawSpriteColumn(_splashPosition, _splashSpriteKey, 0, col, _pauseScreenId);
+	for(int col = 0; col < _splashProgress; ++col)
+		gfx::drawSpriteColumn(_splashPosition, _splashSpriteKey, 0, col, _pauseScreenId);
 
-  if(_isDrawingEngineStats)
-    drawEngineStats();
+	if(_isDrawingEngineStats)
+		drawEngineStats();
 
-  gfx::present();
+	gfx::present();
 }
 
 void Engine::onSplashExit()
 {
-  _isSplashDone = true;
-  _updateTicker.setCallback(&Engine::onUpdateTick);
-  _drawTicker.setCallback(&Engine::onDrawTick);
-  //sfx::unloadSound(_splashSoundKey);
-  gfx::disableScreen(_pauseScreenId);
-  drawPauseDialog();
-  gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);
+	_isSplashDone = true;
+	_updateTicker.setCallback(&Engine::onUpdateTick);
+	_drawTicker.setCallback(&Engine::onDrawTick);
+	//sfx::unloadSound(_splashSoundKey);
+	gfx::disableScreen(_pauseScreenId);
+	drawPauseDialog();
+	gfx::setScreenSizeMode(gfx::SizeMode::AUTO_MIN, _pauseScreenId);
 }
 
 double Engine::durationToMilliseconds(Duration_t d)
 {
-  return static_cast<double>(d.count()) / static_cast<double>(oneMillisecond.count());
+	return static_cast<double>(d.count()) / static_cast<double>(oneMillisecond.count());
 }
 
 double Engine::durationToSeconds(Duration_t d)
 {
-  return static_cast<double>(d.count()) / static_cast<double>(oneSecond.count());
+	return static_cast<double>(d.count()) / static_cast<double>(oneSecond.count());
 }
 
 double Engine::durationToMinutes(Duration_t d)
 {
-  return static_cast<double>(d.count()) / static_cast<double>(oneMinute.count());
+	return static_cast<double>(d.count()) / static_cast<double>(oneMinute.count());
 }
 
 void Engine::durationToDigitalClock(Duration_t d, int& hours, int& mins, int& secs)
 {
-  int s = std::floor(durationToSeconds(d));
-  hours = s / 3600;
-  s %= 3600;
-  mins = s / 60;
-  s %= 60;
-  secs = s;
+	int s = std::floor(durationToSeconds(d));
+	hours = s / 3600;
+	s %= 3600;
+	mins = s / 60;
+	s %= 60;
+	secs = s;
 }
 
 } // namespace pxr
