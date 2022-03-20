@@ -540,7 +540,6 @@ bool MusicSequencePlayer::isUsingMusicResource(ResourceKey_t musicKey)
 
 void MusicSequencePlayer::playNode(const MusicSequenceNode* node)
 {
-  bool result;
   if(node->_fadeInDuration_ms > 0.f)
     playMusicFadeIn__(node->_musicKey, INFINITE_LOOPS, node->_fadeInDuration_ms);
   else

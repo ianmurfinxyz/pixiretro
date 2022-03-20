@@ -247,11 +247,11 @@ void Engine::mainloop()
         break;
       case SDL_KEYDOWN:
         if(event.key.keysym.sym == decrementGameClockScaleKey){
-          _gameClock.incrementScale(-0.1);
+          _gameClock.incrementScale(-0.1f);
           break;
         }
         else if(event.key.keysym.sym == incrementGameClockScaleKey){
-          _gameClock.incrementScale(0.1);
+          _gameClock.incrementScale(0.1f);
           break;
         }
         else if(event.key.keysym.sym == resetGameClockScaleKey){
@@ -296,9 +296,10 @@ void Engine::mainloop()
   ++_framesDone;
   ++_framesDoneThisSecond;
   if((realNow - _lastFrameMeasureNow) >= oneSecond){
-    _measuredFrameFrequency = (static_cast<double>(_framesDoneThisSecond) / 
-                              (realNow - _lastFrameMeasureNow).count()) * 
-                              oneSecond.count();
+    _measuredFrameFrequency = 
+      (static_cast<float>(_framesDoneThisSecond) / 
+      (realNow - _lastFrameMeasureNow).count()) * 
+      oneSecond.count();
     _lastFrameMeasureNow = realNow;
     _framesDoneThisSecond = 0;
   }

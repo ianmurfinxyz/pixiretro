@@ -317,7 +317,7 @@ void Bmp::extractPixels(std::ifstream& file, FileHeader& fileHead, InfoHeader& i
   // in-memory pixels. If the bitmap height is positive then we can simply read the first row
   // in the file first, as this will be the first row in the in-memory bitmap.
   
-  int rowSize_bytes = static_cast<float>(std::ceil((infoHead._bitsPerPixel * infoHead._bmpWidth_px) / 32.f) * 4.f);  
+  int rowSize_bytes = static_cast<int>(std::ceil((infoHead._bitsPerPixel * infoHead._bmpWidth_px) / 32.f) * 4.f);  
   int pixelSize_bytes = infoHead._bitsPerPixel / 8;
 
   int numRows = std::abs(infoHead._bmpHeight_px);
