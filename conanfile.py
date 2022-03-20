@@ -6,7 +6,7 @@ class PixiRetroConan(ConanFile):
 	version = "0.9.0"
 	license = "MIT"
 	author = "Ian Murfin - github.com/ianmurfinxyz - ianmurfin@protonmail.com"
-	url = "<Package recipe repository url here, for issues about the package>"
+	url = "https://github.com/ianmurfinxyz/pixiretro_engine"
 	description = "A small framework for making 2D arcade games."
 	topics = ("Game Framework", "2D Games", "Arcade Games")
 	settings = "os", "compiler", "build_type", "arch"
