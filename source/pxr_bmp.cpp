@@ -128,7 +128,7 @@ bool Bmp::load(std::string filepath)
   int infoHeadVersion {1};
 
   if(infoHead._headerSize_bytes >= V2INFOHEADER_SIZE_BYTES ||
-    (infoHead._headerSize_bytes == V1INFOHEADER_SIZE_BYTES && infoHead._compression == BI_BITFIELDS))
+    (infoHead._headerSize_bytes == V1INFOHEADER_SIZE_BYTES && infoHead._compression == BI_BITFIELDS_))
   {
     file.read(reinterpret_cast<char*>(&infoHead._redMask), sizeof(infoHead._redMask));
     file.read(reinterpret_cast<char*>(&infoHead._greenMask), sizeof(infoHead._greenMask));
@@ -154,7 +154,7 @@ bool Bmp::load(std::string filepath)
     infoHeadVersion = 5;
   }
 
-  if(infoHead._compression != BI_RGB && infoHead._compression != BI_BITFIELDS){
+  if(infoHead._compression != BI_RGB_ && infoHead._compression != BI_BITFIELDS_){
     log::log(log::ERROR, log::msg_bmp_unsupported_compression, std::string{});
     return false;
   }
@@ -178,7 +178,7 @@ bool Bmp::load(std::string filepath)
     extractIndexedPixels(file, fileHead, infoHead);
     break;
   case 16:
-    if(infoHead._compression == BI_RGB){
+    if(infoHead._compression == BI_RGB_){
       infoHead._redMask   = 0x007c00;      // default masks.
       infoHead._greenMask = 0x0003e0;
       infoHead._blueMask  = 0x00001f;
@@ -195,7 +195,7 @@ bool Bmp::load(std::string filepath)
     extractPixels(file, fileHead, infoHead); 
     break;
   case 32:
-    if(infoHead._compression == BI_RGB){
+    if(infoHead._compression == BI_RGB_){
       infoHead._redMask   = 0xff0000;      // default masks.
       infoHead._greenMask = 0x00ff00;
       infoHead._blueMask  = 0x0000ff;

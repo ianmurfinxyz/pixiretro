@@ -61,16 +61,16 @@ private:
 
   enum Compression
   {
-    BI_RGB = 0, 
-    BI_RLE8, 
-    BI_RLE4, 
-    BI_BITFIELDS, 
-    BI_JPEG, 
-    BI_PNG, 
-    BI_ALPHABITFIELDS, 
-    BI_CMYK = 11,
-    BI_CMYKRLE8, 
-    BI_CMYKRLE4
+    BI_RGB_ = 0, 
+    BI_RLE8_, 
+    BI_RLE4_, 
+    BI_BITFIELDS_, 
+    BI_JPEG_, 
+    BI_PNG_, 
+    BI_ALPHABITFIELDS_, 
+    BI_CMYK_ = 11,
+    BI_CMYKRLE8_, 
+    BI_CMYKRLE4_
   };
 
   struct FileHeader
