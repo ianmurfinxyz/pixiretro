@@ -1,11 +1,5 @@
 [settings]
-os=Windows
-os_build=Windows
-arch=x86_64
-arch_build=x86_64
-compiler=Visual Studio
-compiler.version=16
-build_type=Debug
+tinyxml2:compiler.cppstd=14
 [options]
 shared=True
 sdl:shared=True
