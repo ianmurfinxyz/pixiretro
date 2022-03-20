@@ -1,7 +1,7 @@
 #ifndef _PIXIRETRO_SFX_H_
 #define _PIXIRETRO_SFX_H_
 
-#include <SDL2/SDL_audio.h>
+#include <SDL_audio.h>
 #include <limits>
 
 namespace pxr

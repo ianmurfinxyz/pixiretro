@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <SDL2/SDL_mixer.h>
+#include <SDL_mixer.h>
 #include "pxr_sfx.h"
 #include "pxr_log.h"
 #include "pxr_wav.h"

@@ -1,7 +1,7 @@
 #ifndef _PIXIRETRO_ENGINE_H_
 #define _PIXIRETRO_ENGINE_H_
 
-#include <SDL2/SDL_keycode.h>
+#include <SDL_keycode.h>
 
 #include <memory>
 #include <chrono>

@@ -47,7 +47,7 @@ int RC::load(const std::string& filename)
   }
 
   auto lineNoToString = [](int l){return std::string{" ["} + std::to_string(l) + "] ";};
-  auto isSpace = [](char c){return std::isspace<char>(c, std::locale::classic());};
+  auto isSpace = [](char c){return std::isspace(c);};
 
   int lineNo {0};
   int nErrors {0};
