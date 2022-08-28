@@ -1,5 +1,4 @@
-from conans import ConanFile, CMake, tools
-import os, shutil
+from conans import ConanFile, CMake
 
 class PixiRetroConan(ConanFile):
 	name = "pixiretro"
@@ -10,8 +9,8 @@ class PixiRetroConan(ConanFile):
 	description = "A small library for making 2D arcade games."
 	topics = ("Game Framework", "2D Games", "Arcade Games")
 	settings = "os", "compiler", "build_type", "arch"
-	options = {"shared": [True, False], "fPIC": [True, False]}
-	default_options = {"shared": False, "fPIC": True}
+	options = {"fPIC": [True, False]}
+	default_options = {"fPIC": True}
 	build_subfolder = "build"
 	source_subfolder = "src"
 	user = "ianmurfinxyz"
@@ -37,7 +36,7 @@ class PixiRetroConan(ConanFile):
 		cmake.build()
 
 	def package(self):
-		self.copy("*.h", dst="include", src=self.source_subfolder)
+		self.copy("*.h", dst="include", src="include", keep_path=True)
 		self.copy("*.lib", dst="lib", keep_path=False)
 		self.copy("*.a", dst="lib", keep_path=False)
 		self.copy("*.exp", dst="lib", keep_path=False)
@@ -46,21 +45,10 @@ class PixiRetroConan(ConanFile):
 		self.copy("*.pdb", dst="bin", keep_path=False)
 
 	def package_info(self):
-		self.cpp_info.includedirs = ['include']
-		
 		build_type = self.settings.get_safe("build_type", default="Release")
 		postfix = "d" if build_type == "Debug" else ""
-		static = "-static" if self.options.shared else ""
 
-		extension = ""
-		match self.settings.os:
-			case "Windows":
-				extension = "lib"
-			case "Linux":
-				extension = "so" if self.options.shared else "a"
-			case _:
-				raise Exception(f"Unsupported OS {self.settings.os}")
-
-		self.cpp_info.libs = [f"pixiretro{static}{postfix}.{extension}"]
+		self.cpp_info.libs = [f"pixiretro{postfix}"]
 		self.cpp_info.libdirs = ['lib']
 		self.cpp_info.bindirs = ['bin']
+		self.cpp_info.includedirs = ['include']
