@@ -4,9 +4,9 @@ import os, shutil
 class PixiRetroConan(ConanFile):
 	name = "pixiretro"
 	version = "0.9.0"
-	license = "MIT"
+	license = "GNU GPLv3"
 	author = "Ian Murfin - github.com/ianmurfinxyz - ianmurfin@protonmail.com"
-	url = "https://github.com/ianmurfinxyz/pixiretro_engine"
+	url = "https://github.com/ianmurfinxyz/pixiretro"
 	description = "A small library for making 2D arcade games."
 	topics = ("Game Framework", "2D Games", "Arcade Games")
 	settings = "os", "compiler", "build_type", "arch"
