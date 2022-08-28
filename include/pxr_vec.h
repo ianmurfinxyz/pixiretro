@@ -46,7 +46,7 @@ struct Vector2i
 	{return std::hypotf(static_cast<float>(_x), static_cast<float>(_y));}
 
 	float lengthSquared() const 
-	{return std::powf(static_cast<float>(_x), 2) + std::powf(static_cast<float>(_y), 2);}
+	{return std::pow(static_cast<float>(_x), 2) + std::pow(static_cast<float>(_y), 2);}
 
 	bool operator==(const Vector2i& v) const {return _x == v._x && _y == v._y;}
 	bool operator!=(const Vector2i& v) const {return _x != v._x && _y != v._y;}

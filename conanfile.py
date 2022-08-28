@@ -13,11 +13,11 @@ class PixiRetroConan(ConanFile):
 	options = {"shared": [True, False], "fPIC": [True, False]}
 	default_options = {"shared": False, "fPIC": True}
 	build_subfolder = "build"
-	source_subfolder = "source"
+	source_subfolder = "src"
 	user = "ianmurfinxyz"
 	channel = "stable"
 	generators = "cmake"
-	exports_sources = ["CMakeLists.txt", "Source/*", "Include/*"]
+	exports_sources = ["CMakeLists.txt", "src/*", "include/*"]
 
 	def config_options(self):
 		if self.settings.os == "Windows":
@@ -50,17 +50,17 @@ class PixiRetroConan(ConanFile):
 		
 		build_type = self.settings.get_safe("build_type", default="Release")
 		postfix = "d" if build_type == "Debug" else ""
-		
-		if self.settings.os == "Windows":
-			static = "-static" if self.options.shared else ""
-			self.cpp_info.libs = [
-				f"PixiRetro{static}{postfix}.lib"
-			]
-		elif self.settings.os == "Linux":
-			extension = "so" if self.options.shared else "a"
-			self.cpp_info.libs = [
-				f"PixiRetro{static}{postfix}.{extension}"
-			]
-		
+		static = "-static" if self.options.shared else ""
+
+		extension = ""
+		match self.settings.os:
+			case "Windows":
+				extension = "lib"
+			case "Linux":
+				extension = "so" if self.options.shared else "a"
+			case _:
+				raise Exception(f"Unsupported OS {self.settings.os}")
+
+		self.cpp_info.libs = [f"pixiretro{static}{postfix}.{extension}"]
 		self.cpp_info.libdirs = ['lib']
 		self.cpp_info.bindirs = ['bin']
