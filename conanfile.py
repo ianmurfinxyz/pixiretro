@@ -7,7 +7,7 @@ class PixiRetroConan(ConanFile):
 	license = "MIT"
 	author = "Ian Murfin - github.com/ianmurfinxyz - ianmurfin@protonmail.com"
 	url = "https://github.com/ianmurfinxyz/pixiretro_engine"
-	description = "A small framework for making 2D arcade games."
+	description = "A small library for making 2D arcade games."
 	topics = ("Game Framework", "2D Games", "Arcade Games")
 	settings = "os", "compiler", "build_type", "arch"
 	options = {"shared": [True, False], "fPIC": [True, False]}
@@ -23,13 +23,13 @@ class PixiRetroConan(ConanFile):
 		if self.settings.os == "Windows":
 			del self.options.fPIC
 
-	def build_requirements(self):
-		self.build_requires("tinyxml2/9.0.0")
-		self.build_requires("opengl/system")
-		self.build_requires("sdl/2.0.20@ianmurfinxyz/stable")
-		self.build_requires("sdl-image/2.0.5@ianmurfinxyz/stable")
-		self.build_requires("sdl-mixer/2.0.4@ianmurfinxyz/stable")
-		self.build_requires("sdl-ttf/2.0.18@ianmurfinxyz/stable")
+	def requirements(self):
+		self.requires("tinyxml2/9.0.0")
+		self.requires("opengl/system")
+		self.requires("sdl/2.0.20")
+		self.requires("sdl_image/2.0.5")
+		self.requires("sdl_mixer/2.0.4")
+		self.requires("sdl_ttf/2.0.18")
 
 	def build(self):
 		cmake = CMake(self)

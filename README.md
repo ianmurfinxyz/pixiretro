@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="Image/pixiretro_logo.png" atl="pixiretro_engine_logo">
+  <img src="res/pixiretro_logo.png" atl="pixiretro_engine_logo">
 </p>
 
 ## What's this?

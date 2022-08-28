@@ -1,5 +1,5 @@
 [settings]
-tinyxml2:compiler.cppstd=14
+build_type=Release
 [options]
 shared=True
 sdl:shared=True
