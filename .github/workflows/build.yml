@@ -24,5 +24,20 @@ jobs:
         with:
           version: 1.51.3
 
+      # SDL enables features dynamically when compiling by detecting what the host
+      # machine has available. Hence installing these packages ensures that all required
+      # features will be enabled during compilation. Without this step SDL_Mixer will
+      # fail to find any sound servers when run on linux.
+      # https://discourse.libsdl.org/t/couldnt-open-audio-device-no-available-audio-device/18499
+      # https://github.com/libsdl-org/SDL/blob/9325b22ef03302d80b6ab9a4eade362f22f9657e/docs/README-linux.md#l1
+      - name: Install SDL_Mixer features
+        run: | 
+          sudo apt-get install build-essential mercurial make cmake autoconf automake \
+          libtool libasound2-dev libpulse-dev libaudio-dev libx11-dev libxext-dev \
+          libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libxxf86vm-dev libxss-dev \
+          libgl1-mesa-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev \
+          libibus-1.0-dev fcitx-libs-dev libsamplerate0-dev libsndio-dev libwayland-dev \
+          libxkbcommon-dev
+
       - name: Create Package
-        run: conan create -pr release.profile -pr x86_64_linux.profile .
+        run: conan create -pr release.profile -pr x86_64_linux.profile . --build=missing
