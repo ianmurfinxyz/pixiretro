@@ -4,7 +4,7 @@ os_build=Linux
 arch=x86_64
 arch_build=x86_64
 compiler=gcc
-compiler.version=12
+compiler.version=9
 compiler.libcxx=libstdc++11
 [options]
 [build_requires]
