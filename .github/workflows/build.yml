@@ -1,0 +1,27 @@
+name: build
+on:
+  push:
+    paths:
+      - 'src/*.cpp'
+      - 'include/*.h'
+      - '*.py'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: Install Conan
+        id: conan
+        uses: turtlebrowser/get-conan@main
+        with:
+          version: 1.51.3
+
+      - name: Create Package
+        run: conan create -pr release.profile -pr x86_64_linux.profile .
