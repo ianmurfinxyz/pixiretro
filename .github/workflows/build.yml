@@ -64,7 +64,7 @@ jobs:
         run: |
           conan create . --build=missing --json info.json
 
-      - uses: ianmurfinxyz/parse-package-json@v1.0
+      - uses: ianmurfinxyz/parse-package-json@v1.1.1
         id: info
         with:
           json-path: 'info.json'
