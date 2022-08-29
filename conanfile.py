@@ -1,23 +1,22 @@
-from conans import ConanFile, CMake, tools
-import os, shutil
+from conans import ConanFile, CMake
 
 class PixiRetroConan(ConanFile):
 	name = "pixiretro"
 	version = "0.9.0"
-	license = "MIT"
+	license = "GNU GPLv3"
 	author = "Ian Murfin - github.com/ianmurfinxyz - ianmurfin@protonmail.com"
-	url = "https://github.com/ianmurfinxyz/pixiretro_engine"
+	url = "https://github.com/ianmurfinxyz/pixiretro"
 	description = "A small library for making 2D arcade games."
 	topics = ("Game Framework", "2D Games", "Arcade Games")
 	settings = "os", "compiler", "build_type", "arch"
-	options = {"shared": [True, False], "fPIC": [True, False]}
-	default_options = {"shared": False, "fPIC": True}
+	options = {"fPIC": [True, False]}
+	default_options = {"fPIC": True}
 	build_subfolder = "build"
-	source_subfolder = "source"
+	source_subfolder = "src"
 	user = "ianmurfinxyz"
 	channel = "stable"
 	generators = "cmake"
-	exports_sources = ["CMakeLists.txt", "Source/*", "Include/*"]
+	exports_sources = ["CMakeLists.txt", "src/*", "include/*"]
 
 	def config_options(self):
 		if self.settings.os == "Windows":
@@ -37,7 +36,7 @@ class PixiRetroConan(ConanFile):
 		cmake.build()
 
 	def package(self):
-		self.copy("*.h", dst="include", src=self.source_subfolder)
+		self.copy("*.h", dst="include", src="include", keep_path=True)
 		self.copy("*.lib", dst="lib", keep_path=False)
 		self.copy("*.a", dst="lib", keep_path=False)
 		self.copy("*.exp", dst="lib", keep_path=False)
@@ -46,21 +45,10 @@ class PixiRetroConan(ConanFile):
 		self.copy("*.pdb", dst="bin", keep_path=False)
 
 	def package_info(self):
-		self.cpp_info.includedirs = ['include']
-		
 		build_type = self.settings.get_safe("build_type", default="Release")
 		postfix = "d" if build_type == "Debug" else ""
-		
-		if self.settings.os == "Windows":
-			static = "-static" if self.options.shared else ""
-			self.cpp_info.libs = [
-				f"PixiRetro{static}{postfix}.lib"
-			]
-		elif self.settings.os == "Linux":
-			extension = "so" if self.options.shared else "a"
-			self.cpp_info.libs = [
-				f"PixiRetro{static}{postfix}.{extension}"
-			]
-		
+
+		self.cpp_info.libs = [f"pixiretro{postfix}"]
 		self.cpp_info.libdirs = ['lib']
 		self.cpp_info.bindirs = ['bin']
+		self.cpp_info.includedirs = ['include']

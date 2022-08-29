@@ -1,10 +1,5 @@
 [settings]
 build_type=Release
 [options]
-shared=True
-sdl:shared=True
-sdl-image:shared=True
-sdl-ttf:shared=True
-sdl-mixer:shared=True
 [build_requires]
 [env]
