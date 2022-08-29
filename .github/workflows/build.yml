@@ -69,13 +69,6 @@ jobs:
         with:
           json-path: 'info.json'
 
-      - name: Print package info
-        run: |
-          echo ${{ steps.info.outputs.recipe_id }}
-          echo ${{ steps.info.outputs.package_id }}
-          echo ${{ steps.info.outputs.root_path }}
-          echo ${{ steps.info.outputs.version }}
-
       - name: Upload package
         uses: actions/upload-artifact@v2
         with:
