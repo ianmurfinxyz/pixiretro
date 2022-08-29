@@ -1,6 +1,13 @@
 name: build
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'src/*.cpp'
+      - 'include/*.h'
+      - '*.py'
   push:
     paths:
       - 'src/*.cpp'
@@ -55,14 +62,22 @@ jobs:
 
       - name: Create package
         run: |
-          conan create . --build=missing 
+          conan create . --build=missing --json info.json
 
-      - uses: grisumbras/locate-conan-package@latest
-        id: locate_package
+      - uses: ianmurfinxyz/parse-package-json@v1.0
+        id: info
+        with:
+          json-path: 'info.json'
+
+      - name: Print package info
+        run: |
+          echo ${{ steps.info.outputs.recipe_id }}
+          echo ${{ steps.info.outputs.package_id }}
+          echo ${{ steps.info.outputs.root_path }}
+          echo ${{ steps.info.outputs.version }}
 
       - name: Upload package
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
-          name: artifacts-linux
-          path: ${{ steps.locate_package.outputs.path }}
+          path: ${{ steps.info.outputs.root_path }} 
 
