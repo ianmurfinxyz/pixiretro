@@ -32,22 +32,17 @@ jobs:
           conan profile new default --detect
           conan profile update settings.compiler.libcxx=libstdc++11 default
 
-      - name: Install dependencies
-        run: conan install .
-
       # If we need to build sdl_mixer from source make sure all features are available, see:
       # https://discourse.libsdl.org/t/couldnt-open-audio-device-no-available-audio-device/18499
       # https://github.com/libsdl-org/SDL/blob/9325b22ef03302d80b6ab9a4eade362f22f9657e/docs/README-linux.md#l1
       - name: Install sdl_mixer features
         run: |
-          if ! [ -z $(conan search "sdl_mixer" --raw) ]; then
-            sudo apt-get install build-essential mercurial make cmake autoconf automake \
-            libtool libasound2-dev libpulse-dev libaudio-dev libx11-dev libxext-dev \
-            libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libxxf86vm-dev libxss-dev \
-            libgl1-mesa-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev \
-            libibus-1.0-dev fcitx-libs-dev libsamplerate0-dev libsndio-dev libwayland-dev \
-            libxkbcommon-dev
-          fi
+          sudo apt-get install build-essential mercurial make cmake autoconf automake \
+          libtool libasound2-dev libpulse-dev libaudio-dev libx11-dev libxext-dev \
+          libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libxxf86vm-dev libxss-dev \
+          libgl1-mesa-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev \
+          libibus-1.0-dev fcitx-libs-dev libsamplerate0-dev libsndio-dev libwayland-dev \
+          libxkbcommon-dev
 
       - name: Create package
         run: |
