@@ -40,4 +40,7 @@ jobs:
           libxkbcommon-dev
 
       - name: Create Package
-        run: conan create -pr release.profile -pr x86_64_linux.profile . --build=missing
+        run: |
+          conan create -pr release.profile -pr x86_64_linux.profile . --build=missing \
+          -c tools.system.package_manager:mode=install
+
